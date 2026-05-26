@@ -7,7 +7,7 @@ export type UserStatus = "active" | "banned" | "deleted";
 export type UserSportProfile = {
   sportId: string;
   skillLevel: SkillLevel;
-  preferredPositions?: string[];
+  preferredPositions: string[];
 };
 
 export type UserLocation = {
