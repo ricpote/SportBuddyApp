@@ -45,8 +45,8 @@ export type User = {
 export type CreateUserDto = {
   name: string;
   email: string;
-  sports?: UserSportProfile[];
-  location?: UserLocation;
+  Sportslist: UserSportProfile[];
+  location: UserLocation;
 };
 
 export type UpdateUserDto = {
@@ -72,7 +72,7 @@ export function createUserObject(
     role: "participant",
     status: "active",
 
-    sports: data.sports ?? [],
+    sports: data.Sportslist ??[],
 
     location: data.location,
 
