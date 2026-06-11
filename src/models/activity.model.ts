@@ -38,6 +38,8 @@ export type Activity = {
 
   difficultyLevel: SkillLevel;
 
+  requiresApproval: boolean;
+
   status: ActivityStatus;
 
   createdAt: Date;
@@ -57,6 +59,8 @@ export type CreateActivityDto = {
   date: Date;
 
   difficultyLevel: SkillLevel;
+
+  requiresApproval: boolean;
 };
 export function createActivityObject(
   id: string,
@@ -85,6 +89,8 @@ export function createActivityObject(
     date: data.date,
 
     difficultyLevel: data.difficultyLevel,
+
+    requiresApproval: data.requiresApproval,
 
     status: data.maxParticipants <= 1 ? "full" : "open",
 
