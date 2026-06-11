@@ -1,0 +1,149 @@
+import { db } from "../config/firebase";
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  User,
+  UserRole,
+  UserStatus,
+  createUserObject,
+} from "../models/user.model";
+
+const USERS_COLLECTION = "users";
+
+export class UsersService {
+  private usersRef = db.collection(USERS_COLLECTION);
+
+  async createUserProfile(
+    firebaseUid: string,
+    data: CreateUserDto
+  ): Promise<User> {
+    const existingUser = await this.getUserByFirebaseUid(firebaseUid);
+
+    if (existingUser) {
+      throw new Error("User profile already exists");
+    }
+
+    // We use Firebase UID as the Firestore document ID.
+    // This makes it easy to find the logged-in user.
+    const user = createUserObject(firebaseUid, firebaseUid, data);
+
+    await this.usersRef.doc(firebaseUid).set(user);
+
+    return user;
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | null> {
+    const userDoc = await this.usersRef.doc(firebaseUid).get();
+
+    if (!userDoc.exists) {
+      return null;
+    }
+
+    return userDoc.data() as User;
+  }
+
+  async getUserById(userId: string): Promise<User | null> {
+    const userDoc = await this.usersRef.doc(userId).get();
+
+    if (!userDoc.exists) {
+      return null;
+    }
+
+    return userDoc.data() as User;
+  }
+
+  async getCurrentUser(firebaseUid: string): Promise<User> {
+    const user = await this.getUserByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      throw new Error("User profile not found");
+    }
+
+    return user;
+  }
+
+  async updateUserProfile(
+    firebaseUid: string,
+    data: UpdateUserDto
+  ): Promise<User> {
+    const user = await this.getUserByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      throw new Error("User profile not found");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      ...data,
+      updatedAt: new Date(),
+    };
+
+    await this.usersRef.doc(firebaseUid).update({
+      ...data,
+      updatedAt: updatedUser.updatedAt,
+    });
+
+    return updatedUser;
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User> {
+    const user = await this.getUserById(userId);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      role,
+      updatedAt: new Date(),
+    };
+
+    await this.usersRef.doc(userId).update({
+      role,
+      updatedAt: updatedUser.updatedAt,
+    });
+
+    return updatedUser;
+  }
+
+  async updateUserStatus(userId: string, status: UserStatus): Promise<User> {
+    const user = await this.getUserById(userId);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      status,
+      updatedAt: new Date(),
+    };
+
+    await this.usersRef.doc(userId).update({
+      status,
+      updatedAt: updatedUser.updatedAt,
+    });
+
+    return updatedUser;
+  }
+
+  async banUser(userId: string): Promise<User> {
+    return this.updateUserStatus(userId, "banned");
+  }
+
+  async reactivateUser(userId: string): Promise<User> {
+    return this.updateUserStatus(userId, "active");
+  }
+
+  async softDeleteUser(userId: string): Promise<User> {
+    return this.updateUserStatus(userId, "deleted");
+  }
+
+  async userExists(firebaseUid: string): Promise<boolean> {
+    const userDoc = await this.usersRef.doc(firebaseUid).get();
+    return userDoc.exists;
+  }
+}
+
+export const usersService = new UsersService();
