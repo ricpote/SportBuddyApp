@@ -3,6 +3,7 @@
 import express from "express";
 import cors from "cors";
 import usersRoutes from "./routes/users.routes";
+import activitiesRoutes from "./routes/activities.route";
 
 const app = express();
 
@@ -16,5 +17,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", usersRoutes);
+app.use("/api/activities", activitiesRoutes);
 
 export default app;
