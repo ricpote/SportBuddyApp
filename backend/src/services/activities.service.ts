@@ -17,6 +17,13 @@ export type UpdateActivityDto = {
   requiresApproval?: boolean;
 };
 
+export type ListActivitiesFilters = {
+  sportId?: string;
+  status?: ActivityStatus;
+  difficultyLevel?: Activity["difficultyLevel"];
+  createdBy?: string;
+};
+
 export class ActivitiesService {
   private activitiesRef = db.collection(ACTIVITIES_COLLECTION);
 
@@ -37,6 +44,38 @@ export class ActivitiesService {
     }
 
     return doc.data() as Activity;
+  }
+
+  async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
+    let query: FirebaseFirestore.Query = this.activitiesRef;
+
+    if (filters.sportId) {
+      query = query.where("sportId", "==", filters.sportId);
+    }
+
+    if (filters.status) {
+      query = query.where("status", "==", filters.status);
+    }
+
+    if (filters.difficultyLevel) {
+      query = query.where("difficultyLevel", "==", filters.difficultyLevel);
+    }
+
+    if (filters.createdBy) {
+      query = query.where("createdBy", "==", filters.createdBy);
+    }
+
+    const snapshot = await query.get();
+
+    return snapshot.docs.map(doc => doc.data() as Activity);
+  }
+
+  async getMyActivities(userId: string): Promise<Activity[]> {
+    const snapshot = await this.activitiesRef
+      .where("participantsList", "array-contains", userId)
+      .get();
+
+    return snapshot.docs.map(doc => doc.data() as Activity);
   }
 
   async updateActivity(activityId: string, requesterId: string, data: UpdateActivityDto
@@ -111,13 +150,127 @@ export class ActivitiesService {
       throw new Error("User is not a participant of this activity");
     }
 
-    const updatedParticipants = activity.participantsList.filter(id => id !== participantId);
+    let updatedParticipants = activity.participantsList.filter(id => id !== participantId);
+    let updatedWaitlist = [...activity.waitlist];
     const now = new Date();
 
-    await this.activitiesRef.doc(activityId).update({participantsList: updatedParticipants,
-      status: "open" as ActivityStatus,updatedAt: now,});
+    if (!activity.requiresApproval && updatedWaitlist.length > 0) {
+      const promoted = updatedWaitlist.shift()!;
+      updatedParticipants = [...updatedParticipants, promoted];
+    }
 
-    return {...activity, participantsList: updatedParticipants, status: "open", updatedAt: now,};
+    const isFull = updatedParticipants.length >= activity.maxParticipants;
+    const newStatus: ActivityStatus = isFull ? "full" : "open";
+
+    await this.activitiesRef.doc(activityId).update({
+      participantsList: updatedParticipants,
+      waitlist: updatedWaitlist,
+      status: newStatus,
+      updatedAt: now,
+    });
+
+    return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
+  }
+
+  async joinActivity(activityId: string, userId: string): Promise<Activity> {
+    const activity = await this.getActivityById(activityId);
+
+    if (!activity) {
+      throw new Error("Activity not found");
+    }
+
+    if (activity.status === "cancelled" || activity.status === "completed") {
+      throw new Error("Cannot join a cancelled or completed activity");
+    }
+
+    if (activity.participantsList.includes(userId)) {
+      throw new Error("User is already a participant");
+    }
+
+    if (activity.waitlist.includes(userId)) {
+      throw new Error("User is already in the waitlist");
+    }
+
+    const now = new Date();
+
+    if (activity.requiresApproval || activity.status === "full") {
+      const updatedWaitlist = [...activity.waitlist, userId];
+
+      await this.activitiesRef.doc(activityId).update({
+        waitlist: updatedWaitlist,
+        updatedAt: now,
+      });
+
+      return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
+    }
+
+    const updatedParticipants = [...activity.participantsList, userId];
+    const isFull = updatedParticipants.length == activity.maxParticipants;
+    const newStatus: ActivityStatus = isFull ? "full" : "open";
+
+    await this.activitiesRef.doc(activityId).update({
+      participantsList: updatedParticipants,
+      status: newStatus,
+      updatedAt: now,
+    });
+
+    return { ...activity, participantsList: updatedParticipants, status: newStatus, updatedAt: now };
+  }
+
+  async leaveActivity(activityId: string, userId: string): Promise<Activity> {
+    const activity = await this.getActivityById(activityId);
+
+    if (!activity) {
+      throw new Error("Activity not found");
+    }
+
+    if (activity.status === "cancelled" || activity.status === "completed") {
+      throw new Error("Cannot leave a cancelled or completed activity");
+    }
+
+    if (activity.createdBy === userId) {
+      throw new Error("Activity creator cannot leave — cancel the activity instead");
+    }
+
+    const inWaitlist = activity.waitlist.includes(userId);
+    const inParticipants = activity.participantsList.includes(userId);
+
+    if (!inWaitlist && !inParticipants) {
+      throw new Error("User is not part of this activity");
+    }
+
+    const now = new Date();
+
+    if (inWaitlist) {
+      const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
+
+      await this.activitiesRef.doc(activityId).update({
+        waitlist: updatedWaitlist,
+        updatedAt: now,
+      });
+
+      return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
+    }
+
+    let updatedParticipants = activity.participantsList.filter(id => id !== userId);
+    let updatedWaitlist = [...activity.waitlist];
+
+    if (!activity.requiresApproval && updatedWaitlist.length > 0) {
+      const promoted = updatedWaitlist.shift()!;
+      updatedParticipants = [...updatedParticipants, promoted];
+    }
+
+    const isFull = updatedParticipants.length >= activity.maxParticipants;
+    const newStatus: ActivityStatus = isFull ? "full" : "open";
+
+    await this.activitiesRef.doc(activityId).update({
+      participantsList: updatedParticipants,
+      waitlist: updatedWaitlist,
+      status: newStatus,
+      updatedAt: now,
+    });
+
+    return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
   }
 
   async admitFromWaitlist(activityId: string, requesterId: string, userId: string): Promise<Activity> {
