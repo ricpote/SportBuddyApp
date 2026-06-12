@@ -62,4 +62,7 @@ export const Spacing = {
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+// On web the tab bar floats over the top of the content, so screens need extra
+// top padding to avoid being covered by it.
+export const TopTabInset = Platform.select({ web: 80 }) ?? 0;
 export const MaxContentWidth = 800;

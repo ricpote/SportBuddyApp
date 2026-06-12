@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput } from 'react-native';
 
@@ -6,11 +6,10 @@ import { DateTimeField } from '@/components/date-time-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-import { createActivity } from '@/services/activities';
-import { listSports } from '@/services/sports';
-import { SkillLevel } from '@/types/activity';
-import { Sport, SportCategory } from '@/types/sport';
+import { getActivity, updateActivity } from '@/services/activities';
+import { Activity, SkillLevel } from '@/types/activity';
 
 const DIFFICULTY_OPTIONS: SkillLevel[] = ['beginner', 'intermediate', 'advanced', 'competitive'];
 const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
@@ -20,46 +19,59 @@ const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
   competitive: 'Competitivo',
 };
 
-const CATEGORY_ORDER: SportCategory[] = ['team', 'individual'];
-const CATEGORY_LABELS: Record<SportCategory, string> = {
-  team: 'Equipa',
-  individual: 'Individual',
-};
-
-function initialDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  date.setHours(18, 0, 0, 0);
-  return date;
-}
-
-export default function CreateActivityScreen() {
+export default function EditActivityScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const theme = useTheme();
 
-  const [sports, setSports] = useState<Sport[]>([]);
+  const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [sportId, setSportId] = useState<string | null>(null);
-  const [maxParticipants, setMaxParticipants] = useState('10');
-  const [locationName, setLocationName] = useState('');
-  const [address, setAddress] = useState('');
-  const [date, setDate] = useState<Date>(initialDate);
+  const [maxParticipants, setMaxParticipants] = useState('');
+  const [date, setDate] = useState<Date>(new Date());
   const [difficultyLevel, setDifficultyLevel] = useState<SkillLevel>('beginner');
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    listSports()
-      .then(setSports)
-      .catch(() => setSports([]));
-  }, []);
+    if (!id) return;
+    getActivity(id)
+      .then((data) => {
+        setActivity(data);
+        setTitle(data.title);
+        setDescription(data.description);
+        setMaxParticipants(String(data.maxParticipants));
+        setDate(new Date(data.date));
+        setDifficultyLevel(data.difficultyLevel);
+        setRequiresApproval(data.requiresApproval);
+      })
+      .catch(() => setActivity(null));
+  }, [id]);
+
+  if (activity === undefined) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (activity === null || !user || activity.createdBy !== user.uid) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText themeColor="textSecondary">
+          Só o organizador pode editar esta atividade.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
   async function handleSubmit() {
     setError(null);
 
-    if (!title.trim() || !sportId || !locationName.trim()) {
-      setError('Preenche o título, modalidade e local');
+    if (!title.trim()) {
+      setError('O título não pode ficar vazio');
       return;
     }
 
@@ -74,21 +86,26 @@ export default function CreateActivityScreen() {
       return;
     }
 
+    if (parsedMax < activity!.participantsList.length) {
+      setError(
+        `Já existem ${activity!.participantsList.length} participantes — o máximo não pode ser menor`
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const activity = await createActivity({
+      await updateActivity(activity!.activityId, {
         title: title.trim(),
         description: description.trim(),
-        sportId,
         maxParticipants: parsedMax,
-        location: { name: locationName.trim(), address: address.trim(), lat: 0, lng: 0 },
         date: date.toISOString(),
         difficultyLevel,
         requiresApproval,
       });
-      router.replace({ pathname: '/activity/[id]', params: { id: activity.activityId } });
+      router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível criar a atividade');
+      setError(err instanceof Error ? err.message : 'Não foi possível guardar as alterações');
     } finally {
       setSubmitting(false);
     }
@@ -113,35 +130,6 @@ export default function CreateActivityScreen() {
           multiline
         />
 
-        <ThemedText type="smallBold">Modalidade</ThemedText>
-        {CATEGORY_ORDER.map((category) => {
-          const group = sports.filter((sport) => sport.category === category);
-          if (group.length === 0) return null;
-          return (
-            <ThemedView key={category} style={styles.categoryGroup}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {CATEGORY_LABELS[category]}
-              </ThemedText>
-              <ThemedView style={styles.chipRow}>
-                {group.map((sport) => (
-                  <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
-                    <ThemedView
-                      type={sportId === sport.id ? 'backgroundSelected' : 'backgroundElement'}
-                      style={styles.chip}>
-                      <ThemedText type="small">{sport.name}</ThemedText>
-                    </ThemedView>
-                  </Pressable>
-                ))}
-              </ThemedView>
-            </ThemedView>
-          );
-        })}
-        {sports.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            Sem modalidades disponíveis ainda.
-          </ThemedText>
-        )}
-
         <ThemedText type="smallBold">Dificuldade</ThemedText>
         <ThemedView style={styles.chipRow}>
           {DIFFICULTY_OPTIONS.map((level) => (
@@ -154,21 +142,6 @@ export default function CreateActivityScreen() {
             </Pressable>
           ))}
         </ThemedView>
-
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Local (nome)"
-          placeholderTextColor={theme.textSecondary}
-          value={locationName}
-          onChangeText={setLocationName}
-        />
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Morada"
-          placeholderTextColor={theme.textSecondary}
-          value={address}
-          onChangeText={setAddress}
-        />
 
         <DateTimeField label="Data e hora" value={date} onChange={setDate} />
 
@@ -197,7 +170,7 @@ export default function CreateActivityScreen() {
           disabled={submitting}
           onPress={handleSubmit}>
           <ThemedText style={{ color: theme.background }} type="smallBold">
-            {submitting ? 'A criar...' : 'Criar atividade'}
+            {submitting ? 'A guardar...' : 'Guardar alterações'}
           </ThemedText>
         </Pressable>
       </ThemedView>
@@ -209,6 +182,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   container: {
     width: '100%',
@@ -226,9 +204,6 @@ const styles = StyleSheet.create({
     height: 96,
     paddingTop: Spacing.two,
     textAlignVertical: 'top',
-  },
-  categoryGroup: {
-    gap: Spacing.one,
   },
   chipRow: {
     flexDirection: 'row',

@@ -1,13 +1,20 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
-import { getActivity, joinActivity, leaveActivity } from '@/services/activities';
+import {
+  admitFromWaitlist,
+  cancelActivity,
+  getActivity,
+  joinActivity,
+  leaveActivity,
+  removeParticipant,
+} from '@/services/activities';
 import { getSport } from '@/services/sports';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
@@ -35,6 +42,7 @@ export default function ActivityDetailScreen() {
   const [sport, setSport] = useState<Sport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const loadActivity = useCallback(() => {
     if (!id) return;
@@ -43,16 +51,17 @@ export default function ActivityDetailScreen() {
       .catch(() => setActivity(null));
   }, [id]);
 
-  useEffect(() => {
-    loadActivity();
-  }, [loadActivity]);
+  // Reload on focus so changes made in the edit modal show up when coming back.
+  useFocusEffect(loadActivity);
+
+  const sportId = activity?.sportId;
 
   useEffect(() => {
-    if (!activity) return;
-    getSport(activity.sportId)
+    if (!sportId) return;
+    getSport(sportId)
       .then(setSport)
       .catch(() => setSport(null));
-  }, [activity?.sportId]);
+  }, [sportId]);
 
   if (activity === undefined) {
     return (
@@ -77,30 +86,48 @@ export default function ActivityDetailScreen() {
   const canJoin = activity.status === 'open' || activity.status === 'full';
   const activityDate = new Date(activity.date);
 
-  async function handleJoin() {
+  async function runAction(action: () => Promise<Activity>, fallbackMessage: string) {
     setError(null);
     setSubmitting(true);
     try {
-      const updated = await joinActivity(activity!.activityId);
+      const updated = await action();
       setActivity(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível entrar na atividade');
+      setError(err instanceof Error ? err.message : fallbackMessage);
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleLeave() {
-    setError(null);
-    setSubmitting(true);
-    try {
-      const updated = await leaveActivity(activity!.activityId);
-      setActivity(updated);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível sair da atividade');
-    } finally {
-      setSubmitting(false);
+  function handleJoin() {
+    return runAction(() => joinActivity(activity!.activityId), 'Não foi possível entrar na atividade');
+  }
+
+  function handleLeave() {
+    return runAction(() => leaveActivity(activity!.activityId), 'Não foi possível sair da atividade');
+  }
+
+  function handleCancel() {
+    if (!confirmingCancel) {
+      setConfirmingCancel(true);
+      return;
     }
+    setConfirmingCancel(false);
+    return runAction(() => cancelActivity(activity!.activityId), 'Não foi possível cancelar a atividade');
+  }
+
+  function handleRemoveParticipant(participantId: string) {
+    return runAction(
+      () => removeParticipant(activity!.activityId, participantId),
+      'Não foi possível remover o participante'
+    );
+  }
+
+  function handleAdmit(userId: string) {
+    return runAction(
+      () => admitFromWaitlist(activity!.activityId, userId),
+      'Não foi possível admitir o utilizador'
+    );
   }
 
   return (
@@ -136,9 +163,87 @@ export default function ActivityDetailScreen() {
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
         {isCreator ? (
-          <ThemedText themeColor="textSecondary" style={styles.note}>
-            És o organizador desta atividade.
-          </ThemedText>
+          <>
+            <ThemedText themeColor="textSecondary" style={styles.note}>
+              És o organizador desta atividade.
+            </ThemedText>
+
+            {canJoin && (
+              <>
+                <ThemedView type="backgroundElement" style={styles.card}>
+                  <ThemedText type="smallBold">Participantes</ThemedText>
+                  {activity.participantsList
+                    .filter((participantId) => participantId !== activity.createdBy)
+                    .map((participantId) => (
+                      <ThemedView key={participantId} type="backgroundElement" style={styles.memberRow}>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {shortId(participantId)}
+                        </ThemedText>
+                        <Pressable
+                          disabled={submitting}
+                          onPress={() => handleRemoveParticipant(participantId)}>
+                          <ThemedText type="smallBold">Remover</ThemedText>
+                        </Pressable>
+                      </ThemedView>
+                    ))}
+                  {activity.participantsList.length <= 1 && (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Ainda só tu. Partilha a atividade!
+                    </ThemedText>
+                  )}
+                </ThemedView>
+
+                {activity.waitlist.length > 0 && (
+                  <ThemedView type="backgroundElement" style={styles.card}>
+                    <ThemedText type="smallBold">Lista de espera</ThemedText>
+                    {activity.waitlist.map((userId) => (
+                      <ThemedView key={userId} type="backgroundElement" style={styles.memberRow}>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {shortId(userId)}
+                        </ThemedText>
+                        {activity.status === 'open' ? (
+                          <Pressable disabled={submitting} onPress={() => handleAdmit(userId)}>
+                            <ThemedText type="smallBold">Admitir</ThemedText>
+                          </Pressable>
+                        ) : (
+                          <ThemedText type="small" themeColor="textSecondary">
+                            Atividade completa
+                          </ThemedText>
+                        )}
+                      </ThemedView>
+                    ))}
+                  </ThemedView>
+                )}
+
+                {/* Link asChild drops the Pressable's style function on web, so the
+                    visual styles live on an inner View instead. */}
+                <Link
+                  href={{ pathname: '/edit-activity/[id]', params: { id: activity.activityId } }}
+                  asChild>
+                  <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                    <View style={[styles.button, { backgroundColor: theme.text }]}>
+                      <ThemedText style={{ color: theme.background }} type="smallBold">
+                        Editar atividade
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                </Link>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.button,
+                    { backgroundColor: theme.backgroundElement },
+                    pressed && styles.pressed,
+                  ]}
+                  disabled={submitting}
+                  onPress={handleCancel}>
+                  <ThemedText type="smallBold">
+                    {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
+                  </ThemedText>
+                </Pressable>
+              </>
+            )}
+          </>
         ) : isParticipant || isWaitlisted ? (
           <Pressable
             style={({ pressed }) => [
@@ -173,6 +278,12 @@ export default function ActivityDetailScreen() {
       </ThemedView>
     </ScrollView>
   );
+}
+
+// The API only exposes participant UIDs (no public profile endpoint yet),
+// so we show a shortened identifier for now.
+function shortId(uid: string) {
+  return `Utilizador ${uid.slice(0, 6)}…`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -210,6 +321,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  memberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.one,
   },
   button: {
     height: 48,

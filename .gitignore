@@ -1,2 +1,6 @@
 node_modules/
 dist/
+
+# Firebase Admin private key — never commit
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
