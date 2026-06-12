@@ -67,8 +67,10 @@ export class ActivitiesService {
   }
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
+    const statusFilter = filters.status ? [filters.status] : ["open", "full"];
+
     let query: FirebaseFirestore.Query = this.activitiesRef
-      .where("status", "in", ["open", "full"])
+      .where("status", "in", statusFilter)
       .where("date", ">", new Date());
 
     if (filters.sportId) {

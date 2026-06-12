@@ -1,4 +1,3 @@
-// src/controllers/users.controller.ts
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { usersService } from "../services/users.service";
@@ -39,11 +38,10 @@ export async function createMyProfile(
     }
 
     const user = await usersService.createUserProfile(req.user.uid, {
-      name: req.body.username,
+      name: req.body.name,
       email: req.user.email ?? req.body.email,
-      sports: req.body.sportsList,
+      sports: req.body.sports,
       location: req.body.location,
-     
     });
 
     return res.status(201).json(user);
