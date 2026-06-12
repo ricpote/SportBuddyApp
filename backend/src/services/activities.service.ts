@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase-admin/firestore";
 import { db } from "../config/firebase";
 import {
   Activity,
@@ -7,6 +8,21 @@ import {
 } from "../models/activity.model";
 
 const ACTIVITIES_COLLECTION = "activities";
+
+// Firestore stores Date fields as Timestamps; convert them back when reading
+// so the API returns proper dates instead of {_seconds, _nanoseconds}.
+function toDate(value: unknown): Date {
+  return value instanceof Timestamp ? value.toDate() : (value as Date);
+}
+
+function docToActivity(data: FirebaseFirestore.DocumentData): Activity {
+  return {
+    ...(data as Activity),
+    date: toDate(data.date),
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
 
 export type UpdateActivityDto = {
   title?: string;
@@ -36,7 +52,102 @@ export class ActivitiesService {
       return null;
     }
 
-    return doc.data() as Activity;
+    return docToActivity(doc.data()!);
+  }
+
+  async listActivities(): Promise<Activity[]> {
+    const snapshot = await this.activitiesRef.orderBy("date", "asc").get();
+
+    return snapshot.docs.map((doc) => docToActivity(doc.data()));
+  }
+
+  async joinActivity(activityId: string, userId: string): Promise<Activity> {
+    const docRef = this.activitiesRef.doc(activityId);
+
+    // Transaction so two simultaneous joins can't exceed maxParticipants.
+    return db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+
+      if (!doc.exists) {
+        throw new Error("Activity not found");
+      }
+
+      const activity = docToActivity(doc.data()!);
+
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("This activity no longer accepts participants");
+      }
+
+      if (activity.participantsList.includes(userId)) {
+        throw new Error("You are already a participant of this activity");
+      }
+
+      if (activity.waitlist.includes(userId)) {
+        throw new Error("You are already in the waitlist");
+      }
+
+      const now = new Date();
+      const isFull = activity.participantsList.length >= activity.maxParticipants;
+
+      if (isFull || activity.requiresApproval) {
+        const waitlist = [...activity.waitlist, userId];
+
+        tx.update(docRef, { waitlist, updatedAt: now });
+
+        return { ...activity, waitlist, updatedAt: now };
+      }
+
+      const participantsList = [...activity.participantsList, userId];
+      const status: ActivityStatus =
+        participantsList.length >= activity.maxParticipants ? "full" : "open";
+
+      tx.update(docRef, { participantsList, status, updatedAt: now });
+
+      return { ...activity, participantsList, status, updatedAt: now };
+    });
+  }
+
+  async leaveActivity(activityId: string, userId: string): Promise<Activity> {
+    const docRef = this.activitiesRef.doc(activityId);
+
+    return db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+
+      if (!doc.exists) {
+        throw new Error("Activity not found");
+      }
+
+      const activity = docToActivity(doc.data()!);
+
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot leave a cancelled or completed activity");
+      }
+
+      const now = new Date();
+
+      if (activity.waitlist.includes(userId)) {
+        const waitlist = activity.waitlist.filter((id) => id !== userId);
+
+        tx.update(docRef, { waitlist, updatedAt: now });
+
+        return { ...activity, waitlist, updatedAt: now };
+      }
+
+      if (!activity.participantsList.includes(userId)) {
+        throw new Error("You are not a participant of this activity");
+      }
+
+      if (activity.createdBy === userId) {
+        throw new Error("The creator cannot leave the activity. Cancel it instead.");
+      }
+
+      const participantsList = activity.participantsList.filter((id) => id !== userId);
+      const status: ActivityStatus = "open";
+
+      tx.update(docRef, { participantsList, status, updatedAt: now });
+
+      return { ...activity, participantsList, status, updatedAt: now };
+    });
   }
 
   async updateActivity(activityId: string, requesterId: string, data: UpdateActivityDto

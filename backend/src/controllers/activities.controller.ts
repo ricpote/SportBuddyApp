@@ -5,8 +5,25 @@ import { CreateActivityDto } from "../models/activity.model";
 
 type ActivityParams = {
   activityId: string;
-};export async function createActivity(
+};
 
+export async function listActivities(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const activities = await activitiesService.listActivities();
+
+    res.status(200).json(activities);
+  } catch (error) {
+    res.status(500).json({
+      message:
+        error instanceof Error ? error.message : "Error listing activities",
+    });
+  }
+}
+
+export async function createActivity(
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {
@@ -126,6 +143,62 @@ export async function cancelActivity(
     res.status(400).json({
       message:
         error instanceof Error ? error.message : "Error cancelling activity",
+    });
+  }
+}
+
+export async function joinActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "User not authenticated",
+      });
+      return;
+    }
+
+    const { activityId } = req.params;
+
+    const activity = await activitiesService.joinActivity(
+      activityId,
+      req.user.uid
+    );
+
+    res.status(200).json(activity);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error joining activity",
+    });
+  }
+}
+
+export async function leaveActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "User not authenticated",
+      });
+      return;
+    }
+
+    const { activityId } = req.params;
+
+    const activity = await activitiesService.leaveActivity(
+      activityId,
+      req.user.uid
+    );
+
+    res.status(200).json(activity);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error leaving activity",
     });
   }
 }

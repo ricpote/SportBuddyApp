@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import usersRoutes from "./routes/users.routes";
 import activitiesRoutes from "./routes/activities.route";
+import sportsRoutes from "./routes/sports.route";
 
 const app = express();
 
@@ -18,5 +19,6 @@ app.get("/", (req, res) => {
 
 app.use("/api/users", usersRoutes);
 app.use("/api/activities", activitiesRoutes);
+app.use("/api/sports", sportsRoutes);
 
 export default app;

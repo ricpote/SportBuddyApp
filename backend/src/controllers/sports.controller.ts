@@ -13,7 +13,10 @@ export async function listSports(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function getSportById(req: Request, res: Response): Promise<void> {
+export async function getSportById(
+  req: Request<{ sportId: string }>,
+  res: Response
+): Promise<void> {
   try {
     const { sportId } = req.params;
 
