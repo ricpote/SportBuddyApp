@@ -11,7 +11,6 @@ const ACTIVITIES_COLLECTION = "activities";
 export type UpdateActivityDto = {
   title?: string;
   description?: string;
-  maxParticipants?: number;
   date?: Date;
   difficultyLevel?: Activity["difficultyLevel"];
   requiresApproval?: boolean;
@@ -22,6 +21,12 @@ export type ListActivitiesFilters = {
   status?: ActivityStatus;
   difficultyLevel?: Activity["difficultyLevel"];
   createdBy?: string;
+};
+
+export type MyActivitiesFilters = {
+  sportId?: string;
+  status?: ActivityStatus;
+  date?: Date;
 };
 
 export class ActivitiesService {
@@ -43,18 +48,31 @@ export class ActivitiesService {
       return null;
     }
 
-    return doc.data() as Activity;
+    const activity = doc.data() as Activity;
+
+    if (
+      activity.status !== "completed" &&
+      activity.status !== "cancelled" &&
+      new Date(activity.date) < new Date()
+    ) {
+      const now = new Date();
+      await this.activitiesRef.doc(activityId).update({
+        status: "completed" as ActivityStatus,
+        updatedAt: now,
+      });
+      return { ...activity, status: "completed", updatedAt: now };
+    }
+
+    return activity;
   }
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
-    let query: FirebaseFirestore.Query = this.activitiesRef;
+    let query: FirebaseFirestore.Query = this.activitiesRef
+      .where("status", "in", ["open", "full"])
+      .where("date", ">", new Date());
 
     if (filters.sportId) {
       query = query.where("sportId", "==", filters.sportId);
-    }
-
-    if (filters.status) {
-      query = query.where("status", "==", filters.status);
     }
 
     if (filters.difficultyLevel) {
@@ -70,10 +88,28 @@ export class ActivitiesService {
     return snapshot.docs.map(doc => doc.data() as Activity);
   }
 
-  async getMyActivities(userId: string): Promise<Activity[]> {
-    const snapshot = await this.activitiesRef
+  async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
+    let query: FirebaseFirestore.Query = this.activitiesRef
       .where("participantsList", "array-contains", userId)
-      .get();
+      .orderBy("date", "asc");
+
+    if (filters.sportId) {
+      query = query.where("sportId", "==", filters.sportId);
+    }
+
+    if (filters.status) {
+      query = query.where("status", "==", filters.status);
+    }
+
+    if (filters.date) {
+      const start = new Date(filters.date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(filters.date);
+      end.setHours(23, 59, 59, 999);
+      query = query.where("date", ">=", start).where("date", "<=", end);
+    }
+
+    const snapshot = await query.get();
 
     return snapshot.docs.map(doc => doc.data() as Activity);
   }

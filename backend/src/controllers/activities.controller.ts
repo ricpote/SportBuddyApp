@@ -15,7 +15,13 @@ type ActivityParams = {
       return;
     }
 
-    const activities = await activitiesService.getMyActivities(req.user.uid);
+    const { sportId, status, date } = req.query;
+
+    const activities = await activitiesService.getMyActivities(req.user.uid, {
+      sportId: sportId as string | undefined,
+      status: status as ActivityStatus | undefined,
+      date: date ? new Date(date as string) : undefined,
+    });
 
     res.status(200).json(activities);
   } catch (error) {

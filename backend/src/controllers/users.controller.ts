@@ -41,7 +41,7 @@ export async function createMyProfile(
     const user = await usersService.createUserProfile(req.user.uid, {
       name: req.body.username,
       email: req.user.email ?? req.body.email,
-      Sportslist: req.body.sportsList,
+      sports: req.body.sportsList,
       location: req.body.location,
      
     });

@@ -18,7 +18,7 @@ export type ActivityLocation = {
 };
 
 export type Activity = {
- activityId: string;
+  id: string;
 
   title: string;
   description: string;
@@ -70,7 +70,7 @@ export function createActivityObject(
   const now = new Date();
 
   return {
-    activityId:String(id),
+    id,
 
     title: data.title,
     description: data.description,
