@@ -1,7 +1,8 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -31,35 +32,53 @@ export default function LoginScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: '#0F172A' }]}>
       <SafeAreaView style={styles.safeArea}>
+
+        {/* O teu Logótipo Personalizado */}
+        <Image
+          source={require('../../../assets/images/sportbuddyIcon.png')}
+          style={styles.logoIcon}
+          resizeMode="contain"
+        />
+
         <ThemedText type="title" style={styles.title}>
           SportBuddy
         </ThemedText>
-        <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+        <ThemedText style={styles.subtitle}>
           Inicia sessão para continuar
         </ThemedText>
 
-        <ThemedView style={styles.form}>
-          <TextInput
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            placeholder="Email"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            placeholder="Palavra-passe"
-            placeholderTextColor={theme.textSecondary}
-            secureTextEntry
-            autoComplete="password"
-            value={password}
-            onChangeText={setPassword}
-          />
+        <View style={styles.form}>
+
+          {/* Caixa do Email com Ícone */}
+          <View style={[styles.inputContainer, { backgroundColor: theme.backgroundElement }]}>
+            <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: theme.text }]}
+              placeholder="Email"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+
+          {/* Caixa da Palavra-passe com Ícone */}
+          <View style={[styles.inputContainer, { backgroundColor: theme.backgroundElement }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: theme.text }]}
+              placeholder="Palavra-passe"
+              placeholderTextColor={theme.textSecondary}
+              secureTextEntry
+              autoComplete="password"
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
 
           {error && (
             <ThemedText themeColor="text" style={styles.error}>
@@ -67,15 +86,16 @@ export default function LoginScreen() {
             </ThemedText>
           )}
 
+          {/* Botão com o teu Laranja Principal */}
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: theme.text },
+              { backgroundColor: '#CF8444' },
               pressed && styles.pressed,
             ]}
             disabled={submitting}
             onPress={handleSubmit}>
-            <ThemedText style={{ color: theme.background }} type="smallBold">
+            <ThemedText style={{ color: '#0F172A' }} type="smallBold">
               {submitting ? 'A entrar...' : 'Entrar'}
             </ThemedText>
           </Pressable>
@@ -83,11 +103,11 @@ export default function LoginScreen() {
           <Link href="/register" asChild>
             <Pressable style={styles.linkPressable}>
               <ThemedText type="link" themeColor="textSecondary">
-                Não tens conta? <ThemedText type="linkPrimary">Regista-te</ThemedText>
+                Não tens conta? <ThemedText style={{ color: '#CF8444' }}>Regista-te</ThemedText>
               </ThemedText>
             </Pressable>
           </Link>
-        </ThemedView>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -105,21 +125,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     gap: Spacing.two,
   },
+  logoIcon: {
+    alignSelf: 'center',
+    width: 120,
+    height: 120,
+    marginBottom: Spacing.two,
+  },
   title: {
     textAlign: 'center',
+    color: '#CF8444', // Laranja do teu logótipo
   },
   subtitle: {
     textAlign: 'center',
+    color: '#A0AEC0', // Um cinzento claro para se ver bem no fundo escuro
     marginBottom: Spacing.four,
   },
   form: {
     gap: Spacing.three,
   },
-  input: {
+  /* Nova estrutura para as caixas de texto com ícones */
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 48,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
+  },
+  inputIcon: {
+    marginRight: Spacing.two,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
+    height: '100%', // Garante que a zona de clique ocupa toda a caixa
   },
   button: {
     height: 48,
@@ -133,6 +171,7 @@ const styles = StyleSheet.create({
   },
   error: {
     textAlign: 'center',
+    color: '#FF6B6B',
   },
   linkPressable: {
     alignItems: 'center',
