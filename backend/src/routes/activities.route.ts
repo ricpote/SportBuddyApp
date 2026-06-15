@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware";
 import {
-  getMyActivities,
   listActivities,
+  getMyActivities,
   createActivity,
   getActivityById,
   updateActivity,
@@ -27,9 +27,17 @@ router.patch("/:activityId", authMiddleware, updateActivity);
 
 router.patch("/:activityId/cancel", authMiddleware, cancelActivity);
 
-router.patch("/:activityId/remove-participant", authMiddleware,removeParticipant);
+router.patch(
+  "/:activityId/remove-participant",
+  authMiddleware,
+  removeParticipant
+);
 
-router.patch("/:activityId/admit-from-waitlist",authMiddleware,admitFromWaitlist);
+router.patch(
+  "/:activityId/admit-from-waitlist",
+  authMiddleware,
+  admitFromWaitlist
+);
 
 router.post("/:activityId/join", authMiddleware, joinActivity);
 

@@ -1,11 +1,11 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
-import { Activity, ActivityStatus, CreateActivityDto } from "../models/activity.model";
+import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
 
 type ActivityParams = {
   activityId: string;
-};export async function getMyActivities(
+}; export async function getMyActivities(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
@@ -32,23 +32,48 @@ type ActivityParams = {
 }
 
 export async function listActivities(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response
 ): Promise<void> {
   try {
-    const { sportId, status, difficultyLevel, createdBy } = req.query;
+    const sportId =
+      typeof req.query.sportId === "string" ? req.query.sportId : undefined;
+
+    const difficultyLevel =
+      typeof req.query.difficultyLevel === "string"
+        ? (req.query.difficultyLevel as SkillLevel)
+        : undefined;
+
+    const status =
+      typeof req.query.status === "string"
+        ? (req.query.status as ActivityStatus)
+        : undefined;
+
+    const lat =
+      typeof req.query.lat === "string" ? Number(req.query.lat) : undefined;
+
+    const lng =
+      typeof req.query.lng === "string" ? Number(req.query.lng) : undefined;
+
+    const radiusKm =
+      typeof req.query.radiusKm === "string"
+        ? Number(req.query.radiusKm)
+        : undefined;
 
     const activities = await activitiesService.listActivities({
-      sportId: sportId as string | undefined,
-      status: status as ActivityStatus | undefined,
-      difficultyLevel: difficultyLevel as Activity["difficultyLevel"] | undefined,
-      createdBy: createdBy as string | undefined,
+      sportId,
+      difficultyLevel,
+      status,
+      lat,
+      lng,
+      radiusKm,
     });
 
     res.status(200).json(activities);
   } catch (error) {
-    res.status(500).json({
-      message: error instanceof Error ? error.message : "Error listing activities",
+    res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error listing activities",
     });
   }
 }
@@ -179,7 +204,7 @@ export async function cancelActivity(
 }
 
 export async function removeParticipant(
- 
+
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {

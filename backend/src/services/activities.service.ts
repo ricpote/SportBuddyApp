@@ -4,8 +4,9 @@ import {
   ActivityStatus,
   CreateActivityDto,
   createActivityObject,
+  SkillLevel,
 } from "../models/activity.model";
-
+import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
 const ACTIVITIES_COLLECTION = "activities";
 
 export type UpdateActivityDto = {
@@ -16,13 +17,17 @@ export type UpdateActivityDto = {
   requiresApproval?: boolean;
 };
 
-export type ListActivitiesFilters = {
-  sportId?: string;
-  status?: ActivityStatus;
-  difficultyLevel?: Activity["difficultyLevel"];
-  createdBy?: string;
-};
 
+export type ListActivitiesFilters = {
+  status?: ActivityStatus;
+  sportId?: string;
+  difficultyLevel?: SkillLevel;
+  createdBy?: string;
+
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+};
 export type MyActivitiesFilters = {
   sportId?: string;
   status?: ActivityStatus;
@@ -66,6 +71,7 @@ export class ActivitiesService {
     return activity;
   }
 
+
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
     const statusFilter = filters.status ? [filters.status] : ["open", "full"];
 
@@ -87,7 +93,41 @@ export class ActivitiesService {
 
     const snapshot = await query.get();
 
-    return snapshot.docs.map(doc => doc.data() as Activity);
+    let activities = snapshot.docs.map((doc) => doc.data() as Activity);
+
+    if (
+      filters.lat !== undefined &&
+      filters.lng !== undefined &&
+      filters.radiusKm !== undefined
+    ) {
+      const center = {
+        lat: filters.lat,
+        lng: filters.lng,
+      };
+
+      if (!isValidCoordinates(center)) {
+        throw new Error("Invalid coordinates");
+      }
+
+      activities = activities.filter((activity) => {
+        const activityCoordinates = {
+          lat: activity.location.lat,
+          lng: activity.location.lng,
+        };
+
+        if (!isValidCoordinates(activityCoordinates)) {
+          return false;
+        }
+
+        return isWithinRadiusKm(
+          center,
+          activityCoordinates,
+          filters.radiusKm!
+        );
+      });
+    }
+
+    return activities;
   }
 
   async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
@@ -169,7 +209,7 @@ export class ActivitiesService {
     return { ...activity, status: "cancelled", updatedAt: now };
   }
 
-  async removeParticipant(activityId: string, requesterId: string, participantId: string ): Promise<Activity> {
+  async removeParticipant(activityId: string, requesterId: string, participantId: string): Promise<Activity> {
     const activity = await this.getActivityById(activityId);
 
     if (!activity) {
@@ -336,11 +376,15 @@ export class ActivitiesService {
     const newStatus: ActivityStatus = isFull ? "full" : "open";
     const now = new Date();
 
-    await this.activitiesRef.doc(activityId).update({participantsList: updatedParticipants,waitlist: updatedWaitlist,
-      status: newStatus,updatedAt: now,});
+    await this.activitiesRef.doc(activityId).update({
+      participantsList: updatedParticipants, waitlist: updatedWaitlist,
+      status: newStatus, updatedAt: now,
+    });
 
-    return {...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus,
-      updatedAt: now,};
+    return {
+      ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus,
+      updatedAt: now,
+    };
   }
 }
 
