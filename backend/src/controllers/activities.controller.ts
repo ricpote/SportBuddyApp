@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
 import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
-
+import { parseCreateActivityDto } from "../util/activityValidation.util";
 type ActivityParams = {
   activityId: string;
 }; export async function getMyActivities(
@@ -79,8 +79,7 @@ export async function listActivities(
 }
 
 export async function createActivity(
-
-  req: AuthenticatedRequest<ActivityParams>,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
   try {
@@ -91,16 +90,7 @@ export async function createActivity(
       return;
     }
 
-    const data: CreateActivityDto = {
-      title: req.body.title,
-      description: req.body.description,
-      sportId: req.body.sportId,
-      maxParticipants: req.body.maxParticipants,
-      location: req.body.location,
-      date: new Date(req.body.date),
-      difficultyLevel: req.body.difficultyLevel,
-      requiresApproval: req.body.requiresApproval ?? false,
-    };
+    const data = parseCreateActivityDto(req.body);
 
     const activity = await activitiesService.createActivity(req.user.uid, data);
 

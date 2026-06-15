@@ -7,6 +7,8 @@ import {
   SkillLevel,
 } from "../models/activity.model";
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
+import { usersService } from "./users.service";
+import { sportsService } from "./sports.service";
 const ACTIVITIES_COLLECTION = "activities";
 
 export type UpdateActivityDto = {
@@ -38,6 +40,22 @@ export class ActivitiesService {
   private activitiesRef = db.collection(ACTIVITIES_COLLECTION);
 
   async createActivity(createdBy: string, data: CreateActivityDto): Promise<Activity> {
+    const creator = await usersService.getUserById(createdBy);
+
+    if (!creator) {
+      throw new Error("User profile not found");
+    }
+
+    if (creator.status !== "active") {
+      throw new Error("Only active users can create activities");
+    }
+
+    const sport = await sportsService.getSportById(data.sportId);
+
+    if (!sport) {
+      throw new Error("Sport not found");
+    }
+
     const docRef = this.activitiesRef.doc();
     const activity = createActivityObject(docRef.id, createdBy, data);
 
