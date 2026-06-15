@@ -79,9 +79,15 @@ export default function HomeScreen() {
             <ThemedText type="subtitle" style={{ color: '#FFFFFF', fontSize: 20 }}>
               Atividades Próximas
             </ThemedText>
-            <ThemedText style={{ color: '#CF8444', fontWeight: 'bold' }}>
-              Ver todas {'>'}
-            </ThemedText>
+
+            <Link href="/explore" asChild>
+              <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedText style={{ color: '#CF8444', fontWeight: 'bold' }}>
+                  Ver todas {'>'}
+                </ThemedText>
+              </Pressable>
+            </Link>
+
           </View>
 
           <View style={styles.activitiesList}>
@@ -210,7 +216,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
   },
-  // Estado Vazio (Empty State)
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -315,5 +320,9 @@ const styles = StyleSheet.create({
   spotsText: {
     color: '#A0AEC0',
     fontSize: 14,
+  },
+  // O estilo pressed é necessário para o link dar aquele feedback visual ao clicar
+  pressed: {
+    opacity: 0.7,
   },
 });
