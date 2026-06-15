@@ -1,6 +1,8 @@
 import { db } from "../config/firebase";
+import { FieldValue } from "firebase-admin/firestore";
 import {
   CreateUserDto,
+  ListUsersFilters,
   UpdateUserDto,
   User,
   UserRole,
@@ -143,6 +145,37 @@ export class UsersService {
   async userExists(firebaseUid: string): Promise<boolean> {
     const userDoc = await this.usersRef.doc(firebaseUid).get();
     return userDoc.exists;
+  }
+
+  async incrementStat(
+    userId: string,
+    field: keyof Pick<
+      User["stats"],
+      | "activitiesJoined"
+      | "activitiesCreated"
+      | "mvpVotesReceived"
+      | "fairPlayVotesReceived"
+    >,
+    delta: 1 | -1
+  ): Promise<void> {
+    await this.usersRef
+      .doc(userId)
+      .update({ [`stats.${field}`]: FieldValue.increment(delta) });
+  }
+
+  async listUsers(filters: ListUsersFilters = {}): Promise<User[]> {
+    let query: FirebaseFirestore.Query = this.usersRef;
+
+    if (filters.role) {
+      query = query.where("role", "==", filters.role);
+    }
+
+    if (filters.status) {
+      query = query.where("status", "==", filters.status);
+    }
+
+    const snapshot = await query.orderBy("createdAt", "desc").get();
+    return snapshot.docs.map((doc) => doc.data() as User);
   }
 }
 

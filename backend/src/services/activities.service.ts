@@ -60,6 +60,7 @@ export class ActivitiesService {
     const activity = createActivityObject(docRef.id, createdBy, data);
 
     await docRef.set(activity);
+    await usersService.incrementStat(createdBy, "activitiesCreated", 1);
 
     return activity;
   }
@@ -249,9 +250,10 @@ export class ActivitiesService {
     let updatedParticipants = activity.participantsList.filter(id => id !== participantId);
     let updatedWaitlist = [...activity.waitlist];
     const now = new Date();
+    let promoted: string | undefined;
 
     if (!activity.requiresApproval && updatedWaitlist.length > 0) {
-      const promoted = updatedWaitlist.shift()!;
+      promoted = updatedWaitlist.shift()!;
       updatedParticipants = [...updatedParticipants, promoted];
     }
 
@@ -264,6 +266,11 @@ export class ActivitiesService {
       status: newStatus,
       updatedAt: now,
     });
+
+    await usersService.incrementStat(participantId, "activitiesJoined", -1);
+    if (promoted) {
+      await usersService.incrementStat(promoted, "activitiesJoined", 1);
+    }
 
     return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
   }
@@ -309,6 +316,7 @@ export class ActivitiesService {
       status: newStatus,
       updatedAt: now,
     });
+    await usersService.incrementStat(userId, "activitiesJoined", 1);
 
     return { ...activity, participantsList: updatedParticipants, status: newStatus, updatedAt: now };
   }
@@ -350,9 +358,10 @@ export class ActivitiesService {
 
     let updatedParticipants = activity.participantsList.filter(id => id !== userId);
     let updatedWaitlist = [...activity.waitlist];
+    let promoted: string | undefined;
 
     if (!activity.requiresApproval && updatedWaitlist.length > 0) {
-      const promoted = updatedWaitlist.shift()!;
+      promoted = updatedWaitlist.shift()!;
       updatedParticipants = [...updatedParticipants, promoted];
     }
 
@@ -365,6 +374,11 @@ export class ActivitiesService {
       status: newStatus,
       updatedAt: now,
     });
+
+    await usersService.incrementStat(userId, "activitiesJoined", -1);
+    if (promoted) {
+      await usersService.incrementStat(promoted, "activitiesJoined", 1);
+    }
 
     return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
   }
@@ -398,6 +412,7 @@ export class ActivitiesService {
       participantsList: updatedParticipants, waitlist: updatedWaitlist,
       status: newStatus, updatedAt: now,
     });
+    await usersService.incrementStat(userId, "activitiesJoined", 1);
 
     return {
       ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus,

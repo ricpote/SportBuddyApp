@@ -29,6 +29,8 @@ export type User = {
 
   name: string;
   email: string;
+  bio?: string;
+  avatarUrl?: string;
 
   role: UserRole;
   status: UserStatus;
@@ -42,6 +44,9 @@ export type User = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type PublicUser = Omit<User, "email" | "firebaseUid">;
+
 export type CreateUserDto = {
   name: string;
   email: string;
@@ -51,8 +56,15 @@ export type CreateUserDto = {
 
 export type UpdateUserDto = {
   name?: string;
+  bio?: string;
+  avatarUrl?: string;
   sports?: UserSportProfile[];
   location?: UserLocation;
+};
+
+export type ListUsersFilters = {
+  role?: UserRole;
+  status?: UserStatus;
 };
 
 export function createUserObject(
