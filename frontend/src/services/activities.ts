@@ -31,7 +31,7 @@ export function joinActivity(activityId: string): Promise<Activity> {
 }
 
 export function leaveActivity(activityId: string): Promise<Activity> {
-  return api.post<Activity>(`/api/activities/${activityId}/leave`);
+  return api.delete<Activity>(`/api/activities/${activityId}/leave`);
 }
 
 export function cancelActivity(activityId: string): Promise<Activity> {

@@ -58,8 +58,16 @@ export default function CreateActivityScreen() {
   async function handleSubmit() {
     setError(null);
 
-    if (!title.trim() || !sportId || !locationName.trim()) {
-      setError('Preenche o título, modalidade e local');
+    // Regras alinhadas com a validação do backend (parseCreateActivityDto):
+    // título, descrição, modalidade, nome e morada do local são obrigatórios.
+    if (
+      !title.trim() ||
+      !description.trim() ||
+      !sportId ||
+      !locationName.trim() ||
+      !address.trim()
+    ) {
+      setError('Preenche o título, descrição, modalidade, local e morada');
       return;
     }
 
@@ -69,8 +77,8 @@ export default function CreateActivityScreen() {
     }
 
     const parsedMax = Number(maxParticipants);
-    if (!Number.isInteger(parsedMax) || parsedMax < 1) {
-      setError('Número máximo de participantes inválido');
+    if (!Number.isInteger(parsedMax) || parsedMax < 2) {
+      setError('O número máximo de participantes tem de ser pelo menos 2');
       return;
     }
 
@@ -86,7 +94,7 @@ export default function CreateActivityScreen() {
         difficultyLevel,
         requiresApproval,
       });
-      router.replace({ pathname: '/activity/[id]', params: { id: activity.activityId } });
+      router.replace({ pathname: '/activity/[id]', params: { id: activity.id } });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível criar a atividade');
     } finally {

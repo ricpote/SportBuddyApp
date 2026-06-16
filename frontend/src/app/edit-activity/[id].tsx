@@ -95,7 +95,7 @@ export default function EditActivityScreen() {
 
     setSubmitting(true);
     try {
-      await updateActivity(activity!.activityId, {
+      await updateActivity(activity!.id, {
         title: title.trim(),
         description: description.trim(),
         maxParticipants: parsedMax,

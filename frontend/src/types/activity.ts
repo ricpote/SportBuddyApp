@@ -10,7 +10,7 @@ export type ActivityLocation = {
 };
 
 export type Activity = {
-  activityId: string;
+  id: string;
 
   title: string;
   description: string;
