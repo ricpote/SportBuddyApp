@@ -100,11 +100,11 @@ export default function ActivityDetailScreen() {
   }
 
   function handleJoin() {
-    return runAction(() => joinActivity(activity!.activityId), 'Não foi possível entrar na atividade');
+    return runAction(() => joinActivity(activity!.id), 'Não foi possível entrar na atividade');
   }
 
   function handleLeave() {
-    return runAction(() => leaveActivity(activity!.activityId), 'Não foi possível sair da atividade');
+    return runAction(() => leaveActivity(activity!.id), 'Não foi possível sair da atividade');
   }
 
   function handleCancel() {
@@ -113,19 +113,19 @@ export default function ActivityDetailScreen() {
       return;
     }
     setConfirmingCancel(false);
-    return runAction(() => cancelActivity(activity!.activityId), 'Não foi possível cancelar a atividade');
+    return runAction(() => cancelActivity(activity!.id), 'Não foi possível cancelar a atividade');
   }
 
   function handleRemoveParticipant(participantId: string) {
     return runAction(
-      () => removeParticipant(activity!.activityId, participantId),
+      () => removeParticipant(activity!.id, participantId),
       'Não foi possível remover o participante'
     );
   }
 
   function handleAdmit(userId: string) {
     return runAction(
-      () => admitFromWaitlist(activity!.activityId, userId),
+      () => admitFromWaitlist(activity!.id, userId),
       'Não foi possível admitir o utilizador'
     );
   }
@@ -218,7 +218,7 @@ export default function ActivityDetailScreen() {
                 {/* Link asChild drops the Pressable's style function on web, so the
                     visual styles live on an inner View instead. */}
                 <Link
-                  href={{ pathname: '/edit-activity/[id]', params: { id: activity.activityId } }}
+                  href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }}
                   asChild>
                   <Pressable style={({ pressed }) => pressed && styles.pressed}>
                     <View style={[styles.button, { backgroundColor: theme.text }]}>

@@ -127,8 +127,8 @@ export default function ProfileScreen() {
         <ThemedView style={styles.list}>
           {myActivities.map((activity) => (
             <Link
-              key={activity.activityId}
-              href={{ pathname: '/activity/[id]', params: { id: activity.activityId } }}
+              key={activity.id}
+              href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
               asChild>
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
                 <ThemedView type="backgroundElement" style={styles.card}>

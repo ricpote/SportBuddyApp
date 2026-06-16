@@ -184,7 +184,7 @@ export default function ExploreScreen() {
 
         <ThemedView style={styles.list}>
           {visibleActivities?.map((activity) => (
-            <Link key={activity.activityId} href={{ pathname: '/activity/[id]', params: { id: activity.activityId } }} asChild>
+            <Link key={activity.id} href={{ pathname: '/activity/[id]', params: { id: activity.id } }} asChild>
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
                 <ThemedView type="backgroundElement" style={styles.card}>
                   <ThemedText type="smallBold">{activity.title}</ThemedText>

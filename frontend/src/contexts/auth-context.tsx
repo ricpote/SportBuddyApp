@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Creates the corresponding profile document via the backend API
     // (POST /api/users/profile -> usersService.createUserProfile)
-    await api.post('/api/users/profile', { username: name, email });
+    await api.post('/api/users/profile', { name, email });
   }
 
   async function signOut() {

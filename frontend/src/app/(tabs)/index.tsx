@@ -1,5 +1,5 @@
-import { Link } from 'expo-router';
-import { useState } from 'react';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,19 +8,69 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { listActivities } from '@/services/activities';
+import { listSports } from '@/services/sports';
+import { Activity } from '@/types/activity';
+import { Sport } from '@/types/sport';
 
-// Filtros base (Podem ser estáticos ou vir da Base de Dados)
-const FILTERS = ['Todos', 'Futebol', 'Basquetebol', 'Corrida', 'Ciclismo', 'Padel'];
+const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
+  beginner: 'Iniciante',
+  intermediate: 'Intermédio',
+  advanced: 'Avançado',
+  competitive: 'Competitivo',
+};
+
+const ALL_FILTER = 'Todos';
+
+function isUpcoming(activity: Activity) {
+  return (
+    (activity.status === 'open' || activity.status === 'full') &&
+    new Date(activity.date).getTime() >= Date.now()
+  );
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
 
-  // Estado para controlar o filtro selecionado (ex: 'Futebol')
-  const [activeFilter, setActiveFilter] = useState('Todos');
+  // Filtro selecionado (nome da modalidade, ou 'Todos')
+  const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
 
-  // Estado que vai receber as atividades vindas do Backend/Firebase (começa vazio)
-  const [activities, setActivities] = useState<any[]>([]);
+  // Dados reais vindos do backend
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      listActivities()
+        .then(setActivities)
+        .catch(() => setActivities([]));
+      listSports()
+        .then(setSports)
+        .catch(() => setSports([]));
+    }, [])
+  );
+
+  // sportId -> nome da modalidade, para mostrar no cartão e filtrar por nome
+  const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
+
+  // Chips de filtro: "Todos" + as modalidades que existem
+  const filters = [ALL_FILTER, ...sports.map((s) => s.name)];
+
+  const upcoming = activities
+    .filter(isUpcoming)
+    .filter(
+      (a) => activeFilter === ALL_FILTER || sportNameById.get(a.sportId) === activeFilter
+    )
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: '#0F172A' }]}>
@@ -44,7 +94,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filtersContainer}
           >
-            {FILTERS.map((filter) => {
+            {filters.map((filter) => {
               const isActive = activeFilter === filter;
               return (
                 <Pressable
@@ -55,7 +105,7 @@ export default function HomeScreen() {
                     isActive && styles.filterChipActive
                   ]}
                 >
-                  {filter === 'Todos' && (
+                  {filter === ALL_FILTER && (
                     <Ionicons
                       name="medal-outline"
                       size={16}
@@ -91,63 +141,77 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.activitiesList}>
-            {activities.length > 0 ? (
-              // Se houver atividades na Base de Dados, desenha os cartões
-              activities.map((activity) => (
-                <View key={activity.id} style={styles.activityCard}>
-                  <View style={styles.cardImagePlaceholder}>
-                    <View style={styles.sportBadge}>
-                      {/* @ts-ignore */}
-                      <Ionicons name={activity.icon} size={14} color="#FFFFFF" />
-                      <ThemedText style={styles.sportBadgeText}>{activity.sport}</ThemedText>
-                    </View>
-                    {activity.isFree && (
-                      <View style={styles.freeBadge}>
-                        <ThemedText style={styles.freeBadgeText}>Grátis</ThemedText>
+            {upcoming.length > 0 ? (
+              // Cartões com os dados reais vindos do backend
+              upcoming.map((activity) => {
+                const difficulty = DIFFICULTY_LABELS[activity.difficultyLevel];
+                return (
+                  <Pressable
+                    key={activity.id}
+                    onPress={() =>
+                      router.push({ pathname: '/activity/[id]', params: { id: activity.id } })
+                    }
+                    style={({ pressed }) => pressed && styles.pressed}>
+                      <View style={styles.activityCard}>
+                        <View style={styles.cardImagePlaceholder}>
+                          <View style={styles.sportBadge}>
+                            <Ionicons name="football-outline" size={14} color="#FFFFFF" />
+                            <ThemedText style={styles.sportBadgeText}>
+                              {sportNameById.get(activity.sportId) ?? activity.sportId}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        <View style={styles.cardBody}>
+                          <ThemedText type="subtitle" style={styles.activityTitle}>
+                            {activity.title}
+                          </ThemedText>
+
+                          <View style={styles.infoRow}>
+                            <Ionicons name="calendar-outline" size={14} color="#A0AEC0" />
+                            <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
+                            <Ionicons name="time-outline" size={14} color="#A0AEC0" style={{ marginLeft: 10 }} />
+                            <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
+                          </View>
+
+                          <View style={styles.infoRow}>
+                            <Ionicons name="location-outline" size={14} color="#A0AEC0" />
+                            <ThemedText style={styles.infoText}>{activity.location.name}</ThemedText>
+                          </View>
+
+                          <View style={styles.cardFooter}>
+                            <View style={[
+                              styles.difficultyBadge,
+                              difficulty === 'Avançado' ? { backgroundColor: '#FF6B6B' } : {}
+                            ]}>
+                              <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
+                            </View>
+
+                            <View style={styles.spotsContainer}>
+                              <Ionicons name="people-outline" size={14} color="#A0AEC0" />
+                              <ThemedText style={styles.spotsText}>
+                                {activity.participantsList.length}/{activity.maxParticipants}
+                              </ThemedText>
+                              {activity.waitlist.length > 0 && (
+                                <ThemedText style={[styles.spotsText, { color: '#CF8444' }]}>
+                                  +{activity.waitlist.length} em espera
+                                </ThemedText>
+                              )}
+                            </View>
+                          </View>
+                        </View>
                       </View>
-                    )}
-                  </View>
-
-                  <View style={styles.cardBody}>
-                    <ThemedText type="subtitle" style={styles.activityTitle}>
-                      {activity.title}
-                    </ThemedText>
-
-                    <View style={styles.infoRow}>
-                      <Ionicons name="calendar-outline" size={14} color="#A0AEC0" />
-                      <ThemedText style={styles.infoText}>{activity.date}</ThemedText>
-                      <Ionicons name="time-outline" size={14} color="#A0AEC0" style={{ marginLeft: 10 }} />
-                      <ThemedText style={styles.infoText}>{activity.duration}</ThemedText>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <Ionicons name="location-outline" size={14} color="#A0AEC0" />
-                      <ThemedText style={styles.infoText}>{activity.location}</ThemedText>
-                    </View>
-
-                    <View style={styles.cardFooter}>
-                      <View style={[
-                        styles.difficultyBadge,
-                        activity.difficulty === 'Avançado' ? { backgroundColor: '#FF6B6B' } : {}
-                      ]}>
-                        <ThemedText style={styles.difficultyText}>{activity.difficulty}</ThemedText>
-                      </View>
-
-                      <ThemedText style={styles.spotsText}>
-                        <Ionicons name="people-outline" size={14} /> {activity.spots}{' '}
-                        <ThemedText style={{ color: '#CF8444' }}>{activity.waiting}</ThemedText>
-                      </ThemedText>
-                    </View>
-                  </View>
-                </View>
-              ))
+                  </Pressable>
+                );
+              })
             ) : (
-              // Se a lista estiver vazia (O estado atual)
               <View style={styles.emptyState}>
                 <Ionicons name="sad-outline" size={48} color="#334155" />
                 <ThemedText style={styles.emptyStateTitle}>Nenhuma atividade encontrada</ThemedText>
                 <ThemedText style={styles.emptyStateText}>
-                  Não existem atividades de momento ou ainda estão a ser carregadas.
+                  {activeFilter === ALL_FILTER
+                    ? 'Não existem atividades de momento. Cria a primeira!'
+                    : `Não há atividades de ${activeFilter} de momento.`}
                 </ThemedText>
               </View>
             )}
@@ -316,6 +380,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  spotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   spotsText: {
     color: '#A0AEC0',
