@@ -36,6 +36,15 @@ export type MyActivitiesFilters = {
   date?: Date;
 };
 
+function normalizeActivity(data: FirebaseFirestore.DocumentData): Activity {
+  return {
+    ...data,
+    date: data.date?.toDate ? data.date.toDate() : data.date,
+    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+    updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+  } as Activity;
+}
+
 export class ActivitiesService {
   private activitiesRef = db.collection(ACTIVITIES_COLLECTION);
 
@@ -72,7 +81,7 @@ export class ActivitiesService {
       return null;
     }
 
-    const activity = doc.data() as Activity;
+    const activity = normalizeActivity(doc.data()!);
 
     if (
       activity.status !== "completed" &&
@@ -112,7 +121,7 @@ export class ActivitiesService {
 
     const snapshot = await query.get();
 
-    let activities = snapshot.docs.map((doc) => doc.data() as Activity);
+    let activities = snapshot.docs.map((doc) => normalizeActivity(doc.data()));
 
     if (
       filters.lat !== undefined &&
@@ -172,7 +181,7 @@ export class ActivitiesService {
 
     const snapshot = await query.get();
 
-    return snapshot.docs.map(doc => doc.data() as Activity);
+    return snapshot.docs.map(doc => normalizeActivity(doc.data()));
   }
 
   async updateActivity(activityId: string, requesterId: string, data: UpdateActivityDto
@@ -192,7 +201,7 @@ export class ActivitiesService {
     }
 
     const now = new Date();
-    const changes = { ...data, updatedAt: now };
+    const changes = JSON.parse(JSON.stringify({ ...data, updatedAt: now }));
 
     await this.activitiesRef.doc(activityId).update(changes);
 

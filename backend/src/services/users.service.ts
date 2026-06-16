@@ -29,7 +29,9 @@ export class UsersService {
     // This makes it easy to find the logged-in user.
     const user = createUserObject(firebaseUid, firebaseUid, data);
 
-    await this.usersRef.doc(firebaseUid).set(user);
+    const userDoc = JSON.parse(JSON.stringify(user));
+
+    await this.usersRef.doc(firebaseUid).set(userDoc);
 
     return user;
   }
