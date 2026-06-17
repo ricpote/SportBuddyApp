@@ -3,9 +3,12 @@ import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
 import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
 import { parseCreateActivityDto } from "../util/activityValidation.util";
+
 type ActivityParams = {
   activityId: string;
-}; export async function getMyActivities(
+};
+
+export async function getMyActivities(
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
@@ -104,7 +107,6 @@ export async function createActivity(
 }
 
 export async function getActivityById(
-
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {
@@ -130,7 +132,6 @@ export async function getActivityById(
 }
 
 export async function updateActivity(
-
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {
@@ -165,7 +166,6 @@ export async function updateActivity(
 }
 
 export async function cancelActivity(
-
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {
@@ -193,8 +193,63 @@ export async function cancelActivity(
   }
 }
 
-export async function removeParticipant(
+export async function joinActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "User not authenticated",
+      });
+      return;
+    }
 
+    const { activityId } = req.params;
+
+    const activity = await activitiesService.joinActivity(
+      activityId,
+      req.user.uid
+    );
+
+    res.status(200).json(activity);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error joining activity",
+    });
+  }
+}
+
+export async function leaveActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "User not authenticated",
+      });
+      return;
+    }
+
+    const { activityId } = req.params;
+
+    const activity = await activitiesService.leaveActivity(
+      activityId,
+      req.user.uid
+    );
+
+    res.status(200).json(activity);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error leaving activity",
+    });
+  }
+}
+
+export async function removeParticipant(
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {
@@ -231,52 +286,7 @@ export async function removeParticipant(
   }
 }
 
-export async function joinActivity(
-  req: AuthenticatedRequest<ActivityParams>,
-  res: Response
-): Promise<void> {
-  try {
-    if (!req.user) {
-      res.status(401).json({ message: "User not authenticated" });
-      return;
-    }
-
-    const { activityId } = req.params;
-
-    const activity = await activitiesService.joinActivity(activityId, req.user.uid);
-
-    res.status(200).json(activity);
-  } catch (error) {
-    res.status(400).json({
-      message: error instanceof Error ? error.message : "Error joining activity",
-    });
-  }
-}
-
-export async function leaveActivity(
-  req: AuthenticatedRequest<ActivityParams>,
-  res: Response
-): Promise<void> {
-  try {
-    if (!req.user) {
-      res.status(401).json({ message: "User not authenticated" });
-      return;
-    }
-
-    const { activityId } = req.params;
-
-    const activity = await activitiesService.leaveActivity(activityId, req.user.uid);
-
-    res.status(200).json(activity);
-  } catch (error) {
-    res.status(400).json({
-      message: error instanceof Error ? error.message : "Error leaving activity",
-    });
-  }
-}
-
 export async function admitFromWaitlist(
-
   req: AuthenticatedRequest<ActivityParams>,
   res: Response
 ): Promise<void> {

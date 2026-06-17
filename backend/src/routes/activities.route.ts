@@ -7,10 +7,10 @@ import {
   getActivityById,
   updateActivity,
   cancelActivity,
-  removeParticipant,
-  admitFromWaitlist,
   joinActivity,
   leaveActivity,
+  removeParticipant,
+  admitFromWaitlist,
 } from "../controllers/activities.controller";
 
 const router = Router();
@@ -22,6 +22,10 @@ router.get("/me", authMiddleware, getMyActivities);
 router.post("/", authMiddleware, createActivity);
 
 router.get("/:activityId", authMiddleware, getActivityById);
+
+router.post("/:activityId/join", authMiddleware, joinActivity);
+
+router.post("/:activityId/leave", authMiddleware, leaveActivity);
 
 router.patch("/:activityId", authMiddleware, updateActivity);
 
@@ -38,9 +42,5 @@ router.patch(
   authMiddleware,
   admitFromWaitlist
 );
-
-router.post("/:activityId/join", authMiddleware, joinActivity);
-
-router.delete("/:activityId/leave", authMiddleware, leaveActivity);
 
 export default router;

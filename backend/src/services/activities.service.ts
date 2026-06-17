@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase-admin/firestore";
 import { db } from "../config/firebase";
 import {
   Activity,
@@ -9,7 +10,12 @@ import {
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
 import { usersService } from "./users.service";
 import { sportsService } from "./sports.service";
+
 const ACTIVITIES_COLLECTION = "activities";
+
+function toDate(value: unknown): Date {
+  return value instanceof Timestamp ? value.toDate() : (value as Date);
+}
 
 export type UpdateActivityDto = {
   title?: string;
@@ -19,17 +25,16 @@ export type UpdateActivityDto = {
   requiresApproval?: boolean;
 };
 
-
 export type ListActivitiesFilters = {
   status?: ActivityStatus;
   sportId?: string;
   difficultyLevel?: SkillLevel;
   createdBy?: string;
-
   lat?: number;
   lng?: number;
   radiusKm?: number;
 };
+
 export type MyActivitiesFilters = {
   sportId?: string;
   status?: ActivityStatus;
@@ -98,7 +103,6 @@ export class ActivitiesService {
 
     return activity;
   }
-
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
     const statusFilter = filters.status ? [filters.status] : ["open", "full"];

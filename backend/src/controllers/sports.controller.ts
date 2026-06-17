@@ -30,6 +30,7 @@ async function requireAdmin(
 export async function listSports(_req: Request, res: Response): Promise<void> {
   try {
     const sports = await sportsService.listSports();
+
     res.status(200).json(sports);
   } catch (error) {
     res.status(500).json({
@@ -44,6 +45,7 @@ export async function getSportById(
 ): Promise<void> {
   try {
     const { sportId } = req.params;
+
     const sport = await sportsService.getSportById(sportId);
 
     if (!sport) {
