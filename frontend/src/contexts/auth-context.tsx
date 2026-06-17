@@ -40,9 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName: name });
 
-    // Creates the corresponding profile document via the backend API
-    // (POST /api/users/profile -> usersService.createUserProfile)
-    await api.post('/api/users/profile', { name, email });
+    try {
+      await api.post('/api/users/profile', { name, email });
+    } catch (err) {
+      await credential.user.delete();
+      throw err;
+    }
   }
 
   async function signOut() {

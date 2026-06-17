@@ -9,13 +9,17 @@ import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constan
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { api } from '@/services/api';
-import { listActivities } from '@/services/activities';
+import { getMyActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
 
 type ProfileData = {
   name: string;
   email: string;
   role: string;
+  stats: {
+    activitiesCreated: number;
+    activitiesJoined: number;
+  };
 };
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
@@ -52,32 +56,16 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      listActivities()
+      getMyActivities()
         .then(setActivities)
         .catch(() => setActivities(null));
     }, [])
   );
 
-  // The backend has no "my activities" endpoint yet, so we derive everything
-  // from the full list.
-  const myActivities =
-    user && activities
-      ? activities.filter(
-          (activity) =>
-            activity.participantsList.includes(user.uid) ||
-            activity.waitlist.includes(user.uid)
-        )
-      : [];
+  const myActivities = activities ?? [];
 
-  const createdCount = user
-    ? myActivities.filter((activity) => activity.createdBy === user.uid).length
-    : 0;
-  const joinedCount = user
-    ? myActivities.filter(
-        (activity) =>
-          activity.createdBy !== user.uid && activity.participantsList.includes(user.uid)
-      ).length
-    : 0;
+  const createdCount = profile?.stats.activitiesCreated ?? 0;
+  const joinedCount = profile?.stats.activitiesJoined ?? 0;
 
   return (
     <ScrollView

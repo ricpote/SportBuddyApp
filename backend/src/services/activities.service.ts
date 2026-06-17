@@ -86,7 +86,7 @@ export class ActivitiesService {
       return null;
     }
 
-    const activity = normalizeActivity(doc.data()!);
+    const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
     if (
       activity.status !== "completed" &&
@@ -125,7 +125,7 @@ export class ActivitiesService {
 
     const snapshot = await query.get();
 
-    let activities = snapshot.docs.map((doc) => normalizeActivity(doc.data()));
+    let activities = snapshot.docs.map((doc) => normalizeActivity({ id: doc.id, ...doc.data() }));
 
     if (
       filters.lat !== undefined &&
@@ -163,16 +163,22 @@ export class ActivitiesService {
   }
 
   async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
-    let query: FirebaseFirestore.Query = this.activitiesRef
+    let participantQuery: FirebaseFirestore.Query = this.activitiesRef
       .where("participantsList", "array-contains", userId)
       .orderBy("date", "asc");
 
+    let waitlistQuery: FirebaseFirestore.Query = this.activitiesRef
+      .where("waitlist", "array-contains", userId)
+      .orderBy("date", "asc");
+
     if (filters.sportId) {
-      query = query.where("sportId", "==", filters.sportId);
+      participantQuery = participantQuery.where("sportId", "==", filters.sportId);
+      waitlistQuery = waitlistQuery.where("sportId", "==", filters.sportId);
     }
 
     if (filters.status) {
-      query = query.where("status", "==", filters.status);
+      participantQuery = participantQuery.where("status", "==", filters.status);
+      waitlistQuery = waitlistQuery.where("status", "==", filters.status);
     }
 
     if (filters.date) {
@@ -180,12 +186,26 @@ export class ActivitiesService {
       start.setHours(0, 0, 0, 0);
       const end = new Date(filters.date);
       end.setHours(23, 59, 59, 999);
-      query = query.where("date", ">=", start).where("date", "<=", end);
+      participantQuery = participantQuery.where("date", ">=", start).where("date", "<=", end);
+      waitlistQuery = waitlistQuery.where("date", ">=", start).where("date", "<=", end);
     }
 
-    const snapshot = await query.get();
+    const [participantSnap, waitlistSnap] = await Promise.all([
+      participantQuery.get(),
+      waitlistQuery.get(),
+    ]);
 
-    return snapshot.docs.map(doc => normalizeActivity(doc.data()));
+    const seen = new Set<string>();
+    const activities: Activity[] = [];
+
+    for (const doc of [...participantSnap.docs, ...waitlistSnap.docs]) {
+      if (!seen.has(doc.id)) {
+        seen.add(doc.id);
+        activities.push(normalizeActivity({ id: doc.id, ...doc.data() }));
+      }
+    }
+
+    return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
   async updateActivity(activityId: string, requesterId: string, data: UpdateActivityDto
@@ -242,195 +262,193 @@ export class ActivitiesService {
   }
 
   async removeParticipant(activityId: string, requesterId: string, participantId: string): Promise<Activity> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) {
-      throw new Error("Activity not found");
-    }
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
 
-    if (activity.createdBy !== requesterId) {
-      throw new Error("Only the activity creator can remove participants");
-    }
+      if (!doc.exists) throw new Error("Activity not found");
 
-    if (activity.status === "cancelled" || activity.status === "completed") {
-      throw new Error("Cannot remove participants from a cancelled or completed activity");
-    }
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    if (!activity.participantsList.includes(participantId)) {
-      throw new Error("User is not a participant of this activity");
-    }
+      if (activity.createdBy !== requesterId) {
+        throw new Error("Only the activity creator can remove participants");
+      }
 
-    let updatedParticipants = activity.participantsList.filter(id => id !== participantId);
-    let updatedWaitlist = [...activity.waitlist];
-    const now = new Date();
-    let promoted: string | undefined;
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot remove participants from a cancelled or completed activity");
+      }
 
-    if (!activity.requiresApproval && updatedWaitlist.length > 0) {
-      promoted = updatedWaitlist.shift()!;
-      updatedParticipants = [...updatedParticipants, promoted];
-    }
+      if (!activity.participantsList.includes(participantId)) {
+        throw new Error("User is not a participant of this activity");
+      }
 
-    const isFull = updatedParticipants.length >= activity.maxParticipants;
-    const newStatus: ActivityStatus = isFull ? "full" : "open";
+      let updatedParticipants = activity.participantsList.filter(id => id !== participantId);
+      let updatedWaitlist = [...activity.waitlist];
+      let promoted: string | undefined;
 
-    await this.activitiesRef.doc(activityId).update({
-      participantsList: updatedParticipants,
-      waitlist: updatedWaitlist,
-      status: newStatus,
-      updatedAt: now,
+      if (!activity.requiresApproval && updatedWaitlist.length > 0) {
+        promoted = updatedWaitlist.shift()!;
+        updatedParticipants = [...updatedParticipants, promoted];
+      }
+
+      const isFull = updatedParticipants.length >= activity.maxParticipants;
+      const newStatus: ActivityStatus = isFull ? "full" : "open";
+      const now = new Date();
+
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+
+      return { activity, updatedParticipants, updatedWaitlist, newStatus, now, promoted };
     });
 
     await usersService.incrementStat(participantId, "activitiesJoined", -1);
-    if (promoted) {
-      await usersService.incrementStat(promoted, "activitiesJoined", 1);
+    if (result.promoted) {
+      await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
     }
 
-    return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
+    return { ...result.activity, participantsList: result.updatedParticipants, waitlist: result.updatedWaitlist, status: result.newStatus, updatedAt: result.now };
   }
 
   async joinActivity(activityId: string, userId: string): Promise<Activity> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) {
-      throw new Error("Activity not found");
-    }
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
 
-    if (activity.status === "cancelled" || activity.status === "completed") {
-      throw new Error("Cannot join a cancelled or completed activity");
-    }
+      if (!doc.exists) throw new Error("Activity not found");
 
-    if (activity.participantsList.includes(userId)) {
-      throw new Error("User is already a participant");
-    }
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    if (activity.waitlist.includes(userId)) {
-      throw new Error("User is already in the waitlist");
-    }
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot join a cancelled or completed activity");
+      }
 
-    const now = new Date();
+      if (activity.participantsList.includes(userId)) {
+        throw new Error("User is already a participant");
+      }
 
-    if (activity.requiresApproval || activity.status === "full") {
-      const updatedWaitlist = [...activity.waitlist, userId];
+      if (activity.waitlist.includes(userId)) {
+        throw new Error("User is already in the waitlist");
+      }
 
-      await this.activitiesRef.doc(activityId).update({
-        waitlist: updatedWaitlist,
-        updatedAt: now,
-      });
+      const now = new Date();
 
-      return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
-    }
+      if (activity.requiresApproval || activity.status === "full") {
+        const updatedWaitlist = [...activity.waitlist, userId];
+        tx.update(docRef, { waitlist: updatedWaitlist, updatedAt: now });
+        return { activity, updatedWaitlist, now, joined: false };
+      }
 
-    const updatedParticipants = [...activity.participantsList, userId];
-    const isFull = updatedParticipants.length == activity.maxParticipants;
-    const newStatus: ActivityStatus = isFull ? "full" : "open";
-
-    await this.activitiesRef.doc(activityId).update({
-      participantsList: updatedParticipants,
-      status: newStatus,
-      updatedAt: now,
+      const updatedParticipants = [...activity.participantsList, userId];
+      const isFull = updatedParticipants.length >= activity.maxParticipants;
+      const newStatus: ActivityStatus = isFull ? "full" : "open";
+      tx.update(docRef, { participantsList: updatedParticipants, status: newStatus, updatedAt: now });
+      return { activity, updatedParticipants, newStatus, now, joined: true };
     });
-    await usersService.incrementStat(userId, "activitiesJoined", 1);
 
-    return { ...activity, participantsList: updatedParticipants, status: newStatus, updatedAt: now };
+    if (result.joined) {
+      await usersService.incrementStat(userId, "activitiesJoined", 1);
+      return { ...result.activity, participantsList: result.updatedParticipants!, status: result.newStatus!, updatedAt: result.now };
+    }
+
+    return { ...result.activity, waitlist: result.updatedWaitlist!, updatedAt: result.now };
   }
 
   async leaveActivity(activityId: string, userId: string): Promise<Activity> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) {
-      throw new Error("Activity not found");
-    }
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
 
-    if (activity.status === "cancelled" || activity.status === "completed") {
-      throw new Error("Cannot leave a cancelled or completed activity");
-    }
+      if (!doc.exists) throw new Error("Activity not found");
 
-    if (activity.createdBy === userId) {
-      throw new Error("Activity creator cannot leave — cancel the activity instead");
-    }
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    const inWaitlist = activity.waitlist.includes(userId);
-    const inParticipants = activity.participantsList.includes(userId);
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot leave a cancelled or completed activity");
+      }
 
-    if (!inWaitlist && !inParticipants) {
-      throw new Error("User is not part of this activity");
-    }
+      if (activity.createdBy === userId) {
+        throw new Error("Activity creator cannot leave — cancel the activity instead");
+      }
 
-    const now = new Date();
+      const inWaitlist = activity.waitlist.includes(userId);
+      const inParticipants = activity.participantsList.includes(userId);
 
-    if (inWaitlist) {
-      const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
+      if (!inWaitlist && !inParticipants) {
+        throw new Error("User is not part of this activity");
+      }
 
-      await this.activitiesRef.doc(activityId).update({
-        waitlist: updatedWaitlist,
-        updatedAt: now,
-      });
+      const now = new Date();
 
-      return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
-    }
+      if (inWaitlist) {
+        const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
+        tx.update(docRef, { waitlist: updatedWaitlist, updatedAt: now });
+        return { activity, updatedWaitlist, now, leftParticipants: false, promoted: undefined };
+      }
 
-    let updatedParticipants = activity.participantsList.filter(id => id !== userId);
-    let updatedWaitlist = [...activity.waitlist];
-    let promoted: string | undefined;
+      let updatedParticipants = activity.participantsList.filter(id => id !== userId);
+      let updatedWaitlist = [...activity.waitlist];
+      let promoted: string | undefined;
 
-    if (!activity.requiresApproval && updatedWaitlist.length > 0) {
-      promoted = updatedWaitlist.shift()!;
-      updatedParticipants = [...updatedParticipants, promoted];
-    }
+      if (!activity.requiresApproval && updatedWaitlist.length > 0) {
+        promoted = updatedWaitlist.shift()!;
+        updatedParticipants = [...updatedParticipants, promoted];
+      }
 
-    const isFull = updatedParticipants.length >= activity.maxParticipants;
-    const newStatus: ActivityStatus = isFull ? "full" : "open";
-
-    await this.activitiesRef.doc(activityId).update({
-      participantsList: updatedParticipants,
-      waitlist: updatedWaitlist,
-      status: newStatus,
-      updatedAt: now,
+      const isFull = updatedParticipants.length >= activity.maxParticipants;
+      const newStatus: ActivityStatus = isFull ? "full" : "open";
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+      return { activity, updatedParticipants, updatedWaitlist, newStatus, now, leftParticipants: true, promoted };
     });
 
-    await usersService.incrementStat(userId, "activitiesJoined", -1);
-    if (promoted) {
-      await usersService.incrementStat(promoted, "activitiesJoined", 1);
+    if (result.leftParticipants) {
+      await usersService.incrementStat(userId, "activitiesJoined", -1);
+      if (result.promoted) {
+        await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
+      }
+      return { ...result.activity, participantsList: result.updatedParticipants!, waitlist: result.updatedWaitlist!, status: result.newStatus!, updatedAt: result.now };
     }
 
-    return { ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now };
+    return { ...result.activity, waitlist: result.updatedWaitlist!, updatedAt: result.now };
   }
 
   async admitFromWaitlist(activityId: string, requesterId: string, userId: string): Promise<Activity> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) {
-      throw new Error("Activity not found");
-    }
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
 
-    if (activity.createdBy !== requesterId) {
-      throw new Error("Only the activity creator can admit participants from the waitlist");
-    }
+      if (!doc.exists) throw new Error("Activity not found");
 
-    if (activity.status !== "open") {
-      throw new Error("It's not possible in this activity");
-    }
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    if (!activity.waitlist.includes(userId)) {
-      throw new Error("User is not in the waitlist");
-    }
+      if (activity.createdBy !== requesterId) {
+        throw new Error("Only the activity creator can admit participants from the waitlist");
+      }
 
-    const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
-    const updatedParticipants = [...activity.participantsList, userId];
-    const isFull = updatedParticipants.length == activity.maxParticipants;
-    const newStatus: ActivityStatus = isFull ? "full" : "open";
-    const now = new Date();
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot admit participants to a cancelled or completed activity");
+      }
 
-    await this.activitiesRef.doc(activityId).update({
-      participantsList: updatedParticipants, waitlist: updatedWaitlist,
-      status: newStatus, updatedAt: now,
+      if (!activity.waitlist.includes(userId)) {
+        throw new Error("User is not in the waitlist");
+      }
+
+      const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
+      const updatedParticipants = [...activity.participantsList, userId];
+      const isFull = updatedParticipants.length >= activity.maxParticipants;
+      const newStatus: ActivityStatus = isFull ? "full" : "open";
+      const now = new Date();
+
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+
+      return { activity, updatedParticipants, updatedWaitlist, newStatus, now };
     });
+
     await usersService.incrementStat(userId, "activitiesJoined", 1);
 
-    return {
-      ...activity, participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus,
-      updatedAt: now,
-    };
+    return { ...result.activity, participantsList: result.updatedParticipants, waitlist: result.updatedWaitlist, status: result.newStatus, updatedAt: result.now };
   }
 }
 

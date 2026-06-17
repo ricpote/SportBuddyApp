@@ -14,6 +14,10 @@ export function listActivities(): Promise<Activity[]> {
   return api.get<Activity[]>('/api/activities');
 }
 
+export function getMyActivities(): Promise<Activity[]> {
+  return api.get<Activity[]>('/api/activities/me');
+}
+
 export function getActivity(activityId: string): Promise<Activity> {
   return api.get<Activity>(`/api/activities/${activityId}`);
 }
@@ -31,7 +35,7 @@ export function joinActivity(activityId: string): Promise<Activity> {
 }
 
 export function leaveActivity(activityId: string): Promise<Activity> {
-  return api.delete<Activity>(`/api/activities/${activityId}/leave`);
+  return api.post<Activity>(`/api/activities/${activityId}/leave`);
 }
 
 export function cancelActivity(activityId: string): Promise<Activity> {

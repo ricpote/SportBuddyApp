@@ -81,8 +81,8 @@ export default function EditActivityScreen() {
     }
 
     const parsedMax = Number(maxParticipants);
-    if (!Number.isInteger(parsedMax) || parsedMax < 1) {
-      setError('Número máximo de participantes inválido');
+    if (!Number.isInteger(parsedMax) || parsedMax < 2) {
+      setError('O número máximo de participantes tem de ser pelo menos 2');
       return;
     }
 

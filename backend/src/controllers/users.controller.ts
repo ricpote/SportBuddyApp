@@ -42,7 +42,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ message: "User profile not found" });
     }
 
-    return res.json(user);
+    return res.json(toPublicProfile(user));
   } catch {
     return res.status(500).json({ message: "Error getting current user" });
   }
