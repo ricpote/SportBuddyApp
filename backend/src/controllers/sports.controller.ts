@@ -68,17 +68,19 @@ export async function createSport(
     if (!isAdmin) return;
 
     const data: CreateSportDto = {
-      id: req.body.id,
       name: req.body.name,
       description: req.body.description,
       category: req.body.category,
-      emoji: req.body.emoji,
     };
 
-    if (!data.id || !data.name || !data.category || !data.emoji) {
-      res
-        .status(400)
-        .json({ message: "id, name, category and emoji are required" });
+    if (!data.name || !data.description || !data.category) {
+      res.status(400).json({ message: "name, description and category are required" });
+      return;
+    }
+
+    const validCategories = ["team", "individual"];
+    if (!validCategories.includes(data.category)) {
+      res.status(400).json({ message: "category must be 'team' or 'individual'" });
       return;
     }
 

@@ -12,14 +12,18 @@ export class SportsService {
   private sportsRef = db.collection(SPORTS_COLLECTION);
 
   async createSport(data: CreateSportDto): Promise<Sport> {
-    const existing = await this.sportsRef.doc(data.id).get();
+    const duplicateSnapshot = await this.sportsRef
+      .where("name", "==", data.name)
+      .limit(1)
+      .get();
 
-    if (existing.exists) {
-      throw new Error(`Sport with id '${data.id}' already exists`);
+    if (!duplicateSnapshot.empty) {
+      throw new Error(`Sport '${data.name}' already exists`);
     }
 
-    const sport = createSportObject(data);
-    await this.sportsRef.doc(data.id).set(sport);
+    const docRef = this.sportsRef.doc();
+    const sport = createSportObject(docRef.id, data);
+    await docRef.set(sport);
 
     return sport;
   }
