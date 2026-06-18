@@ -11,6 +11,7 @@ import {
   leaveActivity,
   removeParticipant,
   admitFromWaitlist,
+  rejectFromWaitlist,
 } from "../controllers/activities.controller";
 
 const router = Router();
@@ -41,6 +42,12 @@ router.patch(
   "/:activityId/admit-from-waitlist",
   authMiddleware,
   admitFromWaitlist
+);
+
+router.patch(
+  "/:activityId/reject-from-waitlist",
+  authMiddleware,
+  rejectFromWaitlist
 );
 
 export default router;

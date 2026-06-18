@@ -324,3 +324,38 @@ export async function admitFromWaitlist(
     });
   }
 }
+
+export async function rejectFromWaitlist(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const { activityId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      res.status(400).json({ message: "userId is required" });
+      return;
+    }
+
+    const activity = await activitiesService.rejectFromWaitlist(
+      activityId,
+      req.user.uid,
+      userId
+    );
+
+    res.status(200).json(activity);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error rejecting user from waitlist",
+    });
+  }
+}

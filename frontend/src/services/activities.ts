@@ -49,3 +49,7 @@ export function removeParticipant(activityId: string, participantId: string): Pr
 export function admitFromWaitlist(activityId: string, userId: string): Promise<Activity> {
   return api.patch<Activity>(`/api/activities/${activityId}/admit-from-waitlist`, { userId });
 }
+
+export function rejectFromWaitlist(activityId: string, userId: string): Promise<Activity> {
+  return api.patch<Activity>(`/api/activities/${activityId}/reject-from-waitlist`, { userId });
+}

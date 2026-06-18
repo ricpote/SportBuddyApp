@@ -450,6 +450,37 @@ export class ActivitiesService {
 
     return { ...result.activity, participantsList: result.updatedParticipants, waitlist: result.updatedWaitlist, status: result.newStatus, updatedAt: result.now };
   }
+
+  async rejectFromWaitlist(activityId: string, requesterId: string, userId: string): Promise<Activity> {
+    const docRef = this.activitiesRef.doc(activityId);
+
+    return await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+
+      if (!doc.exists) throw new Error("Activity not found");
+
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
+
+      if (activity.createdBy !== requesterId) {
+        throw new Error("Only the activity creator can reject participants from the waitlist");
+      }
+
+      if (activity.status === "cancelled" || activity.status === "completed") {
+        throw new Error("Cannot reject participants from a cancelled or completed activity");
+      }
+
+      if (!activity.waitlist.includes(userId)) {
+        throw new Error("User is not in the waitlist");
+      }
+
+      const updatedWaitlist = activity.waitlist.filter(id => id !== userId);
+      const now = new Date();
+
+      tx.update(docRef, { waitlist: updatedWaitlist, updatedAt: now });
+
+      return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
+    });
+  }
 }
 
 export const activitiesService = new ActivitiesService();

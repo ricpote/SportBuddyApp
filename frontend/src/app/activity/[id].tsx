@@ -13,9 +13,11 @@ import {
   getActivity,
   joinActivity,
   leaveActivity,
+  rejectFromWaitlist,
   removeParticipant,
 } from '@/services/activities';
 import { getSport } from '@/services/sports';
+import { getUserProfile } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
 
@@ -40,9 +42,11 @@ export default function ActivityDetailScreen() {
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [sport, setSport] = useState<Sport | null>(null);
+  const [participantNames, setParticipantNames] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingReject, setConfirmingReject] = useState<string | null>(null);
 
   const loadActivity = useCallback(() => {
     if (!id) return;
@@ -62,6 +66,20 @@ export default function ActivityDetailScreen() {
       .then(setSport)
       .catch(() => setSport(null));
   }, [sportId]);
+
+  useEffect(() => {
+    if (!activity) return;
+    const uids = [...new Set([...activity.participantsList, ...activity.waitlist])];
+    if (uids.length === 0) return;
+    Promise.allSettled(uids.map((uid) => getUserProfile(uid).then((u) => [uid, u.name] as const)))
+      .then((results) => {
+        const names = new Map<string, string>();
+        for (const r of results) {
+          if (r.status === 'fulfilled') names.set(r.value[0], r.value[1]);
+        }
+        setParticipantNames(names);
+      });
+  }, [activity]);
 
   if (activity === undefined) {
     return (
@@ -124,9 +142,22 @@ export default function ActivityDetailScreen() {
   }
 
   function handleAdmit(userId: string) {
+    setConfirmingReject(null);
     return runAction(
       () => admitFromWaitlist(activity!.id, userId),
       'Não foi possível admitir o utilizador'
+    );
+  }
+
+  function handleReject(userId: string) {
+    if (confirmingReject !== userId) {
+      setConfirmingReject(userId);
+      return;
+    }
+    setConfirmingReject(null);
+    return runAction(
+      () => rejectFromWaitlist(activity!.id, userId),
+      'Não foi possível rejeitar o utilizador'
     );
   }
 
@@ -177,7 +208,7 @@ export default function ActivityDetailScreen() {
                     .map((participantId) => (
                       <ThemedView key={participantId} type="backgroundElement" style={styles.memberRow}>
                         <ThemedText type="small" themeColor="textSecondary">
-                          {shortId(participantId)}
+                          {participantNames.get(participantId) ?? shortId(participantId)}
                         </ThemedText>
                         <Pressable
                           disabled={submitting}
@@ -199,12 +230,19 @@ export default function ActivityDetailScreen() {
                     {activity.waitlist.map((userId) => (
                       <ThemedView key={userId} type="backgroundElement" style={styles.memberRow}>
                         <ThemedText type="small" themeColor="textSecondary">
-                          {shortId(userId)}
+                          {participantNames.get(userId) ?? shortId(userId)}
                         </ThemedText>
                         {activity.status === 'open' ? (
-                          <Pressable disabled={submitting} onPress={() => handleAdmit(userId)}>
-                            <ThemedText type="smallBold">Admitir</ThemedText>
-                          </Pressable>
+                          <ThemedView style={styles.waitlistActions}>
+                            <Pressable disabled={submitting} onPress={() => handleAdmit(userId)}>
+                              <ThemedText type="smallBold">Admitir</ThemedText>
+                            </Pressable>
+                            <Pressable disabled={submitting} onPress={() => handleReject(userId)}>
+                              <ThemedText type="smallBold" style={styles.rejectText}>
+                                {confirmingReject === userId ? 'Tens a certeza?' : 'Rejeitar'}
+                              </ThemedText>
+                            </Pressable>
+                          </ThemedView>
                         ) : (
                           <ThemedText type="small" themeColor="textSecondary">
                             Atividade completa
@@ -280,8 +318,7 @@ export default function ActivityDetailScreen() {
   );
 }
 
-// The API only exposes participant UIDs (no public profile endpoint yet),
-// so we show a shortened identifier for now.
+// Fallback enquanto o nome carrega ou se o fetch falhar.
 function shortId(uid: string) {
   return `Utilizador ${uid.slice(0, 6)}…`;
 }
@@ -342,5 +379,12 @@ const styles = StyleSheet.create({
   },
   note: {
     textAlign: 'center',
+  },
+  waitlistActions: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+  },
+  rejectText: {
+    color: '#FF6B6B',
   },
 });

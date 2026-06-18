@@ -21,6 +21,17 @@ export default function RegisterScreen() {
 
   async function handleSubmit() {
     setError(null);
+
+    if (!name.trim() || !email.trim() || !password) {
+      setError('Preenche todos os campos');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('A palavra-passe tem de ter pelo menos 6 caracteres');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await signUp(name.trim(), email.trim(), password);
