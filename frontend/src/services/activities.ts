@@ -53,3 +53,28 @@ export function admitFromWaitlist(activityId: string, userId: string): Promise<A
 export function rejectFromWaitlist(activityId: string, userId: string): Promise<Activity> {
   return api.patch<Activity>(`/api/activities/${activityId}/reject-from-waitlist`, { userId });
 }
+export type NearbyActivitiesFilters = {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  sportId?: string;
+  difficultyLevel?: SkillLevel;
+};
+
+export function listNearbyActivities(filters: NearbyActivitiesFilters): Promise<Activity[]> {
+  const params = new URLSearchParams({
+    lat: String(filters.lat),
+    lng: String(filters.lng),
+    radiusKm: String(filters.radiusKm),
+  });
+
+  if (filters.sportId) {
+    params.set('sportId', filters.sportId);
+  }
+
+  if (filters.difficultyLevel) {
+    params.set('difficultyLevel', filters.difficultyLevel);
+  }
+
+  return api.get<Activity[]>(`/api/activities?${params.toString()}`);
+}

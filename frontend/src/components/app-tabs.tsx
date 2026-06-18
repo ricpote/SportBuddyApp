@@ -32,6 +32,10 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="map">
+  <NativeTabs.Trigger.Label>Mapa</NativeTabs.Trigger.Label>
+  <NativeTabs.Trigger.Icon sf="map.fill" drawable="ic_dialog_map" />
+</NativeTabs.Trigger>
     </NativeTabs>
   );
 }
