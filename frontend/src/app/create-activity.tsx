@@ -84,12 +84,44 @@ export default function CreateActivityScreen() {
 
     setSubmitting(true);
     try {
+      let lat = 0;
+      let lng = 0;
+      try {
+        const queries = [
+          `${address.trim()}, Portugal`,
+          `${locationName.trim()}, ${address.trim()}, Portugal`,
+        ];
+        let found = false;
+        for (const q of queries) {
+          const geo = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=pt`,
+            { headers: { 'Accept-Language': 'pt' } }
+          );
+          const results = await geo.json();
+          if (results.length > 0) {
+            lat = parseFloat(results[0].lat);
+            lng = parseFloat(results[0].lon);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          setError('Morada não encontrada. Tenta incluir a cidade (ex: "Estrada do Jamor, Oeiras")');
+          setSubmitting(false);
+          return;
+        }
+      } catch {
+        setError('Não foi possível obter as coordenadas da morada. Verifica a ligação à internet.');
+        setSubmitting(false);
+        return;
+      }
+
       const activity = await createActivity({
         title: title.trim(),
         description: description.trim(),
         sportId,
         maxParticipants: parsedMax,
-        location: { name: locationName.trim(), address: address.trim(), lat: 0, lng: 0 },
+        location: { name: locationName.trim(), address: address.trim(), lat, lng },
         date: date.toISOString(),
         difficultyLevel,
         requiresApproval,

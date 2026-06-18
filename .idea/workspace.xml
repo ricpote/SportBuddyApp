@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="reject waitlist e fixes">
+    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="users ya">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/services/activities.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/activities.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/map.web.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/map.web.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/create-activity.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/create-activity.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -17,7 +19,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="FRONTEND" />
+        <entry key="$PROJECT_DIR$" value="integration-merge" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -55,6 +57,7 @@
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "git-widget-placeholder": "integration",
     "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/NOVA/3 Ano 2 Sem/ADC/Projeto_Final/frontend",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -65,6 +68,11 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\NOVA\3 Ano 2 Sem\ADC\Projeto_Final\frontend" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -86,6 +94,7 @@
       <workItem from="1781264793998" duration="635000" />
       <workItem from="1781465768460" duration="2557000" />
       <workItem from="1781622082094" duration="3226000" />
+      <workItem from="1781798959226" duration="814000" />
     </task>
     <task id="LOCAL-00001" summary="a">
       <option name="closed" value="true" />
@@ -103,7 +112,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781789856447</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="users ya">
+      <option name="closed" value="true" />
+      <created>1781793813498</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1781793813498</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -112,6 +129,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="a" />
     <MESSAGE value="reject waitlist e fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="reject waitlist e fixes" />
+    <MESSAGE value="users ya" />
+    <option name="LAST_COMMIT_MESSAGE" value="users ya" />
   </component>
 </project>

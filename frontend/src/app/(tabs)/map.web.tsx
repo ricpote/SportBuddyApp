@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import {
+  AdvancedMarker,
   APIProvider,
   InfoWindow,
   Map,
   MapCameraChangedEvent,
-  Marker,
+  Pin,
 } from '@vis.gl/react-google-maps';
 import { router } from 'expo-router';
 
@@ -18,7 +19,7 @@ const DEFAULT_CENTER = {
   lng: -9.1393,
 };
 
-const DEFAULT_RADIUS_KM = 5;
+const DEFAULT_RADIUS_KM = 20;
 
 export default function MapWebScreen() {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY;
@@ -151,7 +152,8 @@ export default function MapWebScreen() {
         <Map
           style={styles.map}
           defaultCenter={center}
-          defaultZoom={13}
+          defaultZoom={12}
+          mapId="DEMO_MAP_ID"
           gestureHandling="greedy"
           disableDefaultUI={false}
           onCameraChanged={(event: MapCameraChangedEvent) => {
@@ -159,7 +161,7 @@ export default function MapWebScreen() {
           }}
         >
           {validActivities.map((activity) => (
-            <Marker
+            <AdvancedMarker
               key={activity.id}
               position={{
                 lat: activity.location.lat,
@@ -167,7 +169,14 @@ export default function MapWebScreen() {
               }}
               title={activity.title}
               onClick={() => setSelectedActivity(activity)}
-            />
+            >
+              <Pin
+                background="#CF8444"
+                borderColor="#7C4F28"
+                glyphColor="#FFFFFF"
+                scale={1.4}
+              />
+            </AdvancedMarker>
           ))}
 
           {selectedActivity && (
@@ -222,7 +231,7 @@ export default function MapWebScreen() {
 
       <View style={styles.overlay}>
         <View style={styles.radiusRow}>
-          {[2, 5, 10, 20].map((option) => {
+          {[5, 10, 20, 50].map((option) => {
             const active = radiusKm === option;
 
             return (
