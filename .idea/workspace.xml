@@ -4,14 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="a">
+    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="reject waitlist e fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/controllers/activities.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/controllers/activities.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/activities.route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/activities.route.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/services/activities.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/activities.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(auth)/register.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(auth)/register.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/activities.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/activities.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/index.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,7 +95,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781188835267</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="reject waitlist e fixes">
+      <option name="closed" value="true" />
+      <created>1781789856447</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1781789856447</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -107,6 +111,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="a" />
-    <option name="LAST_COMMIT_MESSAGE" value="a" />
+    <MESSAGE value="reject waitlist e fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="reject waitlist e fixes" />
   </component>
 </project>

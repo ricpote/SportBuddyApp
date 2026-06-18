@@ -225,11 +225,16 @@ export class ActivitiesService {
     }
 
     const now = new Date();
-    const changes = JSON.parse(JSON.stringify({ ...data, updatedAt: now }));
+    const changes: Record<string, unknown> = { updatedAt: now };
+    if (data.title !== undefined) changes.title = data.title;
+    if (data.description !== undefined) changes.description = data.description;
+    if (data.date !== undefined) changes.date = data.date;
+    if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
+    if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
 
     await this.activitiesRef.doc(activityId).update(changes);
 
-    return { ...activity, ...changes };
+    return { ...activity, ...changes } as Activity;
   }
 
   async cancelActivity(activityId: string, requesterId: string): Promise<Activity> {

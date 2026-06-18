@@ -192,6 +192,11 @@ export default function HomeScreen() {
                               <ThemedText style={styles.spotsText}>
                                 {activity.participantsList.length}/{activity.maxParticipants}
                               </ThemedText>
+                              {activity.status === 'full' && (
+                                <ThemedText style={[styles.spotsText, { color: '#FF6B6B' }]}>
+                                  · Completa
+                                </ThemedText>
+                              )}
                               {activity.waitlist.length > 0 && (
                                 <ThemedText style={[styles.spotsText, { color: '#CF8444' }]}>
                                   +{activity.waitlist.length} em espera
