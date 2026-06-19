@@ -5,6 +5,8 @@ import cors from "cors";
 import usersRoutes from "./routes/users.routes";
 import activitiesRoutes from "./routes/activities.route";
 import sportsRoutes from "./routes/sports.routes";
+import messagesRoutes from "./routes/messages.route";
+import notificationsRoutes from "./routes/notifications.route";
 
 const app = express();
 
@@ -20,5 +22,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", usersRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/sports", sportsRoutes);
+app.use("/api/activities/:activityId/messages", messagesRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 export default app;

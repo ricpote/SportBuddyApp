@@ -10,6 +10,7 @@ import {
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
 import { usersService } from "./users.service";
 import { sportsService } from "./sports.service";
+import { notificationsService } from "./notifications.service";
 
 const ACTIVITIES_COLLECTION = "activities";
 
@@ -263,6 +264,16 @@ export class ActivitiesService {
       updatedAt: now,
     });
 
+    const participants = activity.participantsList.filter(id => id !== requesterId);
+    if (participants.length > 0) {
+      await notificationsService.createNotificationForMany(
+        participants,
+        "activity_cancelled",
+        `A atividade "${activity.title}" foi cancelada pelo criador.`,
+        activityId
+      );
+    }
+
     return { ...activity, status: "cancelled", updatedAt: now };
   }
 
@@ -311,6 +322,13 @@ export class ActivitiesService {
       await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
     }
 
+    await notificationsService.createNotification(
+      participantId,
+      "participant_removed",
+      `Foste removido da atividade "${result.activity.title}" pelo criador.`,
+      activityId
+    );
+
     return { ...result.activity, participantsList: result.updatedParticipants, waitlist: result.updatedWaitlist, status: result.newStatus, updatedAt: result.now };
   }
 
@@ -353,8 +371,32 @@ export class ActivitiesService {
 
     if (result.joined) {
       await usersService.incrementStat(userId, "activitiesJoined", 1);
+
+      await notificationsService.createNotification(
+        result.activity.createdBy,
+        "activity_joined",
+        `Um novo participante entrou na tua atividade "${result.activity.title}".`,
+        activityId
+      );
+
+      if (result.newStatus === "full") {
+        await notificationsService.createNotification(
+          result.activity.createdBy,
+          "activity_full",
+          `A tua atividade "${result.activity.title}" ficou cheia!`,
+          activityId
+        );
+      }
+
       return { ...result.activity, participantsList: result.updatedParticipants!, status: result.newStatus!, updatedAt: result.now };
     }
+
+    await notificationsService.createNotification(
+      result.activity.createdBy,
+      "activity_join_request",
+      `Alguém pediu para entrar na tua atividade "${result.activity.title}".`,
+      activityId
+    );
 
     return { ...result.activity, waitlist: result.updatedWaitlist!, updatedAt: result.now };
   }
@@ -412,6 +454,14 @@ export class ActivitiesService {
       if (result.promoted) {
         await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
       }
+
+      await notificationsService.createNotification(
+        result.activity.createdBy,
+        "activity_left",
+        `Um participante saiu da tua atividade "${result.activity.title}".`,
+        activityId
+      );
+
       return { ...result.activity, participantsList: result.updatedParticipants!, waitlist: result.updatedWaitlist!, status: result.newStatus!, updatedAt: result.now };
     }
 
@@ -452,6 +502,13 @@ export class ActivitiesService {
     });
 
     await usersService.incrementStat(userId, "activitiesJoined", 1);
+
+    await notificationsService.createNotification(
+      userId,
+      "waitlist_admitted",
+      `O teu pedido foi aceite! Entraste na atividade "${result.activity.title}".`,
+      activityId
+    );
 
     return { ...result.activity, participantsList: result.updatedParticipants, waitlist: result.updatedWaitlist, status: result.newStatus, updatedAt: result.now };
   }
