@@ -1,6 +1,6 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -11,6 +11,7 @@ import { listActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
+import { relativeDate } from '@/utils/date';
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
   open: 'Aberta',
@@ -41,6 +42,7 @@ export default function ExploreScreen() {
   const [sportFilter, setSportFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<SportCategory | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +93,8 @@ export default function ExploreScreen() {
     (activity) =>
       (showAll || isUpcoming(activity)) &&
       (!sportFilter || activity.sportId === sportFilter) &&
-      (!categoryFilter || categoryBySportId.get(activity.sportId) === categoryFilter)
+      (!categoryFilter || categoryBySportId.get(activity.sportId) === categoryFilter) &&
+      (!searchText.trim() || activity.title.toLowerCase().includes(searchText.toLowerCase()))
   );
 
   return (
@@ -117,6 +120,15 @@ export default function ExploreScreen() {
             </Pressable>
           </Link>
         </ThemedView>
+
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: theme.backgroundElement, color: theme.text }]}
+          placeholder="Pesquisar atividade..."
+          placeholderTextColor={theme.textSecondary}
+          value={searchText}
+          onChangeText={setSearchText}
+          clearButtonMode="while-editing"
+        />
 
         <ThemedView style={styles.chipRow}>
           <Pressable onPress={() => setShowAll(false)}>
@@ -189,7 +201,7 @@ export default function ExploreScreen() {
                 <ThemedView type="backgroundElement" style={styles.card}>
                   <ThemedText type="smallBold">{activity.title}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {new Date(activity.date).toLocaleString()}
+                    {relativeDate(activity.date)}
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {activity.location.name} · {activity.participantsList.length}/{activity.maxParticipants} ·{' '}
@@ -238,6 +250,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.five,
+  },
+  searchInput: {
+    height: 44,
+    borderRadius: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    fontSize: 15,
   },
   pressed: {
     opacity: 0.8,

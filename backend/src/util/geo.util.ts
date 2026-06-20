@@ -46,6 +46,7 @@ export function isValidCoordinates(location: Coordinates): boolean {
     location.lat >= -90 &&
     location.lat <= 90 &&
     location.lng >= -180 &&
-    location.lng <= 180
+    location.lng <= 180 &&
+    !(location.lat === 0 && location.lng === 0)
   );
 }

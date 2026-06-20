@@ -7,10 +7,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
 import { useTheme } from '@/hooks/use-theme';
 import { api } from '@/services/api';
 import { getMyActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
+import { relativeDate } from '@/utils/date';
 
 type ProfileData = {
   name: string;
@@ -33,8 +35,10 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const theme = useTheme();
+  const { pendingCount, refresh: refreshBadge } = usePendingWaitlist();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [activities, setActivities] = useState<Activity[] | null>(null);
+  const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -57,12 +61,16 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       getMyActivities()
-        .then(setActivities)
+        .then((data) => { setActivities(data); refreshBadge(); })
         .catch(() => setActivities(null));
-    }, [])
+    }, [refreshBadge])
   );
 
-  const myActivities = activities ?? [];
+  const myActivities = (activities ?? []).filter((a) => {
+    if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
+    if (activityFilter === 'past') return a.status === 'completed' || a.status === 'cancelled';
+    return true;
+  });
 
   const createdCount = profile?.stats.activitiesCreated ?? 0;
   const joinedCount = profile?.stats.activitiesJoined ?? 0;
@@ -100,7 +108,32 @@ export default function ProfileScreen() {
           </ThemedText>
         </ThemedView>
 
+        <Link href="/edit-profile" asChild>
+          <Pressable style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
+            <ThemedText type="smallBold">Editar perfil</ThemedText>
+          </Pressable>
+        </Link>
+
+        {pendingCount > 0 && (
+          <ThemedView style={[styles.card, styles.pendingCard]}>
+            <ThemedText type="smallBold" style={styles.pendingText}>
+              {pendingCount === 1 ? '1 atividade com pedidos na lista de espera' : `${pendingCount} atividades com pedidos na lista de espera`}
+            </ThemedText>
+            <ThemedText type="small" style={styles.pendingText}>Abre a atividade para admitir ou rejeitar.</ThemedText>
+          </ThemedView>
+        )}
+
         <ThemedText type="subtitle">As minhas atividades</ThemedText>
+
+        <ThemedView style={styles.filterRow}>
+          {(['all', 'active', 'past'] as const).map((f) => (
+            <Pressable key={f} onPress={() => setActivityFilter(f)}>
+              <ThemedView type={activityFilter === f ? 'backgroundSelected' : 'backgroundElement'} style={styles.filterChip}>
+                <ThemedText type="small">{f === 'all' ? 'Todas' : f === 'active' ? 'Ativas' : 'Passadas'}</ThemedText>
+              </ThemedView>
+            </Pressable>
+          ))}
+        </ThemedView>
 
         {activities === null && (
           <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
@@ -122,7 +155,7 @@ export default function ProfileScreen() {
                 <ThemedView type="backgroundElement" style={styles.card}>
                   <ThemedText type="smallBold">{activity.title}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {new Date(activity.date).toLocaleString()} · {STATUS_LABELS[activity.status]}
+                    {relativeDate(activity.date)} · {STATUS_LABELS[activity.status]}
                     {user && activity.createdBy === user.uid
                       ? ' · Organizador'
                       : user && activity.waitlist.includes(user.uid)
@@ -183,5 +216,22 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  pendingCard: {
+    backgroundColor: '#CF844420',
+    borderWidth: 1,
+    borderColor: '#CF8444',
+  },
+  pendingText: {
+    color: '#CF8444',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  filterChip: {
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.five,
   },
 });
