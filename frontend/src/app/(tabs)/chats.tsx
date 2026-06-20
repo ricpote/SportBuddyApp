@@ -46,7 +46,34 @@ export default function ChatsScreen() {
     }
   }
 
-  const chats = (activities ?? []).filter((a) => a.participantsList.includes(user?.uid ?? ''));
+  const uid = user?.uid ?? '';
+  const allChats = (activities ?? []).filter(
+    (a) => a.status !== 'cancelled' && a.participantsList.includes(uid)
+  );
+  const activeChats = allChats.filter((a) => a.status === 'open' || a.status === 'full');
+  const pastChats = allChats.filter((a) => a.status === 'completed');
+
+  function renderCard(activity: Activity) {
+    return (
+      <Link key={activity.id} href={`/chat/${activity.id}`} asChild>
+        <Pressable style={({ pressed }) => pressed && styles.pressed}>
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedView type="backgroundElement" style={styles.cardRow}>
+              <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
+                {activity.title}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {relativeDate(activity.date)}
+              </ThemedText>
+            </ThemedView>
+            <ThemedText type="small" themeColor="textSecondary">
+              {activity.location.name} · {activity.participantsList.length} participantes
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+      </Link>
+    );
+  }
 
   return (
     <ScrollView
@@ -62,31 +89,25 @@ export default function ChatsScreen() {
           <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
         )}
 
-        {activities !== null && chats.length === 0 && (
+        {activities !== null && allChats.length === 0 && (
           <ThemedText themeColor="textSecondary">
             Ainda não participas em nenhuma atividade. Junta-te a uma para poder conversar!
           </ThemedText>
         )}
 
-        {chats.map((activity) => (
-          <Link key={activity.id} href={`/chat/${activity.id}`} asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.card}>
-                <ThemedView type="backgroundElement" style={styles.cardRow}>
-                  <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
-                    {activity.title}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {relativeDate(activity.date)}
-                  </ThemedText>
-                </ThemedView>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {activity.location.name} · {STATUS_LABELS[activity.status]} · {activity.participantsList.length}/{activity.maxParticipants}
-                </ThemedText>
-              </ThemedView>
-            </Pressable>
-          </Link>
-        ))}
+        {activeChats.length > 0 && (
+          <>
+            <ThemedText type="subtitle">Ativas</ThemedText>
+            {activeChats.map(renderCard)}
+          </>
+        )}
+
+        {pastChats.length > 0 && (
+          <>
+            <ThemedText type="subtitle">Terminadas</ThemedText>
+            {pastChats.map(renderCard)}
+          </>
+        )}
       </ThemedView>
     </ScrollView>
   );

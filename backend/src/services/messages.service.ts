@@ -20,8 +20,8 @@ export class MessagesService {
       throw new Error("Only participants can send messages");
     }
 
-    if (activity.status === "cancelled" || activity.status === "completed") {
-      throw new Error("Cannot send messages to a cancelled or completed activity");
+    if (activity.status === "cancelled") {
+      throw new Error("Cannot send messages to a cancelled activity");
     }
 
     const docRef = this.messagesRef(activityId).doc();

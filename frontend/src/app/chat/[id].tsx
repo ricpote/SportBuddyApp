@@ -16,7 +16,9 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
+import { getActivity } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
+import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 
 const POLL_INTERVAL_MS = 4000;
@@ -27,12 +29,18 @@ export default function ChatScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [activity, setActivity] = useState<Activity | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
   const latestCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!id) return;
+    getActivity(id).then(setActivity).catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -114,6 +122,14 @@ export default function ChatScreen() {
 
           {error && (
             <ThemedText style={styles.error}>{error}</ThemedText>
+          )}
+
+          {activity?.status === 'completed' && (
+            <View style={styles.completedBanner}>
+              <ThemedText type="small" style={styles.completedText}>
+                Atividade terminada — podes continuar a conversar com o grupo.
+              </ThemedText>
+            </View>
           )}
 
           <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two, backgroundColor: theme.background }]}>
@@ -207,5 +223,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.one,
+  },
+  completedBanner: {
+    backgroundColor: '#CF844420',
+    borderTopWidth: 1,
+    borderTopColor: '#CF8444',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  completedText: {
+    color: '#CF8444',
+    textAlign: 'center',
   },
 });
