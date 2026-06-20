@@ -34,6 +34,13 @@ const DIFFICULTY_TEXT_COLORS: Record<Activity['difficultyLevel'], string> = {
   competitive: '#FFFFFF',
 };
 
+const DIFFICULTY_BORDER_COLORS: Record<Activity['difficultyLevel'], string> = {
+  beginner: '#059669',
+  intermediate: '#B45309',
+  advanced: '#C2410C',
+  competitive: '#B91C1C',
+};
+
 const ALL_FILTER = 'Todos';
 
 function isUpcoming(activity: Activity) {
@@ -201,7 +208,7 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={styles.cardFooter}>
-                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor }]}>
+                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor, borderColor: DIFFICULTY_BORDER_COLORS[activity.difficultyLevel] }]}>
                               <ThemedText style={[styles.difficultyText, { color: DIFFICULTY_TEXT_COLORS[activity.difficultyLevel] }]}>{difficulty}</ThemedText>
                             </View>
 
@@ -400,6 +407,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
   },
   difficultyText: {
     color: '#FFFFFF',
