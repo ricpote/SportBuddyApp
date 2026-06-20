@@ -55,7 +55,7 @@ export default function ChatsScreen() {
 
   function renderCard(activity: Activity) {
     return (
-      <Link key={activity.id} href={`/chat/${activity.id}`} asChild>
+      <Link key={activity.id} href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
         <Pressable style={({ pressed }) => pressed && styles.pressed}>
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedView type="backgroundElement" style={styles.cardRow}>
