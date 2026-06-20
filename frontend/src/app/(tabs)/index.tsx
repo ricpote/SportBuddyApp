@@ -20,6 +20,13 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   competitive: 'Competitivo',
 };
 
+const DIFFICULTY_COLORS: Record<Activity['difficultyLevel'], string> = {
+  beginner: '#10B981',
+  intermediate: '#EAB308',
+  advanced: '#F97316',
+  competitive: '#EF4444',
+};
+
 const ALL_FILTER = 'Todos';
 
 function isUpcoming(activity: Activity) {
@@ -145,6 +152,7 @@ export default function HomeScreen() {
               // Cartões com os dados reais vindos do backend
               upcoming.map((activity) => {
                 const difficulty = DIFFICULTY_LABELS[activity.difficultyLevel];
+                const difficultyColor = DIFFICULTY_COLORS[activity.difficultyLevel];
                 return (
                   <Pressable
                     key={activity.id}
@@ -186,10 +194,7 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={styles.cardFooter}>
-                            <View style={[
-                              styles.difficultyBadge,
-                              difficulty === 'Avançado' ? { backgroundColor: '#FF6B6B' } : {}
-                            ]}>
+                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor }]}>
                               <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
                             </View>
 
@@ -385,7 +390,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#334155',
   },
   difficultyBadge: {
-    backgroundColor: '#10B981',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
