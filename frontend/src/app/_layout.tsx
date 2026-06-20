@@ -33,6 +33,10 @@ function RootNavigator() {
           name="chat/[id]"
           options={{ headerShown: true, title: 'Chat' }}
         />
+        <Stack.Screen
+          name="user/[id]"
+          options={{ headerShown: true, title: 'Perfil' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

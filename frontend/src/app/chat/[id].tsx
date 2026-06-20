@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -18,10 +18,19 @@ import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { getActivity } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
+import { getUserProfile } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
+import { PublicUser } from '@/types/user';
 
 const POLL_INTERVAL_MS = 4000;
+
+function avatarColor(userId: string): string {
+  const colors = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  return colors[hash % colors.length];
+}
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +39,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
 
   const [activity, setActivity] = useState<Activity | null>(null);
+  const [profiles, setProfiles] = useState<Map<string, PublicUser>>(new Map());
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -39,7 +49,18 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (!id) return;
-    getActivity(id).then(setActivity).catch(() => {});
+    getActivity(id)
+      .then((a) => {
+        setActivity(a);
+        Promise.allSettled(a.participantsList.map((uid) => getUserProfile(uid))).then((results) => {
+          const map = new Map<string, PublicUser>();
+          results.forEach((r, i) => {
+            if (r.status === 'fulfilled') map.set(a.participantsList[i], r.value);
+          });
+          setProfiles(map);
+        });
+      })
+      .catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -81,20 +102,45 @@ export default function ChatScreen() {
     }
   }
 
-  function renderMessage({ item }: { item: Message }) {
+  function renderMessage({ item, index }: { item: Message; index: number }) {
     const isOwn = item.senderId === user?.uid;
+    const profile = profiles.get(item.senderId);
+    const initial = (profile?.name ?? '?').charAt(0).toUpperCase();
+    const color = avatarColor(item.senderId);
+
+    const prev = messages[index - 1];
+    const showAvatar = !isOwn && item.senderId !== prev?.senderId;
+    const showName = !isOwn && item.senderId !== prev?.senderId;
+
     return (
-      <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-        <ThemedView
-          style={[
-            styles.bubbleInner,
-            { backgroundColor: isOwn ? theme.backgroundSelected : theme.backgroundElement },
-          ]}>
-          <ThemedText type="small">{item.text}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.bubbleTime}>
-            {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-          </ThemedText>
-        </ThemedView>
+      <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
+        {!isOwn && (
+          <Pressable
+            style={[styles.avatar, { backgroundColor: showAvatar ? color : 'transparent' }]}
+            onPress={() => showAvatar && router.push({ pathname: '/user/[id]', params: { id: item.senderId } })}>
+            {showAvatar && (
+              <ThemedText style={styles.avatarText}>{initial}</ThemedText>
+            )}
+          </Pressable>
+        )}
+
+        <View style={styles.bubbleCol}>
+          {showName && profile && (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.senderName}>
+              {profile.name}
+            </ThemedText>
+          )}
+          <ThemedView
+            style={[
+              styles.bubbleInner,
+              { backgroundColor: isOwn ? theme.backgroundSelected : theme.backgroundElement },
+            ]}>
+            <ThemedText type="small">{item.text}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.bubbleTime}>
+              {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+            </ThemedText>
+          </ThemedView>
+        </View>
       </View>
     );
   }
@@ -167,24 +213,47 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center' },
   listContent: {
     padding: Spacing.three,
-    gap: Spacing.two,
+    gap: Spacing.one,
     flexGrow: 1,
   },
   empty: {
     textAlign: 'center',
     marginTop: Spacing.six,
   },
-  bubble: {
+  row: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.two,
+    marginVertical: 2,
   },
-  bubbleOwn: {
+  rowOwn: {
     justifyContent: 'flex-end',
   },
-  bubbleOther: {
+  rowOther: {
     justifyContent: 'flex-start',
   },
-  bubbleInner: {
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  bubbleCol: {
     maxWidth: '75%',
+    gap: 2,
+  },
+  senderName: {
+    fontSize: 11,
+    marginLeft: 2,
+  },
+  bubbleInner: {
     padding: Spacing.two,
     borderRadius: Spacing.two,
     gap: 2,
