@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -154,6 +155,12 @@ export default function ProfileScreen() {
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
                 <ThemedView type="backgroundElement" style={styles.card}>
                   <ThemedText type="smallBold">{activity.title}</ThemedText>
+                  {activity.requiresApproval && (
+                    <View style={styles.approvalChip}>
+                      <Ionicons name="lock-closed" size={11} color="#7C3AED" />
+                      <ThemedText style={styles.approvalChipText}>Entrada por aprovação</ThemedText>
+                    </View>
+                  )}
                   <ThemedText type="small" themeColor="textSecondary">
                     {relativeDate(activity.date)} · {STATUS_LABELS[activity.status]}
                     {user && activity.createdBy === user.uid
@@ -233,5 +240,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Spacing.five,
+  },
+  approvalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#7C3AED18',
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Spacing.five,
+  },
+  approvalChipText: {
+    color: '#7C3AED',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

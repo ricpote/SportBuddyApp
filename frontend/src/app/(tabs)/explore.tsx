@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -200,6 +201,12 @@ export default function ExploreScreen() {
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
                 <ThemedView type="backgroundElement" style={styles.card}>
                   <ThemedText type="smallBold">{activity.title}</ThemedText>
+                  {activity.requiresApproval && (
+                    <View style={styles.approvalChip}>
+                      <Ionicons name="lock-closed" size={11} color="#7C3AED" />
+                      <ThemedText style={styles.approvalChipText}>Entrada por aprovação</ThemedText>
+                    </View>
+                  )}
                   <ThemedText type="small" themeColor="textSecondary">
                     {relativeDate(activity.date)}
                   </ThemedText>
@@ -270,5 +277,22 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.one,
+  },
+  approvalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: '#7C3AED18',
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 2,
+    borderRadius: Spacing.five,
+  },
+  approvalChipText: {
+    color: '#7C3AED',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

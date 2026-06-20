@@ -160,6 +160,12 @@ export default function HomeScreen() {
                               {sportNameById.get(activity.sportId) ?? activity.sportId}
                             </ThemedText>
                           </View>
+                          {activity.requiresApproval && (
+                            <View style={styles.approvalBadge}>
+                              <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+                              <ThemedText style={styles.approvalBadgeText}>Entrada por aprovação</ThemedText>
+                            </View>
+                          )}
                         </View>
 
                         <View style={styles.cardBody}>
@@ -336,16 +342,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  freeBadge: {
-    backgroundColor: '#CF8444',
+  approvalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7C3AED',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
+    gap: 4,
   },
-  freeBadgeText: {
+  approvalBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   cardBody: {
