@@ -18,7 +18,7 @@ const DEFAULT_CENTER = {
   lat: 38.7223,
   lng: -9.1393,
 };
-
+const mapId = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_MAP_ID;
 const DEFAULT_RADIUS_KM = 20;
 
 export default function MapWebScreen() {
@@ -140,7 +140,7 @@ export default function MapWebScreen() {
       <View style={styles.emptyContainer}>
         <ThemedText style={styles.title}>Google Maps API key em falta</ThemedText>
         <ThemedText>
-          Adiciona EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY no ficheiro frontend/.env.
+
         </ThemedText>
       </View>
     );
@@ -152,14 +152,22 @@ export default function MapWebScreen() {
         <Map
           style={styles.map}
           defaultCenter={center}
-          defaultZoom={12}
-          mapId="DEMO_MAP_ID"
+          defaultZoom={13}
+          mapId={mapId}
           gestureHandling="greedy"
-          disableDefaultUI={false}
+          disableDefaultUI
+          streetViewControl={false}
+          fullscreenControl={false}
+          mapTypeControl={false}
+
+          scaleControl={false}
+          rotateControl={false}
+          keyboardShortcuts={false}
           onCameraChanged={(event: MapCameraChangedEvent) => {
             setCenter(event.detail.center);
           }}
         >
+
           {validActivities.map((activity) => (
             <AdvancedMarker
               key={activity.id}
