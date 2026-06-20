@@ -15,6 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useChatBadge } from '@/contexts/chat-badge-context';
 import { useTheme } from '@/hooks/use-theme';
 import { getActivity } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
@@ -38,6 +39,7 @@ export default function ChatScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
+  const { markRead } = useChatBadge();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [profiles, setProfiles] = useState<Map<string, PublicUser>>(new Map());
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,6 +48,11 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
   const latestCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!id) return;
+    markRead(id);
+  }, [id, markRead]);
 
   useEffect(() => {
     if (!id) return;

@@ -3,6 +3,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
 
 function RootNavigator() {
@@ -52,7 +53,9 @@ export default function RootLayout() {
       <AnimatedSplashOverlay />
       <AuthProvider>
         <PendingWaitlistProvider>
-          <RootNavigator />
+          <ChatBadgeProvider>
+            <RootNavigator />
+          </ChatBadgeProvider>
         </PendingWaitlistProvider>
       </AuthProvider>
     </ThemeProvider>

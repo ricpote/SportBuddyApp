@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useChatBadge } from '@/contexts/chat-badge-context';
 import { useTheme } from '@/hooks/use-theme';
 import { getMyActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
@@ -23,14 +24,19 @@ export default function ChatsScreen() {
   const { user } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const theme = useTheme();
+  const { checkUnread } = useChatBadge();
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    getMyActivities()
-      .then(setActivities)
-      .catch(() => setActivities([]));
-  }, []);
+    getMyActivities().then((data) => {
+      setActivities(data);
+      const chattableIds = data
+        .filter((a) => a.status !== 'cancelled' && a.participantsList.includes(user?.uid ?? ''))
+        .map((a) => a.id);
+      checkUnread(chattableIds);
+    }).catch(() => setActivities([]));
+  }, [checkUnread, user?.uid]);
 
   useFocusEffect(load);
 
@@ -39,6 +45,10 @@ export default function ChatsScreen() {
     try {
       const data = await getMyActivities();
       setActivities(data);
+      const chattableIds = data
+        .filter((a) => a.status !== 'cancelled' && a.participantsList.includes(user?.uid ?? ''))
+        .map((a) => a.id);
+      checkUnread(chattableIds);
     } catch {
       setActivities([]);
     } finally {

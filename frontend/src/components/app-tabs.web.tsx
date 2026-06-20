@@ -1,21 +1,23 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
-import { Pressable, View, StyleSheet, Image, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  TabList,
+  TabListProps,
+  TabSlot,
+  TabTrigger,
+  TabTriggerSlotProps,
+  Tabs,
+} from 'expo-router/ui';
 import { Link } from 'expo-router';
+import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from './themed-text';
 import { Spacing } from '@/constants/theme';
+import { useChatBadge } from '@/contexts/chat-badge-context';
 
 export default function AppTabs() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768 || Platform.OS === 'web';
+  const { unreadCount } = useChatBadge();
 
   return (
     <Tabs>
@@ -35,7 +37,7 @@ export default function AppTabs() {
             <TabButton icon="add-outline">Create</TabButton>
           </Link>
           <TabTrigger name="chats" href="/chats" asChild>
-            <TabButton icon="chatbubbles-outline">Chats</TabButton>
+            <TabButton icon="chatbubbles-outline" badge={unreadCount}>Chats</TabButton>
           </TabTrigger>
 
           <TabTrigger name="map" href="/map" asChild>
@@ -51,9 +53,9 @@ export default function AppTabs() {
   );
 }
 
-type TabButtonProps = TabTriggerSlotProps & { icon?: any };
+type TabButtonProps = TabTriggerSlotProps & { icon?: any; badge?: number };
 
-export function TabButton({ children, isFocused, icon, ...props }: TabButtonProps) {
+export function TabButton({ children, isFocused, icon, badge, ...props }: TabButtonProps) {
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
       <View
@@ -62,14 +64,21 @@ export function TabButton({ children, isFocused, icon, ...props }: TabButtonProp
           isFocused && { backgroundColor: 'rgba(207, 132, 68, 0.15)' }
         ]}>
 
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={20}
-            color={isFocused ? '#CF8444' : '#64748B'}
-            style={{ marginRight: 12 }}
-          />
-        )}
+        <View style={styles.iconWrap}>
+          {icon && (
+            <Ionicons
+              name={icon}
+              size={20}
+              color={isFocused ? '#CF8444' : '#64748B'}
+              style={{ marginRight: 12 }}
+            />
+          )}
+          {!!badge && badge > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+            </View>
+          )}
+        </View>
 
         <ThemedText
           type="smallBold"
@@ -167,6 +176,28 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  iconWrap: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    lineHeight: 12,
   },
   tabButtonView: {
     flexDirection: 'row',
