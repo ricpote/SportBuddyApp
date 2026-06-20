@@ -4,12 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="users ya">
+    <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="cenas ja testadas">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/map.web.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/map.web.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/create-activity.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/create-activity.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/services/activities.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/activities.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/util/geo.util.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/util/geo.util.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/explore.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/explore.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/profile.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/profile.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/_layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/app-tabs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/app-tabs.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/users.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/users.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +23,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="integration-merge" />
+        <entry key="$PROJECT_DIR$" value="integration" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -55,7 +59,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "integration",
+    "git-widget-placeholder": "delete",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/NOVA/3 Ano 2 Sem/ADC/Projeto_Final/frontend",
     "node.js.detected.package.eslint": "true",
@@ -130,6 +134,7 @@
     <MESSAGE value="a" />
     <MESSAGE value="reject waitlist e fixes" />
     <MESSAGE value="users ya" />
-    <option name="LAST_COMMIT_MESSAGE" value="users ya" />
+    <MESSAGE value="cenas ja testadas" />
+    <option name="LAST_COMMIT_MESSAGE" value="cenas ja testadas" />
   </component>
 </project>

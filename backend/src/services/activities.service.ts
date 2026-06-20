@@ -22,6 +22,7 @@ export type UpdateActivityDto = {
   title?: string;
   description?: string;
   date?: Date;
+  maxParticipants?: number;
   difficultyLevel?: Activity["difficultyLevel"];
   requiresApproval?: boolean;
 };
@@ -232,6 +233,13 @@ export class ActivitiesService {
     if (data.date !== undefined) changes.date = data.date;
     if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
     if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
+    if (data.maxParticipants !== undefined) {
+      if (data.maxParticipants < 2) throw new Error("maxParticipants must be at least 2");
+      if (data.maxParticipants < activity.participantsList.length) throw new Error(`Cannot set maxParticipants below current participant count (${activity.participantsList.length})`);
+      changes.maxParticipants = data.maxParticipants;
+      const newStatus: ActivityStatus = activity.participantsList.length >= data.maxParticipants ? "full" : "open";
+      if (newStatus !== activity.status) changes.status = newStatus;
+    }
 
     await this.activitiesRef.doc(activityId).update(changes);
 
@@ -293,6 +301,10 @@ export class ActivitiesService {
 
       if (activity.status === "cancelled" || activity.status === "completed") {
         throw new Error("Cannot remove participants from a cancelled or completed activity");
+      }
+
+      if (participantId === activity.createdBy) {
+        throw new Error("Cannot remove the activity creator");
       }
 
       if (!activity.participantsList.includes(participantId)) {

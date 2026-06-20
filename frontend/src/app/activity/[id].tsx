@@ -1,6 +1,6 @@
 import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -104,6 +104,25 @@ export default function ActivityDetailScreen() {
   const canJoin = activity.status === 'open' || activity.status === 'full';
   const activityDate = new Date(activity.date);
 
+  async function handleShare() {
+    const url =
+      Platform.OS === 'web'
+        ? `${window.location.origin}/activity/${activity!.id}`
+        : `sportbuddy://activity/${activity!.id}`;
+
+    if (Platform.OS === 'web') {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ title: activity!.title, url }).catch(() => {});
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setError('Link copiado para a área de transferência!');
+        setTimeout(() => setError(null), 2500);
+      }
+    } else {
+      await Share.share({ message: `${activity!.title}\n${url}` });
+    }
+  }
+
   async function runAction(action: () => Promise<Activity>, fallbackMessage: string) {
     setError(null);
     setSubmitting(true);
@@ -170,6 +189,7 @@ export default function ActivityDetailScreen() {
         {activity.description ? <ThemedText>{activity.description}</ThemedText> : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
+          <Row label="Criador" value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)} />
           <Row label="Modalidade" value={sport?.name ?? activity.sportId} />
           <Row label="Dificuldade" value={DIFFICULTY_LABELS[activity.difficultyLevel]} />
           <Row
@@ -313,6 +333,20 @@ export default function ActivityDetailScreen() {
             Esta atividade já não aceita participantes.
           </ThemedText>
         )}
+
+        {activity.location.lat !== 0 && activity.location.lng !== 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${activity.location.lat},${activity.location.lng}`)}>
+            <ThemedText type="smallBold">Abrir no Maps</ThemedText>
+          </Pressable>
+        )}
+
+        <Pressable
+          style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}
+          onPress={handleShare}>
+          <ThemedText type="smallBold">Partilhar atividade</ThemedText>
+        </Pressable>
       </ThemedView>
     </ScrollView>
   );

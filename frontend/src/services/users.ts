@@ -8,3 +8,7 @@ export function getMyProfile(): Promise<UserProfile> {
 export function getUserProfile(userId: string): Promise<PublicUser> {
   return api.get<PublicUser>(`/api/users/${userId}`);
 }
+
+export function updateMyProfile(data: { name?: string; bio?: string }): Promise<UserProfile> {
+  return api.patch<UserProfile>('/api/users/me', data);
+}

@@ -2,10 +2,12 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { pendingCount } = usePendingWaitlist();
 
   return (
     <NativeTabs
@@ -29,7 +31,7 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{pendingCount > 0 ? `Perfil (${pendingCount})` : 'Perfil'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="map">
