@@ -20,11 +20,11 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   competitive: 'Competitivo',
 };
 
-const DIFFICULTY_STYLES: Record<Activity['difficultyLevel'], { bg: string; text: string; border: string }> = {
-  beginner:     { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
-  intermediate: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
-  advanced:     { bg: '#FFEDD5', text: '#9A3412', border: '#FDBA74' },
-  competitive:  { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' },
+const DIFFICULTY_STYLES: Record<Activity['difficultyLevel'], { bg: string; text: string }> = {
+  beginner:     { bg: '#10B981', text: '#111827' },
+  intermediate: { bg: '#EAB308', text: '#111827' },
+  advanced:     { bg: '#F97316', text: '#111827' },
+  competitive:  { bg: '#EF4444', text: '#111827' },
 };
 
 const ALL_FILTER = 'Todos';
@@ -194,7 +194,7 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={styles.cardFooter}>
-                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyStyle.bg, borderColor: difficultyStyle.border }]}>
+                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyStyle.bg }]}>
                               <ThemedText style={[styles.difficultyText, { color: difficultyStyle.text }]}>{difficulty}</ThemedText>
                             </View>
 
@@ -393,7 +393,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    borderWidth: 1,
   },
   difficultyText: {
     color: '#FFFFFF',
