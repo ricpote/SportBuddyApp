@@ -20,25 +20,11 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   competitive: 'Competitivo',
 };
 
-const DIFFICULTY_COLORS: Record<Activity['difficultyLevel'], string> = {
-  beginner: '#10B981',
-  intermediate: '#EAB308',
-  advanced: '#F97316',
-  competitive: '#EF4444',
-};
-
-const DIFFICULTY_TEXT_COLORS: Record<Activity['difficultyLevel'], string> = {
-  beginner: '#FFFFFF',
-  intermediate: '#78350F',
-  advanced: '#FFFFFF',
-  competitive: '#FFFFFF',
-};
-
-const DIFFICULTY_BORDER_COLORS: Record<Activity['difficultyLevel'], string> = {
-  beginner: '#059669',
-  intermediate: '#B45309',
-  advanced: '#C2410C',
-  competitive: '#B91C1C',
+const DIFFICULTY_STYLES: Record<Activity['difficultyLevel'], { bg: string; text: string; border: string }> = {
+  beginner:     { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
+  intermediate: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
+  advanced:     { bg: '#FFEDD5', text: '#9A3412', border: '#FDBA74' },
+  competitive:  { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' },
 };
 
 const ALL_FILTER = 'Todos';
@@ -166,7 +152,7 @@ export default function HomeScreen() {
               // Cartões com os dados reais vindos do backend
               upcoming.map((activity) => {
                 const difficulty = DIFFICULTY_LABELS[activity.difficultyLevel];
-                const difficultyColor = DIFFICULTY_COLORS[activity.difficultyLevel];
+                const difficultyStyle = DIFFICULTY_STYLES[activity.difficultyLevel];
                 return (
                   <Pressable
                     key={activity.id}
@@ -208,8 +194,8 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={styles.cardFooter}>
-                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor, borderColor: DIFFICULTY_BORDER_COLORS[activity.difficultyLevel] }]}>
-                              <ThemedText style={[styles.difficultyText, { color: DIFFICULTY_TEXT_COLORS[activity.difficultyLevel] }]}>{difficulty}</ThemedText>
+                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyStyle.bg, borderColor: difficultyStyle.border }]}>
+                              <ThemedText style={[styles.difficultyText, { color: difficultyStyle.text }]}>{difficulty}</ThemedText>
                             </View>
 
                             <View style={styles.spotsContainer}>
