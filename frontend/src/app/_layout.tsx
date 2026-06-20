@@ -1,10 +1,23 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
+
+// 1. Criamos o nosso tema personalizado "Dark Premium"
+const SportBuddyTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: '#CF8444',       // Laranja da app (botões nativos e setas)
+    background: '#0F172A',    // Fundo principal de todos os ecrãs
+    card: '#1E293B',          // Fundo das barras (headers e bottom tabs)
+    text: '#FFFFFF',          // Texto principal
+    border: '#334155',        // Linhas de separação nativas
+    notification: '#FF6B6B',  // Cor das bolinhas de notificação
+  },
+};
 
 function RootNavigator() {
   const { user, initializing } = useAuth();
@@ -14,7 +27,16 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack 
+      // 2. Aplicamos estilos globais aos cabeçalhos de navegação
+      screenOptions={{ 
+        headerShown: false,
+        headerStyle: { backgroundColor: '#1E293B' },
+        headerTintColor: '#CF8444', // Cor da seta de "voltar atrás"
+        headerTitleStyle: { color: '#FFFFFF', fontWeight: 'bold' },
+        headerShadowVisible: false, // Remove a linha feia por baixo do header
+      }}
+    >
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -47,9 +69,9 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    // 3. Forçamos o nosso tema para a app nunca ficar branca de repente
+    <ThemeProvider value={SportBuddyTheme}>
       <AnimatedSplashOverlay />
       <AuthProvider>
         <PendingWaitlistProvider>

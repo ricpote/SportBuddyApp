@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { useTheme } from '@/hooks/use-theme';
 import { getActivity } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
 import { getUserProfile } from '@/services/users';
@@ -36,7 +36,6 @@ function avatarColor(userId: string): string {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
 
   const { markRead } = useChatBadge();
@@ -131,22 +130,24 @@ export default function ChatScreen() {
           </Pressable>
         )}
 
-        <View style={styles.bubbleCol}>
+        <View style={[styles.bubbleCol, isOwn && { alignItems: 'flex-end' }]}>
           {showName && profile && (
-            <ThemedText type="small" themeColor="textSecondary" style={styles.senderName}>
+            <ThemedText style={styles.senderName}>
               {profile.name}
             </ThemedText>
           )}
-          <ThemedView
+          <View
             style={[
               styles.bubbleInner,
-              { backgroundColor: isOwn ? theme.backgroundSelected : theme.backgroundElement },
+              isOwn ? styles.bubbleOwn : styles.bubbleOther,
             ]}>
-            <ThemedText type="small">{item.text}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.bubbleTime}>
+            <ThemedText style={{ color: isOwn ? '#FFFFFF' : '#E2E8F0', fontSize: 15 }}>
+              {item.text}
+            </ThemedText>
+            <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#94A3B8' }]}>
               {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
             </ThemedText>
-          </ThemedView>
+          </View>
         </View>
       </View>
     );
@@ -159,6 +160,7 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       <View style={[styles.flex, styles.centered]}>
         <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
+          
           <FlatList
             ref={listRef}
             data={messages}
@@ -166,8 +168,8 @@ export default function ChatScreen() {
             renderItem={renderMessage}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
-              <ThemedText themeColor="textSecondary" style={styles.empty}>
-                Sem mensagens ainda. Diz olá!
+              <ThemedText style={styles.empty}>
+                Sem mensagens ainda. Diz olá! 👋
               </ThemedText>
             }
             onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
@@ -185,11 +187,11 @@ export default function ChatScreen() {
             </View>
           )}
 
-          <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two, backgroundColor: theme.background }]}>
+          <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
             <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              style={styles.input}
               placeholder="Escreve uma mensagem..."
-              placeholderTextColor={theme.textSecondary}
+              placeholderTextColor="#64748B"
               value={text}
               onChangeText={setText}
               multiline
@@ -200,15 +202,14 @@ export default function ChatScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.sendBtn,
-                { backgroundColor: theme.text, opacity: (!text.trim() || sending) ? 0.4 : pressed ? 0.7 : 1 },
+                { opacity: (!text.trim() || sending) ? 0.4 : pressed ? 0.7 : 1 },
               ]}
               onPress={handleSend}
               disabled={!text.trim() || sending}>
-              <ThemedText style={{ color: theme.background }} type="smallBold">
-                {sending ? '...' : '↑'}
-              </ThemedText>
+              <Ionicons name="send" size={20} color="#FFFFFF" style={{ marginLeft: 4 }} />
             </Pressable>
           </View>
+          
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -216,22 +217,28 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  centered: { alignItems: 'center' },
+  flex: { 
+    flex: 1, 
+    backgroundColor: '#0F172A' 
+  },
+  centered: { 
+    alignItems: 'center' 
+  },
   listContent: {
     padding: Spacing.three,
-    gap: Spacing.one,
+    gap: Spacing.two,
     flexGrow: 1,
   },
   empty: {
     textAlign: 'center',
-    marginTop: Spacing.six,
+    color: '#64748B',
+    marginTop: 40,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: Spacing.two,
-    marginVertical: 2,
+    marginVertical: 4,
   },
   rowOwn: {
     justifyContent: 'flex-end',
@@ -240,12 +247,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    marginBottom: 2, // Alinhar ligeiramente com a base do balão
   },
   avatarText: {
     fontSize: 14,
@@ -254,61 +262,82 @@ const styles = StyleSheet.create({
   },
   bubbleCol: {
     maxWidth: '75%',
-    gap: 2,
+    gap: 4,
   },
   senderName: {
-    fontSize: 11,
-    marginLeft: 2,
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginLeft: 4,
   },
   bubbleInner: {
-    padding: Spacing.two,
-    borderRadius: Spacing.two,
-    gap: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 4,
+  },
+  bubbleOwn: {
+    backgroundColor: '#CF8444', // Laranja do utilizador
+    borderBottomRightRadius: 4, // Cauda do balão à direita
+  },
+  bubbleOther: {
+    backgroundColor: '#1E293B', // Cinzento escuro do remetente
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderBottomLeftRadius: 4, // Cauda do balão à esquerda
   },
   bubbleTime: {
     fontSize: 11,
     alignSelf: 'flex-end',
+    marginTop: 2,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.three,
     gap: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#00000020',
+    backgroundColor: '#0F172A', // Garante que a zona do input não é transparente
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     maxHeight: 120,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 15,
+    backgroundColor: '#1E293B',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingHorizontal: 20,
+    paddingTop: 14, // Alinha verticalmente com o botão de enviar
+    paddingBottom: 14,
+    fontSize: 16,
+    color: '#FFFFFF',
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#CF8444',
     alignItems: 'center',
     justifyContent: 'center',
   },
   error: {
-    color: '#CF4444',
+    color: '#FF6B6B',
     textAlign: 'center',
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.one,
   },
   completedBanner: {
-    backgroundColor: '#CF844420',
+    backgroundColor: '#10B98120',
     borderTopWidth: 1,
-    borderTopColor: '#CF8444',
+    borderTopColor: '#10B981',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
   completedText: {
-    color: '#CF8444',
+    color: '#10B981',
     textAlign: 'center',
+    fontSize: 13,
   },
 });

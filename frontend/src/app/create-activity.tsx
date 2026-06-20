@@ -1,13 +1,11 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
 import { DateTimeField } from '@/components/date-time-field';
 import LocationPicker, { PickedLocation } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { createActivity } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { SkillLevel } from '@/types/activity';
@@ -42,8 +40,6 @@ function initialDate() {
 }
 
 export default function CreateActivityScreen() {
-  const theme = useTheme();
-
   const [sports, setSports] = useState<Sport[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -131,39 +127,33 @@ export default function CreateActivityScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <ThemedView style={styles.container}>
+    <ScrollView 
+      style={{ backgroundColor: '#0F172A' }} 
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.container}>
+        
+        {/* TÍTULO E DESCRIÇÃO */}
         <TextInput
-          style={[
-            styles.input,
-            {
-              color: theme.text,
-              backgroundColor: theme.backgroundElement,
-            },
-          ]}
-          placeholder="Título"
-          placeholderTextColor={theme.textSecondary}
+          style={styles.input}
+          placeholder="Título da atividade"
+          placeholderTextColor="#64748B"
           value={title}
           onChangeText={setTitle}
         />
 
         <TextInput
-          style={[
-            styles.input,
-            styles.multiline,
-            {
-              color: theme.text,
-              backgroundColor: theme.backgroundElement,
-            },
-          ]}
-          placeholder="Descrição"
-          placeholderTextColor={theme.textSecondary}
+          style={[styles.input, styles.multiline]}
+          placeholder="Descrição (ex: Vamos jogar um 5 para 5 amigável. Levem bola se tiverem!)"
+          placeholderTextColor="#64748B"
           value={description}
           onChangeText={setDescription}
           multiline
         />
 
-        <ThemedText type="smallBold">Modalidade</ThemedText>
+        {/* MODALIDADE */}
+        <ThemedText style={styles.sectionLabel}>Modalidade</ThemedText>
 
         {CATEGORY_ORDER.map((category) => {
           const group = sports.filter((sport) => sport.category === category);
@@ -171,90 +161,102 @@ export default function CreateActivityScreen() {
           if (group.length === 0) return null;
 
           return (
-            <ThemedView key={category} style={styles.categoryGroup}>
-              <ThemedText type="small" themeColor="textSecondary">
+            <View key={category} style={styles.categoryGroup}>
+              <ThemedText style={styles.categoryLabel}>
                 {CATEGORY_LABELS[category]}
               </ThemedText>
 
-              <ThemedView style={styles.chipRow}>
-                {group.map((sport) => (
-                  <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
-                    <ThemedView
-                      type={sportId === sport.id ? 'backgroundSelected' : 'backgroundElement'}
-                      style={styles.chip}
-                    >
-                      <ThemedText type="small">{sport.name}</ThemedText>
-                    </ThemedView>
-                  </Pressable>
-                ))}
-              </ThemedView>
-            </ThemedView>
+              <View style={styles.chipRow}>
+                {group.map((sport) => {
+                  const isActive = sportId === sport.id;
+                  return (
+                    <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
+                      <View style={[styles.chip, isActive && styles.chipActive]}>
+                        <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                          {sport.name}
+                        </ThemedText>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           );
         })}
 
         {sports.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText style={styles.emptyText}>
             Sem modalidades disponíveis ainda.
           </ThemedText>
         )}
 
-        <ThemedText type="smallBold">Dificuldade</ThemedText>
+        {/* DIFICULDADE */}
+        <ThemedText style={styles.sectionLabel}>Dificuldade</ThemedText>
 
-        <ThemedView style={styles.chipRow}>
-          {DIFFICULTY_OPTIONS.map((level) => (
-            <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
-              <ThemedView
-                type={difficultyLevel === level ? 'backgroundSelected' : 'backgroundElement'}
-                style={styles.chip}
-              >
-                <ThemedText type="small">{DIFFICULTY_LABELS[level]}</ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))}
-        </ThemedView>
+        <View style={styles.chipRow}>
+          {DIFFICULTY_OPTIONS.map((level) => {
+            const isActive = difficultyLevel === level;
+            return (
+              <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
+                <View style={[styles.chip, isActive && styles.chipActive]}>
+                  <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                    {DIFFICULTY_LABELS[level]}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        <ThemedText type="smallBold">Localização</ThemedText>
-
+        {/* LOCALIZAÇÃO (Componente externo, poderá necessitar de ajustes no seu próprio ficheiro se tiver fundo branco) */}
+        <ThemedText style={styles.sectionLabel}>Localização</ThemedText>
         <LocationPicker value={location} onChange={setLocation} />
 
+        {/* DATA E HORA */}
         <DateTimeField label="Data e hora" value={date} onChange={setDate} />
 
+        {/* MÁXIMO DE PARTICIPANTES */}
+        <ThemedText style={styles.sectionLabel}>Lotação</ThemedText>
         <TextInput
-          style={[
-            styles.input,
-            {
-              color: theme.text,
-              backgroundColor: theme.backgroundElement,
-            },
-          ]}
+          style={styles.input}
           placeholder="Máximo de participantes"
-          placeholderTextColor={theme.textSecondary}
+          placeholderTextColor="#64748B"
           keyboardType="number-pad"
           value={maxParticipants}
           onChangeText={setMaxParticipants}
         />
 
-        <ThemedView style={styles.switchRow}>
-          <ThemedText>Requer aprovação para participar</ThemedText>
-          <Switch value={requiresApproval} onValueChange={setRequiresApproval} />
-        </ThemedView>
+        {/* APROVAÇÃO */}
+        <View style={styles.switchRow}>
+          <View>
+            <ThemedText style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
+            <ThemedText style={{ color: '#A0AEC0', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
+          </View>
+          <Switch 
+            value={requiresApproval} 
+            onValueChange={setRequiresApproval} 
+            trackColor={{ false: '#334155', true: '#CF8444' }}
+            thumbColor={requiresApproval ? '#FFFFFF' : '#A0AEC0'}
+          />
+        </View>
 
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
+        {/* BOTÃO CRIAR */}
         <Pressable
           style={({ pressed }) => [
             styles.button,
-            { backgroundColor: theme.text },
             pressed && styles.pressed,
           ]}
           disabled={submitting}
           onPress={handleSubmit}
         >
-          <ThemedText style={{ color: theme.background }} type="smallBold">
+          <ThemedText style={styles.buttonText} type="smallBold">
             {submitting ? 'A criar...' : 'Criar atividade'}
           </ThemedText>
         </Pressable>
-      </ThemedView>
+        
+      </View>
     </ScrollView>
   );
 }
@@ -263,55 +265,102 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
+    paddingVertical: Spacing.four,
   },
   container: {
     width: '100%',
     maxWidth: MaxContentWidth,
-    padding: Spacing.four,
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.three,
   },
   input: {
-    height: 48,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    height: 52,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
+    color: '#FFFFFF',
   },
   multiline: {
-    height: 96,
-    paddingTop: Spacing.two,
+    height: 100,
+    paddingTop: 16,
     textAlignVertical: 'top',
+  },
+  sectionLabel: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginTop: Spacing.two,
   },
   categoryGroup: {
     gap: Spacing.one,
   },
+  categoryLabel: {
+    color: '#64748B',
+    fontSize: 14,
+    marginBottom: 4,
+  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginBottom: Spacing.two,
+    gap: 8,
+    marginBottom: Spacing.one,
   },
   chip: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.five,
+    backgroundColor: '#1E293B',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  chipActive: {
+    backgroundColor: '#CF8444',
+    borderColor: '#CF8444',
+  },
+  chipText: {
+    color: '#A0AEC0',
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#0F172A',
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: Spacing.two,
-  },
-  button: {
-    height: 48,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#1E293B',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
     marginTop: Spacing.two,
   },
+  button: {
+    height: 52,
+    backgroundColor: '#CF8444',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.four,
+    marginBottom: Spacing.six,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   error: {
     textAlign: 'center',
+    color: '#FF6B6B',
+    marginTop: Spacing.two,
+  },
+  emptyText: {
+    color: '#64748B',
+    fontSize: 14,
   },
 });

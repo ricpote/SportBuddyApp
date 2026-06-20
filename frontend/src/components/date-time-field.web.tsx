@@ -1,10 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useTheme } from '@/hooks/use-theme';
 
 import type { DateTimeFieldProps } from './date-time-field';
 
@@ -16,12 +13,9 @@ function toLocalInputValue(date: Date) {
 }
 
 export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
-  const theme = useTheme();
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemedView style={styles.field}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+    <View style={styles.field}>
+      <ThemedText style={styles.label}>{label}</ThemedText>
       <input
         type="datetime-local"
         value={toLocalInputValue(value)}
@@ -30,24 +24,31 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
           if (!Number.isNaN(picked.getTime())) onChange(picked);
         }}
         style={{
-          height: 48,
-          borderRadius: Spacing.two,
-          border: 'none',
-          paddingLeft: Spacing.three,
-          paddingRight: Spacing.three,
+          height: 52, // Mesma altura dos outros inputs
+          borderRadius: 12,
+          border: '1px solid #334155', // Borda subtil
+          paddingLeft: 16,
+          paddingRight: 16,
           fontSize: 16,
           fontFamily: 'inherit',
-          color: theme.text,
-          backgroundColor: theme.backgroundElement,
-          colorScheme: colorScheme === 'dark' ? 'dark' : 'light',
+          color: '#FFFFFF', // Texto branco
+          backgroundColor: '#1E293B', // Fundo escuro do input
+          colorScheme: 'dark', // Diz ao Google Chrome/Safari para usar a versão escura do calendário
+          outline: 'none',
         }}
       />
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
+    marginTop: Spacing.two,
+  },
+  label: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

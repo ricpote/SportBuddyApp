@@ -1,15 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
+import { MaxContentWidth, Spacing, TopTabInset, BottomTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
-import { useTheme } from '@/hooks/use-theme';
 import { api } from '@/services/api';
 import { getMyActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
@@ -19,6 +18,7 @@ type ProfileData = {
   name: string;
   email: string;
   role: string;
+  bio?: string; // <-- Adicionado aqui para o TypeScript saber que existe
   stats: {
     activitiesCreated: number;
     activitiesJoined: number;
@@ -35,11 +35,13 @@ const STATUS_LABELS: Record<Activity['status'], string> = {
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
-  const theme = useTheme();
   const { pendingCount, refresh: refreshBadge } = usePendingWaitlist();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
+  
+  // Estado para a foto de perfil
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -76,92 +78,151 @@ export default function ProfileScreen() {
   const createdCount = profile?.stats.activitiesCreated ?? 0;
   const joinedCount = profile?.stats.activitiesJoined ?? 0;
 
+  // Função para escolher imagem da galeria
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Erro ao selecionar imagem:', error);
+    }
+  };
+
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
+      style={[styles.scrollView, { backgroundColor: '#0F172A' }]}
       contentContainerStyle={[
         styles.contentContainer,
         {
-          paddingTop: safeAreaInsets.top + TopTabInset + Spacing.five,
+          paddingTop: safeAreaInsets.top + TopTabInset + Spacing.four,
           paddingBottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
         },
       ]}>
-      <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>
-          Perfil
-        </ThemedText>
+      <View style={styles.container}>
+        
+        {/* CARTÃO PRINCIPAL DE PERFIL */}
+        <View style={styles.profileMainCard}>
+          
+          {/* IMAGEM + INFO */}
+          <View style={styles.profileHeaderRow}>
+            {/* Imagem de Perfil Circular */}
+            <Pressable onPress={handlePickImage} style={styles.imageWrapper}>
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="person" size={36} color="#64748B" />
+                </View>
+              )}
+              <View style={styles.onlineBadge} />
+              <View style={styles.editImageBadge}>
+                <Ionicons name="camera" size={12} color="#FFFFFF" />
+              </View>
+            </Pressable>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">{profile?.name ?? user?.displayName ?? '—'}</ThemedText>
-          <ThemedText themeColor="textSecondary">{profile?.email ?? user?.email}</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Função: {profile?.role ?? 'participant'}
-          </ThemedText>
-        </ThemedView>
+            {/* Nome e Detalhes */}
+            <View style={styles.profileInfo}>
+              <View style={styles.nameRow}>
+                <ThemedText style={styles.profileName} numberOfLines={1}>
+                  {profile?.name ?? user?.displayName ?? '—'}
+                </ThemedText>
+                <Link href="/edit-profile" asChild>
+                  <Pressable hitSlop={10}>
+                    <Ionicons name="pencil" size={16} color="#A0AEC0" />
+                  </Pressable>
+                </Link>
+              </View>
 
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="smallBold">Estatísticas</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Atividades criadas: {createdCount}
-          </ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Atividades participadas: {joinedCount}
-          </ThemedText>
-        </ThemedView>
+              <ThemedText style={styles.profileEmail}>{profile?.email ?? user?.email}</ThemedText>
+              <ThemedText style={styles.profileRole}>
+                Função: {profile?.role ?? 'participant'}
+              </ThemedText>
+            </View>
+          </View>
 
-        <Link href="/edit-profile" asChild>
-          <Pressable style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
-            <ThemedText type="smallBold">Editar perfil</ThemedText>
-          </Pressable>
-        </Link>
+          {/* BIO (Se o utilizador tiver preenchido) */}
+          {profile?.bio ? (
+            <>
+              <View style={styles.divider} />
+              <ThemedText style={styles.bioText}>
+                {profile.bio}
+              </ThemedText>
+            </>
+          ) : null}
 
+        </View>
+
+        {/* ESTATÍSTICAS EM GRELHA (Cartões Individuais) */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Ionicons name="calendar-outline" size={20} color="#CF8444" />
+            <ThemedText style={styles.statValue}>{joinedCount}</ThemedText>
+            <ThemedText style={styles.statLabel}>Participadas</ThemedText>
+          </View>
+          
+          <View style={styles.statCard}>
+            <Ionicons name="people-outline" size={20} color="#10B981" />
+            <ThemedText style={styles.statValue}>{createdCount}</ThemedText>
+            <ThemedText style={styles.statLabel}>Organizadas</ThemedText>
+          </View>
+        </View>
+
+        {/* ALERTAS */}
         {pendingCount > 0 && (
-          <ThemedView style={[styles.card, styles.pendingCard]}>
+          <View style={[styles.card, styles.pendingCard]}>
             <ThemedText type="smallBold" style={styles.pendingText}>
               {pendingCount === 1 ? '1 atividade com pedidos na lista de espera' : `${pendingCount} atividades com pedidos na lista de espera`}
             </ThemedText>
-            <ThemedText type="small" style={styles.pendingText}>Abre a atividade para admitir ou rejeitar.</ThemedText>
-          </ThemedView>
+            <ThemedText type="small" style={styles.pendingSubText}>Abre a atividade para admitir ou rejeitar.</ThemedText>
+          </View>
         )}
 
-        <ThemedText type="subtitle">As minhas atividades</ThemedText>
+        {/* TABS DE ATIVIDADES */}
+        <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
+        <View style={styles.filterRow}>
+          {(['all', 'active', 'past'] as const).map((f) => {
+            const isActive = activityFilter === f;
+            return (
+              <Pressable key={f} onPress={() => setActivityFilter(f)}>
+                <View style={[styles.filterChip, isActive && styles.filterChipActive]}>
+                  <ThemedText type="small" style={[styles.filterText, isActive && styles.filterTextActive]}>
+                    {f === 'all' ? 'Todas' : f === 'active' ? 'Ativas' : 'Passadas'}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        <ThemedView style={styles.filterRow}>
-          {(['all', 'active', 'past'] as const).map((f) => (
-            <Pressable key={f} onPress={() => setActivityFilter(f)}>
-              <ThemedView type={activityFilter === f ? 'backgroundSelected' : 'backgroundElement'} style={styles.filterChip}>
-                <ThemedText type="small">{f === 'all' ? 'Todas' : f === 'active' ? 'Ativas' : 'Passadas'}</ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))}
-        </ThemedView>
-
+        {/* LISTA DE ATIVIDADES */}
         {activities === null && (
-          <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
+          <ThemedText style={styles.emptyText}>A carregar...</ThemedText>
         )}
 
         {activities !== null && myActivities.length === 0 && (
-          <ThemedText themeColor="textSecondary">
+          <ThemedText style={styles.emptyText}>
             Ainda não participas em nenhuma atividade.
           </ThemedText>
         )}
 
-        <ThemedView style={styles.list}>
+        <View style={styles.list}>
           {myActivities.map((activity) => (
             <Link
               key={activity.id}
               href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
               asChild>
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedView type="backgroundElement" style={styles.card}>
-                  <ThemedText type="smallBold">{activity.title}</ThemedText>
-                  {activity.requiresApproval && (
-                    <View style={styles.approvalChip}>
-                      <Ionicons name="lock-closed" size={11} color="#7C3AED" />
-                      <ThemedText style={styles.approvalChipText}>Entrada por aprovação</ThemedText>
-                    </View>
-                  )}
-                  <ThemedText type="small" themeColor="textSecondary">
+                <View style={styles.activityCard}>
+                  <ThemedText type="smallBold" style={styles.activityTitle}>{activity.title}</ThemedText>
+                  <ThemedText type="small" style={styles.activitySubText}>
                     {relativeDate(activity.date)} · {STATUS_LABELS[activity.status]}
                     {user && activity.createdBy === user.uid
                       ? ' · Organizador'
@@ -169,22 +230,21 @@ export default function ProfileScreen() {
                         ? ' · Em lista de espera'
                         : ''}
                   </ThemedText>
-                </ThemedView>
+                </View>
               </Pressable>
             </Link>
           ))}
-        </ThemedView>
+        </View>
 
+        {/* BOTÃO DE LOGOUT */}
         <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: theme.backgroundElement },
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
           onPress={signOut}>
-          <ThemedText type="smallBold">Terminar sessão</ThemedText>
+          <Ionicons name="log-out-outline" size={18} color="#FF6B6B" style={{ marginRight: 6 }} />
+          <ThemedText type="smallBold" style={{ color: '#FF6B6B' }}>Terminar sessão</ThemedText>
         </Pressable>
-      </ThemedView>
+        
+      </View>
     </ScrollView>
   );
 }
@@ -201,61 +261,214 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
-  },
-  title: {
-    marginBottom: Spacing.two,
+    gap: Spacing.four,
   },
   card: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.one,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: Spacing.four,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  list: {
-    gap: Spacing.two,
+  
+  /* ESTILOS DO CARTÃO PRINCIPAL */
+  profileMainCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  button: {
+  profileHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageWrapper: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  imagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#1E293B',
+  },
+  editImageBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#CF8444',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1E293B',
+  },
+  profileInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  profileName: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+    flexShrink: 1,
+  },
+  profileEmail: {
+    color: '#A0AEC0',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  profileRole: {
+    color: '#CF8444',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
+  /* ESTILOS DA BIO */
+  divider: {
+    height: 1,
+    backgroundColor: '#334155',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  bioText: {
+    color: '#CBD5E1',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  /* ESTILOS DA GRELHA DE ESTATÍSTICAS */
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 4,
+  },
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  statLabel: {
+    color: '#A0AEC0',
+    fontSize: 12,
+  },
+
+  /* RESTANTES ESTILOS */
+  sectionTitle: {
+    color: '#FFFFFF',
+    marginTop: Spacing.two,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    backgroundColor: '#FF6B6B20',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
     height: 48,
-    borderRadius: Spacing.two,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.two,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   pendingCard: {
     backgroundColor: '#CF844420',
-    borderWidth: 1,
     borderColor: '#CF8444',
+    alignItems: 'center',
   },
   pendingText: {
     color: '#CF8444',
+    textAlign: 'center',
+  },
+  pendingSubText: {
+    color: '#CF8444',
+    opacity: 0.8,
+    textAlign: 'center',
+    marginTop: 4,
   },
   filterRow: {
     flexDirection: 'row',
     gap: Spacing.two,
   },
   filterChip: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.five,
-  },
-  approvalChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#7C3AED18',
+    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#7C3AED',
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
-    borderRadius: Spacing.five,
+    borderColor: '#334155',
   },
-  approvalChipText: {
-    color: '#7C3AED',
-    fontSize: 11,
+  filterChipActive: {
+    backgroundColor: '#CF8444',
+    borderColor: '#CF8444',
+  },
+  filterText: {
+    color: '#A0AEC0',
     fontWeight: '600',
+  },
+  filterTextActive: {
+    color: '#0F172A',
+  },
+  emptyText: {
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: Spacing.four,
+  },
+  list: {
+    gap: Spacing.three,
+  },
+  activityCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    padding: Spacing.four,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 4,
+  },
+  activityTitle: {
+    color: '#CF8444',
+    fontSize: 16,
+  },
+  activitySubText: {
+    color: '#A0AEC0',
   },
 });

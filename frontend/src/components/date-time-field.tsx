@@ -1,9 +1,8 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 
 export type DateTimeFieldProps = {
@@ -17,16 +16,17 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 
   if (Platform.OS === 'ios') {
     return (
-      <ThemedView style={styles.iosRow}>
-        <ThemedText type="smallBold">{label}</ThemedText>
+      <View style={styles.iosRow}>
+        <ThemedText style={styles.label}>{label}</ThemedText>
         <DateTimePicker
           value={value}
           mode="datetime"
+          themeVariant="dark" // Força o calendário nativo da Apple a abrir em modo escuro
           onChange={(_event: DateTimePickerEvent, picked?: Date) => {
             if (picked) onChange(picked);
           }}
         />
-      </ThemedView>
+      </View>
     );
   }
 
@@ -37,30 +37,38 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
   }
 
   return (
-    <ThemedView style={styles.field}>
-      <ThemedText type="smallBold">{label}</ThemedText>
-      <ThemedView style={styles.row}>
+    <View style={styles.field}>
+      <ThemedText style={styles.label}>{label}</ThemedText>
+      <View style={styles.row}>
         <Pressable style={styles.flex1} onPress={() => setMode('date')}>
-          <ThemedView type="backgroundElement" style={styles.input}>
-            <ThemedText>{value.toLocaleDateString()}</ThemedText>
-          </ThemedView>
+          <View style={styles.input}>
+            <ThemedText style={styles.inputText}>{value.toLocaleDateString()}</ThemedText>
+          </View>
         </Pressable>
         <Pressable style={styles.flex1} onPress={() => setMode('time')}>
-          <ThemedView type="backgroundElement" style={styles.input}>
-            <ThemedText>
+          <View style={styles.input}>
+            <ThemedText style={styles.inputText}>
               {value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </ThemedText>
-          </ThemedView>
+          </View>
         </Pressable>
-      </ThemedView>
-      {mode && <DateTimePicker value={value} mode={mode} onChange={handleChange} />}
-    </ThemedView>
+      </View>
+      {mode && (
+        <DateTimePicker 
+          value={value} 
+          mode={mode} 
+          themeVariant="dark" // Força o calendário nativo do Android a abrir em modo escuro
+          onChange={handleChange} 
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
+    marginTop: Spacing.two,
   },
   row: {
     flexDirection: 'row',
@@ -70,14 +78,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing.two,
+    backgroundColor: '#1E293B',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  label: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   flex1: {
     flex: 1,
   },
   input: {
-    height: 48,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    height: 52, // Mesma altura dos TextInput
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12, // Mesmos cantos arredondados
+    paddingHorizontal: 16,
     justifyContent: 'center',
+  },
+  inputText: {
+    color: '#FFFFFF',
+    fontSize: 16,
   },
 });

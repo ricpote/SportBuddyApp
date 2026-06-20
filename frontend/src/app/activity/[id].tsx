@@ -1,12 +1,11 @@
 import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { useTheme } from '@/hooks/use-theme';
 import {
   admitFromWaitlist,
   cancelActivity,
@@ -28,6 +27,14 @@ const STATUS_LABELS: Record<Activity['status'], string> = {
   completed: 'Terminada',
 };
 
+// Cores dinâmicas para o estado da atividade
+const STATUS_COLORS: Record<Activity['status'], string> = {
+  open: '#10B981',      // Verde
+  full: '#CF8444',      // Laranja
+  cancelled: '#FF6B6B', // Vermelho
+  completed: '#64748B', // Cinzento
+};
+
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   beginner: 'Iniciante',
   intermediate: 'Intermédio',
@@ -38,7 +45,6 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const theme = useTheme();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [sport, setSport] = useState<Sport | null>(null);
@@ -55,7 +61,6 @@ export default function ActivityDetailScreen() {
       .catch(() => setActivity(null));
   }, [id]);
 
-  // Reload on focus so changes made in the edit modal show up when coming back.
   useFocusEffect(loadActivity);
 
   const sportId = activity?.sportId;
@@ -83,17 +88,18 @@ export default function ActivityDetailScreen() {
 
   if (activity === undefined) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
-      </ThemedView>
+      <View style={[styles.centered, { backgroundColor: '#0F172A' }]}>
+        <ThemedText style={{ color: '#64748B' }}>A carregar detalhes...</ThemedText>
+      </View>
     );
   }
 
   if (activity === null) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText themeColor="textSecondary">Atividade não encontrada.</ThemedText>
-      </ThemedView>
+      <View style={[styles.centered, { backgroundColor: '#0F172A' }]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#334155" style={{ marginBottom: 8 }} />
+        <ThemedText style={{ color: '#64748B' }}>Atividade não encontrada.</ThemedText>
+      </View>
     );
   }
 
@@ -181,121 +187,155 @@ export default function ActivityDetailScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <ThemedView style={styles.container}>
-        <ThemedText type="title">{activity.title}</ThemedText>
-        <ThemedText themeColor="textSecondary">{STATUS_LABELS[activity.status]}</ThemedText>
+    <ScrollView 
+      style={{ backgroundColor: '#0F172A' }} 
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.container}>
+        
+        {/* CABEÇALHO */}
+        <View style={styles.headerContainer}>
+          <View style={styles.titleRow}>
+            <ThemedText style={styles.title}>{activity.title}</ThemedText>
+            <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[activity.status] }]}>
+              <ThemedText style={styles.statusText}>{STATUS_LABELS[activity.status]}</ThemedText>
+            </View>
+          </View>
+          {activity.description ? (
+            <ThemedText style={styles.descriptionText}>{activity.description}</ThemedText>
+          ) : null}
+        </View>
 
-        {activity.description ? <ThemedText>{activity.description}</ThemedText> : null}
-
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <Row label="Criador" value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)} />
-          <Row label="Modalidade" value={sport?.name ?? activity.sportId} />
-          <Row label="Dificuldade" value={DIFFICULTY_LABELS[activity.difficultyLevel]} />
+        {/* CARTÃO DE DETALHES */}
+        <View style={styles.card}>
+          <Row icon="person-outline" label="Organizador" value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)} />
+          <Row icon="football-outline" label="Modalidade" value={sport?.name ?? activity.sportId} />
+          <Row icon="speedometer-outline" label="Dificuldade" value={DIFFICULTY_LABELS[activity.difficultyLevel]} />
           <Row
+            icon="calendar-outline"
             label="Data"
-            value={`${activityDate.toLocaleDateString()} ${activityDate.toLocaleTimeString([], {
+            value={`${activityDate.toLocaleDateString()} às ${activityDate.toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             })}`}
           />
-          <Row label="Local" value={activity.location.name} />
-          {activity.location.address ? <Row label="Morada" value={activity.location.address} /> : null}
+          <Row icon="location-outline" label="Local" value={activity.location.name} />
+          {activity.location.address ? <Row icon="map-outline" label="Morada" value={activity.location.address} /> : null}
           <Row
-            label="Participantes"
-            value={`${activity.participantsList.length}/${activity.maxParticipants}`}
+            icon="people-outline"
+            label="Vagas"
+            value={`${activity.participantsList.length} de ${activity.maxParticipants} preenchidas`}
           />
           {activity.waitlist.length > 0 && (
-            <Row label="Lista de espera" value={String(activity.waitlist.length)} />
+            <Row icon="time-outline" label="Em espera" value={`${activity.waitlist.length} pessoa(s)`} highlightValue />
           )}
-          {activity.requiresApproval && <Row label="Requer aprovação" value="Sim" />}
-        </ThemedView>
+          {activity.requiresApproval && <Row icon="lock-closed-outline" label="Acesso" value="Requer aprovação" />}
+        </View>
 
+        {/* AÇÕES PRINCIPAIS */}
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
         {isCreator ? (
           <>
-            <ThemedText themeColor="textSecondary" style={styles.note}>
+            <ThemedText style={styles.note}>
               És o organizador desta atividade.
             </ThemedText>
 
+            {/* LISTA DE PARTICIPANTES (CRIADOR) */}
             {canJoin && (
               <>
-                <ThemedView type="backgroundElement" style={styles.card}>
-                  <ThemedText type="smallBold">Participantes</ThemedText>
+                <View style={styles.card}>
+                  <ThemedText style={styles.sectionTitle}>Participantes ({activity.participantsList.length})</ThemedText>
+                  <View style={styles.divider} />
+                  
                   {activity.participantsList
                     .filter((participantId) => participantId !== activity.createdBy)
                     .map((participantId) => (
-                      <ThemedView key={participantId} type="backgroundElement" style={styles.memberRow}>
-                        <ThemedText type="small" themeColor="textSecondary">
-                          {participantNames.get(participantId) ?? shortId(participantId)}
-                        </ThemedText>
+                      <View key={participantId} style={styles.memberRow}>
+                        <View style={styles.memberInfo}>
+                          <Ionicons name="person-circle-outline" size={24} color="#64748B" />
+                          <ThemedText style={styles.memberName}>
+                            {participantNames.get(participantId) ?? shortId(participantId)}
+                          </ThemedText>
+                        </View>
                         <Pressable
                           disabled={submitting}
+                          style={styles.removeButton}
                           onPress={() => handleRemoveParticipant(participantId)}>
-                          <ThemedText type="smallBold">Remover</ThemedText>
+                          <ThemedText style={styles.removeButtonText}>Remover</ThemedText>
                         </Pressable>
-                      </ThemedView>
+                      </View>
                     ))}
+                  
                   {activity.participantsList.length <= 1 && (
-                    <ThemedText type="small" themeColor="textSecondary">
+                    <ThemedText style={styles.emptyListText}>
                       Ainda só tu. Partilha a atividade!
                     </ThemedText>
                   )}
-                </ThemedView>
+                </View>
 
+                {/* LISTA DE ESPERA */}
                 {activity.waitlist.length > 0 && (
-                  <ThemedView type="backgroundElement" style={styles.card}>
-                    <ThemedText type="smallBold">Lista de espera</ThemedText>
+                  <View style={styles.card}>
+                    <ThemedText style={styles.sectionTitle}>Lista de Espera ({activity.waitlist.length})</ThemedText>
+                    <View style={styles.divider} />
+
                     {activity.waitlist.map((userId) => (
-                      <ThemedView key={userId} type="backgroundElement" style={styles.memberRow}>
-                        <ThemedText type="small" themeColor="textSecondary">
-                          {participantNames.get(userId) ?? shortId(userId)}
-                        </ThemedText>
+                      <View key={userId} style={styles.memberRow}>
+                        <View style={styles.memberInfo}>
+                          <Ionicons name="time-outline" size={24} color="#CF8444" />
+                          <ThemedText style={styles.memberName}>
+                            {participantNames.get(userId) ?? shortId(userId)}
+                          </ThemedText>
+                        </View>
                         {activity.status === 'open' ? (
-                          <ThemedView style={styles.waitlistActions}>
-                            <Pressable disabled={submitting} onPress={() => handleAdmit(userId)}>
-                              <ThemedText type="smallBold">Admitir</ThemedText>
+                          <View style={styles.waitlistActions}>
+                            <Pressable 
+                              disabled={submitting} 
+                              style={styles.admitButton}
+                              onPress={() => handleAdmit(userId)}>
+                              <ThemedText style={styles.admitButtonText}>Admitir</ThemedText>
                             </Pressable>
-                            <Pressable disabled={submitting} onPress={() => handleReject(userId)}>
-                              <ThemedText type="smallBold" style={styles.rejectText}>
-                                {confirmingReject === userId ? 'Tens a certeza?' : 'Rejeitar'}
+                            <Pressable 
+                              disabled={submitting} 
+                              style={styles.rejectButton}
+                              onPress={() => handleReject(userId)}>
+                              <ThemedText style={styles.rejectButtonText}>
+                                {confirmingReject === userId ? 'Confirmar' : 'Rejeitar'}
                               </ThemedText>
                             </Pressable>
-                          </ThemedView>
+                          </View>
                         ) : (
-                          <ThemedText type="small" themeColor="textSecondary">
-                            Atividade completa
-                          </ThemedText>
+                          <ThemedText style={styles.emptyListText}>Atividade completa</ThemedText>
                         )}
-                      </ThemedView>
+                      </View>
                     ))}
-                  </ThemedView>
+                  </View>
                 )}
 
-                {/* Link asChild drops the Pressable's style function on web, so the
-                    visual styles live on an inner View instead. */}
+                {/* BOTÕES DO CRIADOR */}
                 <Link
                   href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }}
                   asChild>
-                  <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                    <View style={[styles.button, { backgroundColor: theme.text }]}>
-                      <ThemedText style={{ color: theme.background }} type="smallBold">
-                        Editar atividade
-                      </ThemedText>
-                    </View>
+                  <Pressable style={({ pressed }) => [styles.button, styles.primaryButton, pressed && styles.pressed]}>
+                    <Ionicons name="pencil" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <ThemedText style={styles.primaryButtonText} type="smallBold">
+                      Editar atividade
+                    </ThemedText>
                   </Pressable>
                 </Link>
 
                 <Pressable
                   style={({ pressed }) => [
                     styles.button,
-                    { backgroundColor: theme.backgroundElement },
+                    styles.dangerButton,
                     pressed && styles.pressed,
                   ]}
                   disabled={submitting}
                   onPress={handleCancel}>
-                  <ThemedText type="smallBold">
+                  <Ionicons name="trash-outline" size={18} color="#FF6B6B" style={{ marginRight: 8 }} />
+                  <ThemedText style={styles.dangerButtonText} type="smallBold">
                     {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
                   </ThemedText>
                 </Pressable>
@@ -303,51 +343,59 @@ export default function ActivityDetailScreen() {
             )}
           </>
         ) : isParticipant || isWaitlisted ? (
+          /* BOTÃO PARA SAIR (PARTICIPANTE) */
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: theme.backgroundElement },
+              styles.dangerButton,
               pressed && styles.pressed,
             ]}
             disabled={submitting}
             onPress={handleLeave}>
-            <ThemedText type="smallBold">
+            <ThemedText style={styles.dangerButtonText} type="smallBold">
               {isWaitlisted ? 'Sair da lista de espera' : 'Sair da atividade'}
             </ThemedText>
           </Pressable>
         ) : canJoin ? (
+          /* BOTÃO PARA ENTRAR */
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: theme.text },
+              styles.primaryButton,
               pressed && styles.pressed,
             ]}
             disabled={submitting}
             onPress={handleJoin}>
-            <ThemedText style={{ color: theme.background }} type="smallBold">
+            <ThemedText style={styles.primaryButtonText} type="smallBold">
               {isFull ? 'Entrar na lista de espera' : 'Participar'}
             </ThemedText>
           </Pressable>
         ) : (
-          <ThemedText themeColor="textSecondary" style={styles.note}>
+          <ThemedText style={styles.note}>
             Esta atividade já não aceita participantes.
           </ThemedText>
         )}
 
-        {activity.location.lat !== 0 && activity.location.lng !== 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}
-            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${activity.location.lat},${activity.location.lng}`)}>
-            <ThemedText type="smallBold">Abrir no Maps</ThemedText>
-          </Pressable>
-        )}
+        {/* BOTÕES UTILITÁRIOS */}
+        <View style={styles.utilityButtonsRow}>
+          {activity.location.lat !== 0 && activity.location.lng !== 0 && (
+            <Pressable
+              style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
+              onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${activity.location.lat},${activity.location.lng}`)}>
+              <Ionicons name="map-outline" size={20} color="#A0AEC0" />
+              <ThemedText style={styles.utilityButtonText}>Ver Mapa</ThemedText>
+            </Pressable>
+          )}
 
-        <Pressable
-          style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}
-          onPress={handleShare}>
-          <ThemedText type="smallBold">Partilhar atividade</ThemedText>
-        </Pressable>
-      </ThemedView>
+          <Pressable
+            style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
+            onPress={handleShare}>
+            <Ionicons name="share-social-outline" size={20} color="#A0AEC0" />
+            <ThemedText style={styles.utilityButtonText}>Partilhar</ThemedText>
+          </Pressable>
+        </View>
+
+      </View>
     </ScrollView>
   );
 }
@@ -357,14 +405,18 @@ function shortId(uid: string) {
   return `Utilizador ${uid.slice(0, 6)}…`;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+// Componente Row melhorado com ícone
+function Row({ icon, label, value, highlightValue = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; highlightValue?: boolean }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.row}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
+    <View style={styles.row}>
+      <View style={styles.rowLabelContainer}>
+        <Ionicons name={icon} size={16} color="#64748B" />
+        <ThemedText style={styles.rowLabelText}>{label}</ThemedText>
+      </View>
+      <ThemedText style={[styles.rowValueText, highlightValue && { color: '#CF8444', fontWeight: 'bold' }]}>
+        {value}
       </ThemedText>
-      <ThemedText type="small">{value}</ThemedText>
-    </ThemedView>
+    </View>
   );
 }
 
@@ -372,6 +424,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
+    paddingBottom: Spacing.six,
   },
   centered: {
     flex: 1,
@@ -384,14 +437,77 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
   },
+  headerContainer: {
+    marginBottom: Spacing.one,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  descriptionText: {
+    color: '#CBD5E1',
+    fontSize: 15,
+    marginTop: Spacing.two,
+    lineHeight: 22,
+  },
   card: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.one,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    padding: Spacing.four,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: Spacing.three,
+    marginBottom: Spacing.two,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rowLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rowLabelText: {
+    color: '#A0AEC0',
+    fontSize: 14,
+  },
+  rowValueText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    flexShrink: 1,
+    textAlign: 'right',
+    paddingLeft: 16,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#334155',
+    marginVertical: 4,
   },
   memberRow: {
     flexDirection: 'row',
@@ -399,26 +515,115 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.one,
   },
-  button: {
-    height: 48,
-    borderRadius: Spacing.two,
+  memberInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
-  pressed: {
-    opacity: 0.8,
+  memberName: {
+    color: '#E2E8F0',
+    fontSize: 15,
   },
-  error: {
+  removeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FF6B6B20',
+  },
+  removeButtonText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  emptyListText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontStyle: 'italic',
     textAlign: 'center',
-  },
-  note: {
-    textAlign: 'center',
+    marginTop: 8,
   },
   waitlistActions: {
     flexDirection: 'row',
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
-  rejectText: {
+  admitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#10B98120',
+  },
+  admitButtonText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  rejectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FF6B6B20',
+  },
+  rejectButtonText: {
     color: '#FF6B6B',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  button: {
+    height: 52,
+    flexDirection: 'row',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButton: {
+    backgroundColor: '#CF8444',
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  dangerButton: {
+    backgroundColor: '#FF6B6B20',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  dangerButtonText: {
+    color: '#FF6B6B',
+    fontSize: 16,
+  },
+  utilityButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginTop: Spacing.two,
+  },
+  utilityButton: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 48,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  utilityButtonText: {
+    color: '#A0AEC0',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  error: {
+    textAlign: 'center',
+    color: '#FF6B6B',
+    marginVertical: 8,
+  },
+  note: {
+    textAlign: 'center',
+    color: '#CF8444',
+    marginBottom: Spacing.two,
   },
 });

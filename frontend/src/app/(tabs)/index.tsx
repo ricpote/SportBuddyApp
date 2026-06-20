@@ -1,6 +1,6 @@
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, ScrollView, View } from 'react-native';
+import { Pressable, StyleSheet, ScrollView, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,13 +18,6 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   intermediate: 'Intermédio',
   advanced: 'Avançado',
   competitive: 'Competitivo',
-};
-
-const DIFFICULTY_STYLES: Record<Activity['difficultyLevel'], { bg: string; text: string }> = {
-  beginner:     { bg: '#10B981', text: '#111827' },
-  intermediate: { bg: '#EAB308', text: '#111827' },
-  advanced:     { bg: '#F97316', text: '#111827' },
-  competitive:  { bg: '#EF4444', text: '#111827' },
 };
 
 const ALL_FILTER = 'Todos';
@@ -85,12 +78,26 @@ export default function HomeScreen() {
 
         {/* CABEÇALHO */}
         <View style={styles.header}>
-          <ThemedText type="title" style={{ color: '#FFFFFF' }}>
-            Olá{firstName ? `, ${firstName}` : ''} 👋
-          </ThemedText>
-          <ThemedText style={{ color: '#A0AEC0' }}>
-            Pronto para a tua próxima atividade?
-          </ThemedText>
+          <View style={styles.profileHeader}>
+            {/* Foto de Perfil */}
+            {user?.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={styles.profilePic} />
+            ) : (
+              <View style={styles.profilePicPlaceholder}>
+                <Ionicons name="person" size={24} color="#64748B" />
+              </View>
+            )}
+            
+            {/* Nome e Mensagem */}
+            <View>
+              <ThemedText type="subtitle" style={styles.profileName}>
+                {user?.displayName ?? firstName ?? 'Sem Nome'}
+              </ThemedText>
+              <ThemedText style={styles.greetingText}>
+                Pronto para a tua próxima atividade?
+              </ThemedText>
+            </View>
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -152,7 +159,6 @@ export default function HomeScreen() {
               // Cartões com os dados reais vindos do backend
               upcoming.map((activity) => {
                 const difficulty = DIFFICULTY_LABELS[activity.difficultyLevel];
-                const difficultyStyle = DIFFICULTY_STYLES[activity.difficultyLevel];
                 return (
                   <Pressable
                     key={activity.id}
@@ -194,8 +200,11 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={styles.cardFooter}>
-                            <View style={[styles.difficultyBadge, { backgroundColor: difficultyStyle.bg }]}>
-                              <ThemedText style={[styles.difficultyText, { color: difficultyStyle.text }]}>{difficulty}</ThemedText>
+                            <View style={[
+                              styles.difficultyBadge,
+                              difficulty === 'Avançado' ? { backgroundColor: '#FF6B6B' } : {}
+                            ]}>
+                              <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
                             </View>
 
                             <View style={styles.spotsContainer}>
@@ -253,7 +262,37 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.four,
-    gap: Spacing.one,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profilePic: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: '#1E293B',
+  },
+  profilePicPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  profileName: {
+    color: '#FFFFFF',
+    fontSize: 20,
+  },
+  greetingText: {
+    color: '#A0AEC0',
+    fontSize: 14,
+    marginTop: 2,
   },
   scrollContent: {
     paddingBottom: BottomTabInset + Spacing.four,
@@ -390,6 +429,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#334155',
   },
   difficultyBadge: {
+    backgroundColor: '#10B981',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -408,7 +448,6 @@ const styles = StyleSheet.create({
     color: '#A0AEC0',
     fontSize: 14,
   },
-  // O estilo pressed é necessário para o link dar aquele feedback visual ao clicar
   pressed: {
     opacity: 0.7,
   },

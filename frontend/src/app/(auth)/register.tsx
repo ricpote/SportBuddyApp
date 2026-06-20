@@ -1,17 +1,15 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { useTheme } from '@/hooks/use-theme';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();
-  const theme = useTheme();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,70 +43,78 @@ export default function RegisterScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        
+        {/* CABEÇALHO */}
         <ThemedText type="title" style={styles.title}>
           Criar conta
         </ThemedText>
-        <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+        <ThemedText style={styles.subtitle}>
           Junta-te ao SportBuddy
         </ThemedText>
 
-        <ThemedView style={styles.form}>
+        {/* FORMULÁRIO */}
+        <View style={styles.form}>
           <TextInput
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+            style={styles.input}
             placeholder="Nome"
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor="#64748B"
             autoCapitalize="words"
             autoComplete="name"
             value={name}
             onChangeText={setName}
           />
+          
           <TextInput
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+            style={styles.input}
             placeholder="Email"
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor="#64748B"
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
             value={email}
             onChangeText={setEmail}
           />
+          
           <TextInput
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+            style={styles.input}
             placeholder="Palavra-passe"
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor="#64748B"
             secureTextEntry
             autoComplete="password-new"
             value={password}
             onChangeText={setPassword}
           />
 
+          {/* MENSAGEM DE ERRO */}
           {error && (
-            <ThemedText themeColor="text" style={styles.error}>
+            <ThemedText style={styles.error}>
               {error}
             </ThemedText>
           )}
 
+          {/* BOTÃO DE REGISTO */}
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: theme.text },
               pressed && styles.pressed,
             ]}
             disabled={submitting}
             onPress={handleSubmit}>
-            <ThemedText style={{ color: theme.background }} type="smallBold">
+            <ThemedText style={styles.buttonText} type="smallBold">
               {submitting ? 'A criar conta...' : 'Criar conta'}
             </ThemedText>
           </Pressable>
 
+          {/* LINK PARA LOGIN */}
           <Link href="/login" asChild>
             <Pressable style={styles.linkPressable}>
-              <ThemedText type="link" themeColor="textSecondary">
-                Já tens conta? <ThemedText type="linkPrimary">Inicia sessão</ThemedText>
+              <ThemedText style={styles.linkText}>
+                Já tens conta? <ThemedText style={styles.linkHighlight}>Inicia sessão</ThemedText>
               </ThemedText>
             </Pressable>
           </Link>
-        </ThemedView>
+        </View>
+
       </SafeAreaView>
     </ThemedView>
   );
@@ -117,6 +123,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0F172A', // Fundo escuro principal
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -128,35 +135,58 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: 'center',
+    color: '#FFFFFF',
+    fontSize: 28,
   },
   subtitle: {
     textAlign: 'center',
+    color: '#A0AEC0', // Texto secundário (cinzento)
     marginBottom: Spacing.four,
   },
   form: {
     gap: Spacing.three,
   },
   input: {
-    height: 48,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    height: 52, // Ligeiramente mais alto para ser mais fácil clicar no telemóvel
+    backgroundColor: '#1E293B', // Fundo do input
+    borderWidth: 1,
+    borderColor: '#334155', // Borda subtil
+    borderRadius: 12, // Cantos arredondados iguais aos da HomeScreen
+    paddingHorizontal: 16,
     fontSize: 16,
+    color: '#FFFFFF', // Texto digitado a branco
   },
   button: {
-    height: 48,
-    borderRadius: Spacing.two,
+    height: 52,
+    backgroundColor: '#CF8444', // Laranja SportBuddy
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.one,
+    marginTop: Spacing.two,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
   },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   error: {
     textAlign: 'center',
+    color: '#FF6B6B', // Vermelho suave para os erros
+    marginTop: 4,
   },
   linkPressable: {
     alignItems: 'center',
-    marginTop: Spacing.two,
+    marginTop: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
+  linkText: {
+    color: '#A0AEC0',
+    fontSize: 14,
+  },
+  linkHighlight: {
+    color: '#CF8444', // Laranja no "Inicia sessão"
+    fontWeight: 'bold',
   },
 });
