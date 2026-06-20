@@ -29,6 +29,10 @@ function RootNavigator() {
           name="edit-profile"
           options={{ headerShown: true, title: 'Editar perfil', presentation: 'modal' }}
         />
+        <Stack.Screen
+          name="chat/[id]"
+          options={{ headerShown: true, title: 'Chat' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

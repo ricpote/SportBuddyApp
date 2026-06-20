@@ -34,6 +34,10 @@ export default function AppTabs() {
           <Link href="/create-activity" asChild>
             <TabButton icon="add-outline">Create</TabButton>
           </Link>
+          <TabTrigger name="chats" href="/chats" asChild>
+            <TabButton icon="chatbubbles-outline">Chats</TabButton>
+          </TabTrigger>
+
           <TabTrigger name="map" href="/map" asChild>
             <TabButton icon="map-outline">Map</TabButton>
           </TabTrigger>

@@ -30,6 +30,11 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="chats">
+        <NativeTabs.Trigger.Label>Chats</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="bubble.left.and.bubble.right.fill" drawable="ic_menu_allfriends" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>{pendingCount > 0 ? `Perfil (${pendingCount})` : 'Perfil'}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
