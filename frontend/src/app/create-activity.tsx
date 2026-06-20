@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput } from 'react-native';
 
 import { DateTimeField } from '@/components/date-time-field';
+import LocationPicker, { PickedLocation } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -12,7 +13,13 @@ import { listSports } from '@/services/sports';
 import { SkillLevel } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 
-const DIFFICULTY_OPTIONS: SkillLevel[] = ['beginner', 'intermediate', 'advanced', 'competitive'];
+const DIFFICULTY_OPTIONS: SkillLevel[] = [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'competitive',
+];
+
 const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
   beginner: 'Iniciante',
   intermediate: 'Intermédio',
@@ -21,6 +28,7 @@ const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
 };
 
 const CATEGORY_ORDER: SportCategory[] = ['team', 'individual'];
+
 const CATEGORY_LABELS: Record<SportCategory, string> = {
   team: 'Equipa',
   individual: 'Individual',
@@ -41,8 +49,14 @@ export default function CreateActivityScreen() {
   const [description, setDescription] = useState('');
   const [sportId, setSportId] = useState<string | null>(null);
   const [maxParticipants, setMaxParticipants] = useState('10');
-  const [locationName, setLocationName] = useState('');
-  const [address, setAddress] = useState('');
+
+  const [location, setLocation] = useState<PickedLocation>({
+    name: '',
+    address: '',
+    lat: 38.7223,
+    lng: -9.1393,
+  });
+
   const [date, setDate] = useState<Date>(initialDate);
   const [difficultyLevel, setDifficultyLevel] = useState<SkillLevel>('beginner');
   const [requiresApproval, setRequiresApproval] = useState(false);
@@ -58,14 +72,12 @@ export default function CreateActivityScreen() {
   async function handleSubmit() {
     setError(null);
 
-    // Regras alinhadas com a validação do backend (parseCreateActivityDto):
-    // título, descrição, modalidade, nome e morada do local são obrigatórios.
     if (
       !title.trim() ||
       !description.trim() ||
       !sportId ||
-      !locationName.trim() ||
-      !address.trim()
+      !location.name.trim() ||
+      !location.address.trim()
     ) {
       setError('Preenche o título, descrição, modalidade, local e morada');
       return;
@@ -77,56 +89,40 @@ export default function CreateActivityScreen() {
     }
 
     const parsedMax = Number(maxParticipants);
+
     if (!Number.isInteger(parsedMax) || parsedMax < 2) {
       setError('O número máximo de participantes tem de ser pelo menos 2');
       return;
     }
 
-    setSubmitting(true);
-    try {
-      let lat = 0;
-      let lng = 0;
-      try {
-        const queries = [
-          `${address.trim()}, Portugal`,
-          `${locationName.trim()}, ${address.trim()}, Portugal`,
-        ];
-        let found = false;
-        for (const q of queries) {
-          const geo = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=pt`,
-            { headers: { 'Accept-Language': 'pt' } }
-          );
-          const results = await geo.json();
-          if (results.length > 0) {
-            lat = parseFloat(results[0].lat);
-            lng = parseFloat(results[0].lon);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          setError('Morada não encontrada. Tenta incluir a cidade (ex: "Estrada do Jamor, Oeiras")');
-          setSubmitting(false);
-          return;
-        }
-      } catch {
-        setError('Não foi possível obter as coordenadas da morada. Verifica a ligação à internet.');
-        setSubmitting(false);
-        return;
-      }
+    if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+      setError('Seleciona uma localização válida no mapa');
+      return;
+    }
 
+    setSubmitting(true);
+
+    try {
       const activity = await createActivity({
         title: title.trim(),
         description: description.trim(),
         sportId,
         maxParticipants: parsedMax,
-        location: { name: locationName.trim(), address: address.trim(), lat, lng },
+        location: {
+          name: location.name.trim(),
+          address: location.address.trim(),
+          lat: location.lat,
+          lng: location.lng,
+        },
         date: date.toISOString(),
         difficultyLevel,
         requiresApproval,
       });
-      router.replace({ pathname: '/activity/[id]', params: { id: activity.id } });
+
+      router.replace({
+        pathname: '/activity/[id]',
+        params: { id: activity.id },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível criar a atividade');
     } finally {
@@ -138,14 +134,28 @@ export default function CreateActivityScreen() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <ThemedView style={styles.container}>
         <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+          style={[
+            styles.input,
+            {
+              color: theme.text,
+              backgroundColor: theme.backgroundElement,
+            },
+          ]}
           placeholder="Título"
           placeholderTextColor={theme.textSecondary}
           value={title}
           onChangeText={setTitle}
         />
+
         <TextInput
-          style={[styles.input, styles.multiline, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+          style={[
+            styles.input,
+            styles.multiline,
+            {
+              color: theme.text,
+              backgroundColor: theme.backgroundElement,
+            },
+          ]}
           placeholder="Descrição"
           placeholderTextColor={theme.textSecondary}
           value={description}
@@ -154,20 +164,25 @@ export default function CreateActivityScreen() {
         />
 
         <ThemedText type="smallBold">Modalidade</ThemedText>
+
         {CATEGORY_ORDER.map((category) => {
           const group = sports.filter((sport) => sport.category === category);
+
           if (group.length === 0) return null;
+
           return (
             <ThemedView key={category} style={styles.categoryGroup}>
               <ThemedText type="small" themeColor="textSecondary">
                 {CATEGORY_LABELS[category]}
               </ThemedText>
+
               <ThemedView style={styles.chipRow}>
                 {group.map((sport) => (
                   <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
                     <ThemedView
                       type={sportId === sport.id ? 'backgroundSelected' : 'backgroundElement'}
-                      style={styles.chip}>
+                      style={styles.chip}
+                    >
                       <ThemedText type="small">{sport.name}</ThemedText>
                     </ThemedView>
                   </Pressable>
@@ -176,6 +191,7 @@ export default function CreateActivityScreen() {
             </ThemedView>
           );
         })}
+
         {sports.length === 0 && (
           <ThemedText type="small" themeColor="textSecondary">
             Sem modalidades disponíveis ainda.
@@ -183,37 +199,34 @@ export default function CreateActivityScreen() {
         )}
 
         <ThemedText type="smallBold">Dificuldade</ThemedText>
+
         <ThemedView style={styles.chipRow}>
           {DIFFICULTY_OPTIONS.map((level) => (
             <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
               <ThemedView
                 type={difficultyLevel === level ? 'backgroundSelected' : 'backgroundElement'}
-                style={styles.chip}>
+                style={styles.chip}
+              >
                 <ThemedText type="small">{DIFFICULTY_LABELS[level]}</ThemedText>
               </ThemedView>
             </Pressable>
           ))}
         </ThemedView>
 
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Local (nome)"
-          placeholderTextColor={theme.textSecondary}
-          value={locationName}
-          onChangeText={setLocationName}
-        />
-        <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Morada"
-          placeholderTextColor={theme.textSecondary}
-          value={address}
-          onChangeText={setAddress}
-        />
+        <ThemedText type="smallBold">Localização</ThemedText>
+
+        <LocationPicker value={location} onChange={setLocation} />
 
         <DateTimeField label="Data e hora" value={date} onChange={setDate} />
 
         <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+          style={[
+            styles.input,
+            {
+              color: theme.text,
+              backgroundColor: theme.backgroundElement,
+            },
+          ]}
           placeholder="Máximo de participantes"
           placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
@@ -235,7 +248,8 @@ export default function CreateActivityScreen() {
             pressed && styles.pressed,
           ]}
           disabled={submitting}
-          onPress={handleSubmit}>
+          onPress={handleSubmit}
+        >
           <ThemedText style={{ color: theme.background }} type="smallBold">
             {submitting ? 'A criar...' : 'Criar atividade'}
           </ThemedText>
