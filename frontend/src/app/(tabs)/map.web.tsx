@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   statusBox: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#000000',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,

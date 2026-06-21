@@ -1,6 +1,8 @@
 import { db } from "../config/firebase";
 import { Message, CreateMessageDto, createMessageObject } from "../models/message.model";
 import { activitiesService } from "./activities.service";
+import { notificationsService } from "./notifications.service";
+import { usersService } from "./users.service";
 
 const ACTIVITIES_COLLECTION = "activities";
 
@@ -28,6 +30,19 @@ export class MessagesService {
     const message = createMessageObject(docRef.id, activityId, senderId, data);
 
     await docRef.set(message);
+
+    const others = activity.participantsList.filter(id => id !== senderId);
+    if (others.length > 0) {
+      const sender = await usersService.getUserById(senderId);
+      const senderName = sender?.name ?? "Alguém";
+      const preview = data.text.length > 60 ? data.text.slice(0, 60) + "…" : data.text;
+      await notificationsService.createNotificationForMany(
+        others,
+        "new_message",
+        `${senderName} em "${activity.title}": ${preview}`,
+        activityId
+      );
+    }
 
     return message;
   }

@@ -7,7 +7,8 @@ export type NotificationType =
   | "participant_removed"
   | "activity_cancelled"
   | "activity_reminder"
-  | "activity_auto_cancelled";
+  | "activity_auto_cancelled"
+  | "new_message";
 
 export type Notification = {
   id: string;
