@@ -7,12 +7,14 @@ import {
   createActivityObject,
   SkillLevel,
 } from "../models/activity.model";
+import { UserRole } from "../models/user.model";
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
 import { usersService } from "./users.service";
 import { sportsService } from "./sports.service";
 import { notificationsService } from "./notifications.service";
 
 const ACTIVITIES_COLLECTION = "activities";
+const NOTIFICATIONS_COLLECTION = "notifications";
 
 function toDate(value: unknown): Date {
   return value instanceof Timestamp ? value.toDate() : (value as Date);
@@ -35,6 +37,11 @@ export type ListActivitiesFilters = {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+};
+
+export type AdminListActivitiesFilters = {
+  status?: ActivityStatus;
+  createdBy?: string;
 };
 
 export type MyActivitiesFilters = {
@@ -210,7 +217,11 @@ export class ActivitiesService {
     return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
-  async updateActivity(activityId: string, requesterId: string, data: UpdateActivityDto
+  async updateActivity(
+    activityId: string,
+    requesterId: string,
+    data: UpdateActivityDto,
+    requesterRole?: UserRole
   ): Promise<Activity> {
     const activity = await this.getActivityById(activityId);
 
@@ -218,8 +229,8 @@ export class ActivitiesService {
       throw new Error("Activity not found");
     }
 
-    if (activity.createdBy !== requesterId) {
-      throw new Error("Only the activity creator can update it");
+    if (activity.createdBy !== requesterId && requesterRole !== "admin") {
+      throw new Error("Only the activity creator or an admin can update it");
     }
 
     if (activity.status === "cancelled" || activity.status === "completed") {
@@ -244,6 +255,64 @@ export class ActivitiesService {
     await this.activitiesRef.doc(activityId).update(changes);
 
     return { ...activity, ...changes } as Activity;
+  }
+
+  async listAllActivities(
+    filters: AdminListActivitiesFilters = {}
+  ): Promise<Activity[]> {
+    let query: FirebaseFirestore.Query = this.activitiesRef.orderBy(
+      "date",
+      "desc"
+    );
+
+    if (filters.status) {
+      query = query.where("status", "==", filters.status);
+    }
+
+    if (filters.createdBy) {
+      query = query.where("createdBy", "==", filters.createdBy);
+    }
+
+    const snapshot = await query.get();
+    return snapshot.docs.map((doc) =>
+      normalizeActivity({ id: doc.id, ...doc.data() })
+    );
+  }
+
+  async deleteActivityAsAdmin(activityId: string): Promise<void> {
+    const activity = await this.getActivityById(activityId);
+
+    if (!activity) {
+      throw new Error("Activity not found");
+    }
+
+    const statsUpdates: Promise<void>[] = [];
+
+    statsUpdates.push(
+      usersService.incrementStat(activity.createdBy, "activitiesCreated", -1)
+    );
+
+    for (const participantId of activity.participantsList) {
+      if (participantId !== activity.createdBy) {
+        statsUpdates.push(
+          usersService.incrementStat(participantId, "activitiesJoined", -1)
+        );
+      }
+    }
+
+    const notificationsSnapshot = await db
+      .collection(NOTIFICATIONS_COLLECTION)
+      .where("activityId", "==", activityId)
+      .get();
+
+    if (!notificationsSnapshot.empty) {
+      const batch = db.batch();
+      notificationsSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    await Promise.all(statsUpdates);
+    await db.recursiveDelete(this.activitiesRef.doc(activityId));
   }
 
   async cancelActivity(activityId: string, requesterId: string): Promise<Activity> {

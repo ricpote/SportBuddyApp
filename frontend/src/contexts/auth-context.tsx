@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -10,13 +10,18 @@ import {
 
 import { auth } from '@/config/firebase';
 import { api } from '@/services/api';
+import { getMyProfile } from '@/services/users';
+import { UserProfile } from '@/types/user';
 
 type AuthContextValue = {
   user: FirebaseUser | null;
+  profile: UserProfile | null;
   initializing: boolean;
+  profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -24,13 +29,34 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  const loadProfile = useCallback(async (firebaseUser: FirebaseUser | null) => {
+    if (!firebaseUser) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const nextProfile = await getMyProfile();
+      setProfile(nextProfile);
+    } catch {
+      setProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setInitializing(false);
+      void loadProfile(firebaseUser);
     });
-  }, []);
+  }, [loadProfile]);
 
   async function signIn(email: string, password: string) {
     await signInWithEmailAndPassword(auth, email, password);
@@ -42,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       await api.post('/api/users/profile', { name, email });
+      await loadProfile(credential.user);
     } catch (err) {
       await credential.user.delete();
       throw err;
@@ -49,11 +76,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    setProfile(null);
     await firebaseSignOut(auth);
   }
 
+  async function refreshProfile() {
+    await loadProfile(auth.currentUser);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, initializing, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        initializing,
+        profileLoading,
+        signIn,
+        signUp,
+        signOut,
+        refreshProfile,
+      }}>
       {children}
     </AuthContext.Provider>
   );

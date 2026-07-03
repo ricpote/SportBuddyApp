@@ -12,12 +12,15 @@ import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions
 
 import { ThemedText } from './themed-text';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
 
 export default function AppTabs() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768 || Platform.OS === 'web';
   const { unreadCount } = useChatBadge();
+  const { profile } = useAuth();
+  const showAdminTab = profile?.role === 'admin';
 
   return (
     <Tabs>
@@ -47,6 +50,12 @@ export default function AppTabs() {
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton icon="person-outline">Profile</TabButton>
           </TabTrigger>
+
+          {showAdminTab && (
+            <TabTrigger name="admin" href={'/admin' as never} asChild>
+              <TabButton icon="shield-checkmark-outline">Admin</TabButton>
+            </TabTrigger>
+          )}
         </CustomTabList>
       </TabList>
     </Tabs>

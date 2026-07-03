@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
 import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
 import { parseCreateActivityDto } from "../util/activityValidation.util";
+import { requireAdmin } from "../util/admin.util";
 
 type ActivityParams = {
   activityId: string;
@@ -153,7 +154,8 @@ export async function updateActivity(
     const activity = await activitiesService.updateActivity(
       activityId,
       req.user.uid,
-      updateData
+      updateData,
+      req.user.role
     );
 
     res.status(200).json(activity);
@@ -161,6 +163,62 @@ export async function updateActivity(
     res.status(400).json({
       message:
         error instanceof Error ? error.message : "Error updating activity",
+    });
+  }
+}
+
+export async function listAdminActivities(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const isAdmin = requireAdmin(req, res);
+    if (!isAdmin) return;
+
+    const status =
+      typeof req.query.status === "string"
+        ? (req.query.status as ActivityStatus)
+        : undefined;
+
+    const createdBy =
+      typeof req.query.createdBy === "string"
+        ? req.query.createdBy
+        : undefined;
+
+    const activities = await activitiesService.listAllActivities({
+      status,
+      createdBy,
+    });
+
+    res.status(200).json(activities);
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error listing admin activities",
+    });
+  }
+}
+
+export async function deleteActivityAsAdmin(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    const isAdmin = requireAdmin(req, res);
+    if (!isAdmin) return;
+
+    const { activityId } = req.params;
+    await activitiesService.deleteActivityAsAdmin(activityId);
+
+    res.status(200).json({ message: "Activity deleted successfully" });
+  } catch (error) {
+    res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error deleting activity",
     });
   }
 }

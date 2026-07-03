@@ -11,17 +11,23 @@ import { useTheme } from '@/hooks/use-theme';
 import { getActivity, updateActivity } from '@/services/activities';
 import { Activity, SkillLevel } from '@/types/activity';
 
-const DIFFICULTY_OPTIONS: SkillLevel[] = ['beginner', 'intermediate', 'advanced', 'competitive'];
+const DIFFICULTY_OPTIONS: SkillLevel[] = [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'competitive',
+];
+
 const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
   beginner: 'Iniciante',
-  intermediate: 'Intermédio',
-  advanced: 'Avançado',
+  intermediate: 'Intermedio',
+  advanced: 'Avancado',
   competitive: 'Competitivo',
 };
 
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const theme = useTheme();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
@@ -36,6 +42,7 @@ export default function EditActivityScreen() {
 
   useEffect(() => {
     if (!id) return;
+
     getActivity(id)
       .then((data) => {
         setActivity(data);
@@ -57,21 +64,26 @@ export default function EditActivityScreen() {
     );
   }
 
-  if (activity === null || !user || activity.createdBy !== user.uid) {
+  const canEdit =
+    !!user && (activity?.createdBy === user.uid || profile?.role === 'admin');
+
+  if (activity === null || !canEdit) {
     return (
       <ThemedView style={styles.centered}>
         <ThemedText themeColor="textSecondary">
-          Só o organizador pode editar esta atividade.
+          So o organizador ou um admin pode editar esta atividade.
         </ThemedText>
       </ThemedView>
     );
   }
 
+  const currentActivity = activity;
+
   async function handleSubmit() {
     setError(null);
 
     if (!title.trim()) {
-      setError('O título não pode ficar vazio');
+      setError('O titulo nao pode ficar vazio');
       return;
     }
 
@@ -82,20 +94,20 @@ export default function EditActivityScreen() {
 
     const parsedMax = Number(maxParticipants);
     if (!Number.isInteger(parsedMax) || parsedMax < 2) {
-      setError('O número máximo de participantes tem de ser pelo menos 2');
+      setError('O numero maximo de participantes tem de ser pelo menos 2');
       return;
     }
 
-    if (parsedMax < activity!.participantsList.length) {
+    if (parsedMax < currentActivity.participantsList.length) {
       setError(
-        `Já existem ${activity!.participantsList.length} participantes — o máximo não pode ser menor`
+        `Ja existem ${currentActivity.participantsList.length} participantes e o maximo nao pode ser menor`
       );
       return;
     }
 
     setSubmitting(true);
     try {
-      await updateActivity(activity!.id, {
+      await updateActivity(currentActivity.id, {
         title: title.trim(),
         description: description.trim(),
         maxParticipants: parsedMax,
@@ -105,7 +117,11 @@ export default function EditActivityScreen() {
       });
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível guardar as alterações');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Nao foi possivel guardar as alteracoes'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -115,15 +131,23 @@ export default function EditActivityScreen() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <ThemedView style={styles.container}>
         <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Título"
+          style={[
+            styles.input,
+            { color: theme.text, backgroundColor: theme.backgroundElement },
+          ]}
+          placeholder="Titulo"
           placeholderTextColor={theme.textSecondary}
           value={title}
           onChangeText={setTitle}
         />
+
         <TextInput
-          style={[styles.input, styles.multiline, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Descrição"
+          style={[
+            styles.input,
+            styles.multiline,
+            { color: theme.text, backgroundColor: theme.backgroundElement },
+          ]}
+          placeholder="Descricao"
           placeholderTextColor={theme.textSecondary}
           value={description}
           onChangeText={setDescription}
@@ -135,9 +159,15 @@ export default function EditActivityScreen() {
           {DIFFICULTY_OPTIONS.map((level) => (
             <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
               <ThemedView
-                type={difficultyLevel === level ? 'backgroundSelected' : 'backgroundElement'}
+                type={
+                  difficultyLevel === level
+                    ? 'backgroundSelected'
+                    : 'backgroundElement'
+                }
                 style={styles.chip}>
-                <ThemedText type="small">{DIFFICULTY_LABELS[level]}</ThemedText>
+                <ThemedText type="small">
+                  {DIFFICULTY_LABELS[level]}
+                </ThemedText>
               </ThemedView>
             </Pressable>
           ))}
@@ -146,8 +176,11 @@ export default function EditActivityScreen() {
         <DateTimeField label="Data e hora" value={date} onChange={setDate} />
 
         <TextInput
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="Máximo de participantes"
+          style={[
+            styles.input,
+            { color: theme.text, backgroundColor: theme.backgroundElement },
+          ]}
+          placeholder="Maximo de participantes"
           placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
           value={maxParticipants}
@@ -155,7 +188,7 @@ export default function EditActivityScreen() {
         />
 
         <ThemedView style={styles.switchRow}>
-          <ThemedText>Requer aprovação para participar</ThemedText>
+          <ThemedText>Requer aprovacao para participar</ThemedText>
           <Switch value={requiresApproval} onValueChange={setRequiresApproval} />
         </ThemedView>
 
@@ -170,7 +203,7 @@ export default function EditActivityScreen() {
           disabled={submitting}
           onPress={handleSubmit}>
           <ThemedText style={{ color: theme.background }} type="smallBold">
-            {submitting ? 'A guardar...' : 'Guardar alterações'}
+            {submitting ? 'A guardar...' : 'Guardar alteracoes'}
           </ThemedText>
         </Pressable>
       </ThemedView>

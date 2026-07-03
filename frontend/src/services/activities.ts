@@ -30,6 +30,14 @@ export function updateActivity(activityId: string, data: UpdateActivityInput): P
   return api.patch<Activity>(`/api/activities/${activityId}`, data);
 }
 
+export function listAdminActivities(): Promise<Activity[]> {
+  return api.get<Activity[]>('/api/activities/admin/all');
+}
+
+export function deleteActivityAsAdmin(activityId: string): Promise<{ message: string }> {
+  return api.delete<{ message: string }>(`/api/activities/${activityId}/admin`);
+}
+
 export function joinActivity(activityId: string): Promise<Activity> {
   return api.post<Activity>(`/api/activities/${activityId}/join`);
 }

@@ -7,6 +7,7 @@ const STORAGE_KEY = '@chat_last_seen_v1';
 
 type ChatBadgeContextValue = {
   unreadCount: number;
+  unreadIds: string[];
   markRead: (activityId: string) => Promise<void>;
   checkUnread: (activityIds: string[]) => Promise<void>;
 };
@@ -55,7 +56,13 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ChatBadgeContext.Provider value={{ unreadCount: unreadIds.size, markRead, checkUnread }}>
+    <ChatBadgeContext.Provider
+      value={{
+        unreadCount: unreadIds.size,
+        unreadIds: [...unreadIds],
+        markRead,
+        checkUnread,
+      }}>
       {children}
     </ChatBadgeContext.Provider>
   );

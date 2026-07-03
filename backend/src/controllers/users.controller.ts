@@ -2,27 +2,9 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { usersService } from "../services/users.service";
 import { PublicUser, UpdateUserDto, User, UserRole } from "../models/user.model";
+import { requireAdmin } from "../util/admin.util";
 
 type UserParams = { userId: string };
-
-async function requireAdmin(
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<boolean> {
-  if (!req.user) {
-    res.status(401).json({ message: "User not authenticated" });
-    return false;
-  }
-
-  const user = await usersService.getUserByFirebaseUid(req.user.uid);
-
-  if (!user || user.role !== "admin") {
-    res.status(403).json({ message: "Admin access required" });
-    return false;
-  }
-
-  return true;
-}
 
 function toPublicProfile(user: User): PublicUser {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -123,7 +105,7 @@ export async function getUserProfile(
 
 export async function listUsers(req: AuthenticatedRequest, res: Response) {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { role, status } = req.query as {
@@ -147,7 +129,7 @@ export async function updateUserRole(
   res: Response
 ) {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { userId } = req.params;
@@ -180,10 +162,13 @@ export async function banUser(
   res: Response
 ) {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { userId } = req.params;
+    if (req.user?.uid === userId) {
+      return res.status(400).json({ message: "Admins cannot ban themselves" });
+    }
     const updated = await usersService.banUser(userId);
     return res.json(updated);
   } catch (error) {
@@ -198,7 +183,7 @@ export async function reactivateUser(
   res: Response
 ) {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { userId } = req.params;
@@ -217,10 +202,15 @@ export async function deleteUser(
   res: Response
 ) {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { userId } = req.params;
+    if (req.user?.uid === userId) {
+      return res
+        .status(400)
+        .json({ message: "Admins cannot delete themselves" });
+    }
     await usersService.softDeleteUser(userId);
     return res.json({ message: "User deleted successfully" });
   } catch (error) {
