@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const theme = useTheme();
 
   const [email, setEmail] = useState('');
@@ -100,6 +100,18 @@ export default function LoginScreen() {
             </ThemedText>
           </Pressable>
 
+          <Pressable
+            style={({ pressed }) => [
+              styles.googleButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={signInWithGoogle}>
+            <Ionicons name="logo-google" size={20} color="#0F172A" style={{ marginRight: 8 }} />
+            <ThemedText style={{ color: '#0F172A' }} type="smallBold">
+              Entrar com Google
+            </ThemedText>
+          </Pressable>
+
           <Link href="/register" asChild>
             <Pressable style={styles.linkPressable}>
               <ThemedText type="link" themeColor="textSecondary">
@@ -168,6 +180,14 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  googleButton: {
+    height: 48,
+    borderRadius: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
   },
   error: {
     textAlign: 'center',
