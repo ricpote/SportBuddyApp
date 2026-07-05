@@ -8,7 +8,9 @@ export type NotificationType =
   | "activity_cancelled"
   | "activity_reminder"
   | "activity_auto_cancelled"
-  | "new_message";
+  | "new_message"
+  | "mvp_voting_open"
+  | "mvp_result";
 
 export type Notification = {
   id: string;

@@ -42,6 +42,10 @@ export type Activity = {
 
   status: ActivityStatus;
 
+  mvpVotes: Record<string, string>;
+  mvpWinners: string[];
+  votingClosedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 };
@@ -93,6 +97,9 @@ export function createActivityObject(
     requiresApproval: data.requiresApproval,
 
     status: data.maxParticipants <= 1 ? "full" : "open",
+
+    mvpVotes: {},
+    mvpWinners: [],
 
     createdAt: now,
     updatedAt: now,

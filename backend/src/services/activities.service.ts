@@ -624,6 +624,63 @@ export class ActivitiesService {
       return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
     });
   }
+
+  async voteMvp(activityId: string, voterId: string, votedForId: string): Promise<void> {
+    const activity = await this.getActivityById(activityId);
+
+    if (!activity) throw new Error("Activity not found");
+    if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
+    if (activity.votingClosedAt) throw new Error("MVP voting is closed");
+    if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
+    if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
+    if (voterId === votedForId) throw new Error("You cannot vote for yourself");
+    if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
+
+    const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
+    const now = new Date();
+    const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
+
+    if (allVoted) {
+      await this.closeMvpVoting(activityId, activity, updatedVotes, now);
+    } else {
+      await this.activitiesRef.doc(activityId).update({ mvpVotes: updatedVotes, updatedAt: now });
+    }
+  }
+
+  private async closeMvpVoting(
+    activityId: string,
+    activity: Activity,
+    votes: Record<string, string>,
+    now: Date
+  ): Promise<void> {
+    const tally: Record<string, number> = {};
+    for (const votedFor of Object.values(votes)) {
+      tally[votedFor] = (tally[votedFor] ?? 0) + 1;
+    }
+
+    const maxVotes = Math.max(...Object.values(tally));
+    const winners = Object.keys(tally).filter(id => tally[id] === maxVotes);
+
+    await this.activitiesRef.doc(activityId).update({
+      mvpVotes: votes,
+      mvpWinners: winners,
+      votingClosedAt: now,
+      updatedAt: now,
+    });
+
+    for (const winnerId of winners) {
+      await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
+    }
+
+    await notificationsService.createNotificationForMany(
+      activity.participantsList,
+      "mvp_result",
+      winners.length === 1
+        ? `A votação de MVP da atividade "${activity.title}" terminou!`
+        : `A votação de MVP da atividade "${activity.title}" terminou com empate!`,
+      activityId
+    );
+  }
 }
 
 export const activitiesService = new ActivitiesService();

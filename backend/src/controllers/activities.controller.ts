@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
+import { usersService } from "../services/users.service";
 import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
 import { parseCreateActivityDto } from "../util/activityValidation.util";
 import { requireAdmin } from "../util/admin.util";
@@ -414,6 +415,39 @@ export async function rejectFromWaitlist(
         error instanceof Error
           ? error.message
           : "Error rejecting user from waitlist",
+    });
+  }
+}
+
+export async function voteMvp(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const { activityId } = req.params;
+    const { votedForId } = req.body;
+
+    if (!votedForId) {
+      res.status(400).json({ message: "votedForId is required" });
+      return;
+    }
+
+    const user = await usersService.getUserByFirebaseUid(req.user.uid);
+    if (!user) {
+      res.status(404).json({ message: "User profile not found" });
+      return;
+    }
+
+    await activitiesService.voteMvp(activityId, user.id, votedForId);
+    res.status(200).json({ message: "Vote registered successfully" });
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : "Error voting for MVP",
     });
   }
 }
