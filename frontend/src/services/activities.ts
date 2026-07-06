@@ -62,6 +62,13 @@ export function rejectFromWaitlist(activityId: string, userId: string): Promise<
   return api.patch<Activity>(`/api/activities/${activityId}/reject-from-waitlist`, { userId });
 }
 
+// Regista o voto de MVP do utilizador atual num participante da atividade.
+// O backend só devolve uma mensagem de sucesso, por isso quem chama deve
+// recarregar a atividade a seguir para ver os votos/vencedores atualizados.
+export function voteMvp(activityId: string, votedForId: string): Promise<{ message: string }> {
+  return api.post<{ message: string }>(`/api/activities/${activityId}/vote-mvp`, { votedForId });
+}
+
   export type NearbyActivitiesFilters = {
     lat: number;
     lng: number;

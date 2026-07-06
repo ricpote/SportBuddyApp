@@ -34,6 +34,11 @@ export type Activity = {
 
   status: ActivityStatus;
 
+  // Votação de MVP (só relevante quando a atividade está "completed")
+  mvpVotes: Record<string, string>; // { quemVota: emQuemVotou }
+  mvpWinners: string[];             // vencedor(es) — pode haver empate
+  votingClosedAt?: string;          // definido quando a votação fecha
+
   createdAt: string;
   updatedAt: string;
 };

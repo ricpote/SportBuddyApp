@@ -60,6 +60,14 @@ function RootNavigator() {
           name="user/[id]"
           options={{ headerShown: true, title: 'Perfil' }}
         />
+        <Stack.Screen
+          name="notifications"
+          options={{ headerShown: true, title: 'Notificações' }}
+        />
+        <Stack.Screen
+          name="friends"
+          options={{ headerShown: true, title: 'Amigos' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />

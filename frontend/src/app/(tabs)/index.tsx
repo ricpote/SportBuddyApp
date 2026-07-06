@@ -8,8 +8,10 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useChatBadge } from '@/contexts/chat-badge-context';
 import { listActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
+import { getNotifications } from '@/services/notifications';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
 
@@ -39,6 +41,7 @@ function formatTime(iso: string) {
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { unreadCount: chatUnread } = useChatBadge();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
 
   // Filtro selecionado (nome da modalidade, ou 'Todos')
@@ -47,6 +50,7 @@ export default function HomeScreen() {
   // Dados reais vindos do backend
   const [activities, setActivities] = useState<Activity[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +60,9 @@ export default function HomeScreen() {
       listSports()
         .then(setSports)
         .catch(() => setSports([]));
+      getNotifications()
+        .then((list) => setUnreadCount(list.filter((n) => !n.read).length))
+        .catch(() => setUnreadCount(0));
     }, [])
   );
 
@@ -77,7 +84,7 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
 
         {/* CABEÇALHO */}
-        <View style={styles.header}>
+        <View style={[styles.header, styles.headerRow]}>
           <View style={styles.profileHeader}>
             {/* Foto de Perfil */}
             {user?.photoURL ? (
@@ -97,6 +104,37 @@ export default function HomeScreen() {
                 Pronto para a tua próxima atividade?
               </ThemedText>
             </View>
+          </View>
+
+          {/* AÇÕES RÁPIDAS: notificações, chats, amigos */}
+          <View style={styles.headerIcons}>
+            <Link href="/notifications" asChild>
+              <Pressable style={styles.iconBtn} hitSlop={8}>
+                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                {unreadCount > 0 && (
+                  <View style={styles.iconBadge}>
+                    <ThemedText style={styles.iconBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</ThemedText>
+                  </View>
+                )}
+              </Pressable>
+            </Link>
+
+            <Link href="/chats" asChild>
+              <Pressable style={styles.iconBtn} hitSlop={8}>
+                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#FFFFFF" />
+                {chatUnread > 0 && (
+                  <View style={styles.iconBadge}>
+                    <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
+                  </View>
+                )}
+              </Pressable>
+            </Link>
+
+            <Link href="/friends" asChild>
+              <Pressable style={styles.iconBtn} hitSlop={8}>
+                <Ionicons name="people-outline" size={24} color="#FFFFFF" />
+              </Pressable>
+            </Link>
           </View>
         </View>
 
@@ -262,6 +300,38 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.four,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  iconBtn: {
+    padding: 6,
+  },
+  iconBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF6B6B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#0F172A',
+  },
+  iconBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   profileHeader: {
     flexDirection: 'row',

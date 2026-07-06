@@ -14,6 +14,7 @@ import {
   leaveActivity,
   rejectFromWaitlist,
   removeParticipant,
+  voteMvp,
 } from '@/services/activities';
 import { getSport } from '@/services/sports';
 import { getUserProfile } from '@/services/users';
@@ -53,6 +54,7 @@ export default function ActivityDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [confirmingReject, setConfirmingReject] = useState<string | null>(null);
+  const [confirmingVote, setConfirmingVote] = useState<string | null>(null);
 
   const loadActivity = useCallback(() => {
     if (!id) return;
@@ -109,6 +111,17 @@ export default function ActivityDetailScreen() {
   const isFull = activity.participantsList.length >= activity.maxParticipants;
   const canJoin = activity.status === 'open' || activity.status === 'full';
   const activityDate = new Date(activity.date);
+
+  // --- Votação de MVP (só faz sentido em atividades terminadas) ---
+  // Guardamos defesas com `?? {}`/`?? []` porque atividades antigas, criadas
+  // antes desta funcionalidade, podem não ter estes campos na base de dados.
+  const mvpVotes = activity.mvpVotes ?? {};
+  const mvpWinners = activity.mvpWinners ?? [];
+  const votingClosed = !!activity.votingClosedAt;
+  const myVote = user ? mvpVotes[user.uid] : undefined;
+  const hasVoted = !!myVote;
+  const canVoteMvp = activity.status === 'completed' && isParticipant && !votingClosed && !hasVoted;
+  const otherParticipants = activity.participantsList.filter((pid) => pid !== user?.uid);
 
   async function handleShare() {
     const url =
@@ -186,6 +199,28 @@ export default function ActivityDetailScreen() {
     );
   }
 
+  async function handleVoteMvp(votedForId: string) {
+    // Primeiro toque só marca; segundo toque confirma e envia o voto.
+    if (confirmingVote !== votedForId) {
+      setConfirmingVote(votedForId);
+      return;
+    }
+    setConfirmingVote(null);
+    setError(null);
+    setSubmitting(true);
+    try {
+      await voteMvp(activity!.id, votedForId);
+      // O endpoint só devolve uma mensagem, por isso recarregamos a atividade
+      // para obter o mvpVotes atualizado (e o vencedor, se a votação fechar).
+      const updated = await getActivity(activity!.id);
+      setActivity(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível registar o voto');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <ScrollView 
       style={{ backgroundColor: '#0F172A' }} 
@@ -235,6 +270,66 @@ export default function ActivityDetailScreen() {
 
         {/* AÇÕES PRINCIPAIS */}
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+        {/* VOTAÇÃO DE MVP (só em atividades terminadas, para participantes) */}
+        {activity.status === 'completed' && isParticipant && (
+          <View style={styles.card}>
+            <View style={styles.voteHeader}>
+              <Ionicons name="trophy" size={20} color="#CF8444" />
+              <ThemedText style={styles.sectionTitle}>MVP da atividade</ThemedText>
+            </View>
+            <View style={styles.divider} />
+
+            {votingClosed ? (
+              mvpWinners.length > 0 ? (
+                <View style={styles.winnerBox}>
+                  <ThemedText style={styles.winnerLabel}>
+                    {mvpWinners.length === 1 ? 'Vencedor' : 'Empate entre'}
+                  </ThemedText>
+                  {mvpWinners.map((wid) => (
+                    <View key={wid} style={styles.winnerRow}>
+                      <Ionicons name="trophy" size={18} color="#CF8444" />
+                      <ThemedText style={styles.winnerName}>
+                        {participantNames.get(wid) ?? shortId(wid)}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <ThemedText style={styles.emptyListText}>A votação terminou sem votos.</ThemedText>
+              )
+            ) : hasVoted ? (
+              <ThemedText style={styles.emptyListText}>
+                Já votaste em {participantNames.get(myVote!) ?? shortId(myVote!)}. À espera dos restantes participantes.
+              </ThemedText>
+            ) : (
+              <>
+                <ThemedText style={styles.voteHint}>Escolhe o melhor jogador da atividade:</ThemedText>
+                {otherParticipants.map((pid) => (
+                  <View key={pid} style={styles.memberRow}>
+                    <View style={styles.memberInfo}>
+                      <Ionicons name="person-circle-outline" size={24} color="#64748B" />
+                      <ThemedText style={styles.memberName}>
+                        {participantNames.get(pid) ?? shortId(pid)}
+                      </ThemedText>
+                    </View>
+                    <Pressable
+                      disabled={submitting}
+                      style={styles.voteButton}
+                      onPress={() => handleVoteMvp(pid)}>
+                      <ThemedText style={styles.voteButtonText}>
+                        {confirmingVote === pid ? 'Confirmar' : 'Votar'}
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ))}
+                {otherParticipants.length === 0 && (
+                  <ThemedText style={styles.emptyListText}>Não há outros participantes para votar.</ThemedText>
+                )}
+              </>
+            )}
+          </View>
+        )}
 
         {isCreator ? (
           <>
@@ -541,6 +636,50 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
+  },
+  voteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  voteHint: {
+    color: '#A0AEC0',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  voteButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#CF844420',
+    borderWidth: 1,
+    borderColor: '#CF8444',
+  },
+  voteButtonText: {
+    color: '#CF8444',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  winnerBox: {
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  winnerLabel: {
+    color: '#A0AEC0',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+  },
+  winnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  winnerName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   waitlistActions: {
     flexDirection: 'row',
