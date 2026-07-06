@@ -297,6 +297,9 @@ export class ActivitiesService {
         statsUpdates.push(
           usersService.incrementStat(participantId, "activitiesJoined", -1)
         );
+        statsUpdates.push(
+          usersService.incrementSportStat(participantId, activity.sportId, -1)
+        );
       }
     }
 
@@ -399,8 +402,10 @@ export class ActivitiesService {
     });
 
     await usersService.incrementStat(participantId, "activitiesJoined", -1);
+    await usersService.incrementSportStat(participantId, result.activity.sportId, -1);
     if (result.promoted) {
       await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
+      await usersService.incrementSportStat(result.promoted, result.activity.sportId, 1);
     }
 
     await notificationsService.createNotification(
@@ -452,6 +457,7 @@ export class ActivitiesService {
 
     if (result.joined) {
       await usersService.incrementStat(userId, "activitiesJoined", 1);
+      await usersService.incrementSportStat(userId, result.activity.sportId, 1);
 
       await notificationsService.createNotification(
         result.activity.createdBy,
@@ -532,8 +538,10 @@ export class ActivitiesService {
 
     if (result.leftParticipants) {
       await usersService.incrementStat(userId, "activitiesJoined", -1);
+      await usersService.incrementSportStat(userId, result.activity.sportId, -1);
       if (result.promoted) {
         await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
+        await usersService.incrementSportStat(result.promoted, result.activity.sportId, 1);
       }
 
       await notificationsService.createNotification(
@@ -583,6 +591,7 @@ export class ActivitiesService {
     });
 
     await usersService.incrementStat(userId, "activitiesJoined", 1);
+    await usersService.incrementSportStat(userId, result.activity.sportId, 1);
 
     await notificationsService.createNotification(
       userId,

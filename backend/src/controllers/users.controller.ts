@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { usersService } from "../services/users.service";
+import { badgesService } from "../services/badges.service";
 import { PublicUser, UpdateUserDto, User, UserRole } from "../models/user.model";
 import { requireAdmin } from "../util/admin.util";
 
@@ -83,6 +84,33 @@ export async function updateMe(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function setDisplayedBadge(
+  req: AuthenticatedRequest,
+  res: Response
+) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { badgeId } = req.body as { badgeId: string | null };
+
+    if (badgeId !== null && typeof badgeId !== "string") {
+      return res
+        .status(400)
+        .json({ message: "badgeId must be a string or null" });
+    }
+
+    const user = await usersService.setDisplayedBadge(req.user.uid, badgeId);
+    return res.json(toPublicProfile(user));
+  } catch (error) {
+    return res.status(400).json({
+      message:
+        error instanceof Error ? error.message : "Error setting displayed badge",
+    });
+  }
+}
+
 export async function getUserProfile(
   req: AuthenticatedRequest<UserParams>,
   res: Response
@@ -98,6 +126,43 @@ export async function getUserProfile(
     return res.json(toPublicProfile(user));
   } catch {
     return res.status(500).json({ message: "Error getting user profile" });
+  }
+}
+
+export async function getMyBadges(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const badges = await badgesService.getUserBadges(req.user.uid);
+
+    if (!badges) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    return res.json(badges);
+  } catch {
+    return res.status(500).json({ message: "Error getting badges" });
+  }
+}
+
+export async function getUserBadges(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    const { userId } = req.params;
+    const user = await usersService.getUserById(userId);
+
+    if (!user || user.status === "deleted") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const badges = await badgesService.getUserBadges(userId);
+    return res.json(badges);
+  } catch {
+    return res.status(500).json({ message: "Error getting badges" });
   }
 }
 
