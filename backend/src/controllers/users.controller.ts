@@ -137,7 +137,6 @@ export async function updateUserRole(
 
     const validRoles: UserRole[] = [
       "participant",
-      "activity_manager",
       "partner",
       "admin",
     ];

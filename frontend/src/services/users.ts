@@ -1,5 +1,5 @@
 import { api } from '@/services/api';
-import { AdminUser, PublicUser, UserProfile } from '@/types/user';
+import { AdminUser, PublicUser, UserProfile,UserRole  } from '@/types/user';
 
 export function getMyProfile(): Promise<UserProfile> {
   return api.get<UserProfile>('/api/users/me');
@@ -27,4 +27,8 @@ export function reactivateUser(userId: string): Promise<AdminUser> {
 
 export function deleteUser(userId: string): Promise<{ message: string }> {
   return api.delete<{ message: string }>(`/api/users/${userId}`);
+}
+
+export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
+  return api.patch<AdminUser>(`/api/users/${userId}/role`, { role });
 }

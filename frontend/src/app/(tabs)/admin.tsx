@@ -27,9 +27,11 @@ import {
   deleteUser,
   listAdminUsers,
   reactivateUser,
+  updateUserRole,
 } from '@/services/users';
+import { AdminUser, UserRole } from '@/types/user';
 import { Activity } from '@/types/activity';
-import { AdminUser } from '@/types/user';
+
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('pt-PT', {
@@ -45,6 +47,7 @@ function matchesSearch(value: string, search: string) {
 }
 
 export default function AdminScreen() {
+  const ROLE_OPTIONS: UserRole[] = ['participant', 'partner', 'admin'];
   const { profile, profileLoading } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -121,7 +124,23 @@ export default function AdminScreen() {
       ].some((value) => matchesSearch(value, activitySearch))
     );
   }, [activities, activitySearch, userNameById]);
+  async function handleRoleChange(userId: string, role: UserRole) {
+    setBusyKey(`role:${userId}`);
+    setError(null);
 
+    try {
+      const updated = await updateUserRole(userId, role);
+      setUsers((current) =>
+        current.map((user) => (user.id === userId ? { ...user, ...updated } : user))
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Nao foi possivel atualizar o role'
+      );
+    } finally {
+      setBusyKey(null);
+    }
+  }
   async function handleBan(userId: string) {
     setBusyKey(`ban:${userId}`);
     setError(null);
@@ -290,6 +309,7 @@ export default function AdminScreen() {
             {visibleUsers.map((user) => {
               const isCurrentAdmin = user.id === profile.id;
               const isBusy =
+                busyKey === `role:${user.id}` ||
                 busyKey === `ban:${user.id}` ||
                 busyKey === `reactivate:${user.id}` ||
                 busyKey === `delete-user:${user.id}`;
@@ -332,6 +352,35 @@ export default function AdminScreen() {
                   <ThemedText style={styles.itemSubtle}>
                     ID: {user.id}
                   </ThemedText>
+                  <View style={styles.rolesSection}>
+                    <ThemedText style={styles.rolesLabel}>Role</ThemedText>
+                    <View style={styles.rolesRow}>
+                      {ROLE_OPTIONS.map((role) => {
+                        const isActive = user.role === role;
+
+                        return (
+                          <Pressable
+                            key={role}
+                            disabled={isBusy}
+                            style={({ pressed }) => [
+                              styles.roleChip,
+                              isActive && styles.roleChipActive,
+                              isBusy && styles.disabledChip,
+                              pressed && !isBusy && styles.pressed,
+                            ]}
+                            onPress={() => void handleRoleChange(user.id, role)}>
+                            <ThemedText
+                              style={[
+                                styles.roleChipText,
+                                isActive && styles.roleChipTextActive,
+                              ]}>
+                              {role}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
 
                   <View style={styles.actionsRow}>
                     {user.status !== 'banned' ? (
@@ -533,6 +582,45 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
+  rolesSection: {
+    gap: Spacing.one,
+    marginTop: Spacing.one,
+  },
+  rolesLabel: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  rolesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
+  },
+  roleChip: {
+    backgroundColor: '#17253F',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  roleChipActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  roleChipText: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  roleChipTextActive: {
+    color: '#0F172A',
+  },
+  disabledChip: {
+    opacity: 0.45,
+  },
   screen: {
     flex: 1,
     backgroundColor: '#0F172A',
