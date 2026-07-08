@@ -1,8 +1,7 @@
 export type BadgeCriteriaType =
   | 'activitiesJoined'
   | 'activitiesJoinedBySport'
-  | 'mvpVotesReceived'
-  | 'fairPlayVotesReceived';
+  | 'mvpVotesReceived';
 
 export type Badge = {
   id: string;

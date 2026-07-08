@@ -103,6 +103,23 @@ export class BadgesCatalogService {
     await this.badgesRef.doc(badgeId).delete();
     this.invalidateCache();
   }
+
+  
+  async syncCatalog(
+    definitions: ({ id: string } & CreateBadgeDto)[]
+  ): Promise<void> {
+    const existing = await this.listBadges();
+    const validIds = new Set(definitions.map((definition) => definition.id));
+
+    for (const { id, ...data } of definitions) {
+      await this.upsertBadge(id, data);
+    }
+
+    const staleBadges = existing.filter((badge) => !validIds.has(badge.id));
+    for (const badge of staleBadges) {
+      await this.deleteBadge(badge.id);
+    }
+  }
 }
 
 export const badgesCatalogService = new BadgesCatalogService();

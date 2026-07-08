@@ -7,5 +7,4 @@ export const badgeImages: Record<string, ImageSourcePropType> = {
   // joined_50: require('../../assets/images/badges/joined_50.png'),
   // mvp_1: require('../../assets/images/badges/mvp_1.png'),
   // mvp_10: require('../../assets/images/badges/mvp_10.png'),
-  // fairplay_1: require('../../assets/images/badges/fairplay_1.png'),
 };

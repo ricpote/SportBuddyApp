@@ -12,7 +12,6 @@ const VALID_CRITERIA_TYPES: BadgeCriteriaType[] = [
   "activitiesJoined",
   "activitiesJoinedBySport",
   "mvpVotesReceived",
-  "fairPlayVotesReceived",
 ];
 
 export async function listBadges(

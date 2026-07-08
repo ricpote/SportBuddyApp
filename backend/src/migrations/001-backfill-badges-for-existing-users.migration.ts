@@ -3,7 +3,7 @@ import { badgesService } from "../services/badges.service";
 import { Migration } from "./migration.types";
 
 export const backfillBadgesMigration: Migration = {
-  id: "002-backfill-badges-for-existing-users",
+  id: "001-backfill-badges-for-existing-users",
   description:
     "Evaluates the badge catalog against stats users already had before the badges feature existed",
   async run() {

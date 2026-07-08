@@ -1,9 +1,7 @@
-import { badgesCatalogService } from "../services/badges-catalog.service";
 import { sportsService } from "../services/sports.service";
 import { CreateBadgeDto } from "../models/badge.model";
-import { Migration } from "./migration.types";
 
-type SeedBadge = { id: string } & CreateBadgeDto;
+export type SeedBadge = { id: string } & CreateBadgeDto;
 
 const PARTICIPATION_BADGES: SeedBadge[] = [
   {
@@ -51,17 +49,6 @@ const MVP_BADGES: SeedBadge[] = [
   },
 ];
 
-const FAIR_PLAY_BADGES: SeedBadge[] = [
-  {
-    id: "fairplay_1",
-    name: "Fair Play",
-    description: "Foi eleito Fair Play 1 vez",
-    icon: "hand-left-outline",
-    criteriaType: "fairPlayVotesReceived",
-    threshold: 1,
-  },
-];
-
 async function buildSportBadges(): Promise<SeedBadge[]> {
   const sports = await sportsService.listSports();
 
@@ -76,20 +63,13 @@ async function buildSportBadges(): Promise<SeedBadge[]> {
   }));
 }
 
-export const seedInitialBadgesMigration: Migration = {
-  id: "001-seed-initial-badges",
-  description: "Creates the baseline badge catalog (participation, MVP, fair play, per-sport)",
-  async run() {
-    const sportBadges = await buildSportBadges();
-    const allBadges = [
-      ...PARTICIPATION_BADGES,
-      ...MVP_BADGES,
-      ...FAIR_PLAY_BADGES,
-      ...sportBadges,
-    ];
+/**
+ * Single source of truth for the badge catalog. To add, change or remove a
+ * badge, edit this file directly — `syncBadgeCatalog` reconciles Firestore
+ * with whatever this function returns on every server startup.
+ */
+export async function buildBadgeCatalog(): Promise<SeedBadge[]> {
+  const sportBadges = await buildSportBadges();
 
-    for (const { id, ...data } of allBadges) {
-      await badgesCatalogService.upsertBadge(id, data);
-    }
-  },
-};
+  return [...PARTICIPATION_BADGES, ...MVP_BADGES, ...sportBadges];
+}

@@ -19,8 +19,6 @@ function meetsCriteria(user: User, badge: BadgeDefinition): boolean {
       );
     case "mvpVotesReceived":
       return user.stats.mvpVotesReceived >= badge.threshold;
-    case "fairPlayVotesReceived":
-      return user.stats.fairPlayVotesReceived >= badge.threshold;
     default:
       return false;
   }
