@@ -13,6 +13,10 @@ export function updateMyProfile(data: { name?: string; bio?: string }): Promise<
   return api.patch<UserProfile>('/api/users/me', data);
 }
 
+export function uploadMyAvatar(imageData: string): Promise<UserProfile> {
+  return api.post<UserProfile>('/api/users/me/avatar', { imageData });
+}
+
 export function listAdminUsers(): Promise<AdminUser[]> {
   return api.get<AdminUser[]>('/api/users');
 }

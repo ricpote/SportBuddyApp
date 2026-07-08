@@ -83,6 +83,42 @@ export async function updateMe(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function uploadMyAvatar(
+  req: AuthenticatedRequest,
+  res: Response
+) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { imageData } = req.body as { imageData?: string };
+
+    if (!imageData || typeof imageData !== "string") {
+      return res.status(400).json({ message: "imageData is required" });
+    }
+
+    if (!imageData.startsWith("data:image/")) {
+      return res.status(400).json({ message: "imageData must be a data URL" });
+    }
+
+    // Firestore documents have a size limit, so reject oversized avatars.
+    if (imageData.length > 700_000) {
+      return res.status(400).json({ message: "Avatar image is too large" });
+    }
+
+    const updated = await usersService.updateUserProfile(req.user.uid, {
+      avatarUrl: imageData,
+    });
+
+    return res.json(toPublicProfile(updated));
+  } catch (error) {
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : "Error saving avatar",
+    });
+  }
+}
+
 export async function getUserProfile(
   req: AuthenticatedRequest<UserParams>,
   res: Response

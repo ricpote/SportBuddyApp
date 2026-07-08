@@ -3,6 +3,7 @@ import { authMiddleware } from "../middleware/auth.middleware";
 import {
   getMe,
   updateMe,
+  uploadMyAvatar,
   createMyProfile,
   getUserProfile,
   listUsers,
@@ -18,6 +19,7 @@ const router = Router();
 router.post("/profile", authMiddleware, createMyProfile);
 router.get("/me", authMiddleware, getMe);
 router.patch("/me", authMiddleware, updateMe);
+router.post("/me/avatar", authMiddleware, uploadMyAvatar);
 
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);
