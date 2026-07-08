@@ -63,3 +63,55 @@ export const WEATHER_CATEGORY_COLORS: Record<WeatherCategory, string> = {
   snow: '#FFFFFF',
   storm: '#FDE68A',
 };
+
+// O IPMA devolve a direção do vento em inglês (N, NE, E, SE, S, SW, W, NW).
+const WIND_DIRECTION_PT: Record<string, string> = {
+  N: 'N',
+  NE: 'NE',
+  E: 'E',
+  SE: 'SE',
+  S: 'S',
+  SW: 'SO',
+  W: 'O',
+  NW: 'NO',
+};
+
+export function getWindDirectionLabel(direction: string): string {
+  return WIND_DIRECTION_PT[direction] ?? direction;
+}
+
+export function getUvColor(uv: number): string {
+  if (uv < 3) return '#22C55E';
+  if (uv < 6) return '#EAB308';
+  if (uv < 8) return '#F97316';
+  if (uv < 11) return '#EF4444';
+  return '#A855F7';
+}
+
+export function getUvLabel(uv: number): string {
+  if (uv < 3) return 'Baixo';
+  if (uv < 6) return 'Moderado';
+  if (uv < 8) return 'Alto';
+  if (uv < 11) return 'Muito alto';
+  return 'Extremo';
+}
+
+// https://api.ipma.pt/open-data/wind-speed-daily-classe.json
+export const WIND_SPEED_LABELS: Record<number, string> = {
+  1: 'Fraco',
+  2: 'Moderado',
+  3: 'Forte',
+  4: 'Muito forte',
+};
+
+export const WARNING_LEVEL_LABELS: Record<'yellow' | 'orange' | 'red', string> = {
+  yellow: 'Amarelo',
+  orange: 'Laranja',
+  red: 'Vermelho',
+};
+
+export const WARNING_LEVEL_COLORS: Record<'yellow' | 'orange' | 'red', string> = {
+  yellow: '#EAB308',
+  orange: '#F97316',
+  red: '#EF4444',
+};

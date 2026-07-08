@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,7 +7,19 @@ import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
-import { getWeatherInfo } from '@/utils/weather-codes';
+import {
+  getWeatherInfo,
+  getWindDirectionLabel,
+  getUvColor,
+  getUvLabel,
+  WIND_SPEED_LABELS,
+  WARNING_LEVEL_LABELS,
+  WARNING_LEVEL_COLORS,
+} from '@/utils/weather-codes';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Lisboa — usado quando a permissão de localização é negada ou falha.
 const DEFAULT_COORDS = { latitude: 38.7223, longitude: -9.1393 };
@@ -22,6 +34,8 @@ function formatDayLabel(dateStr: string, index: number) {
 export function WeatherSection() {
   const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +71,16 @@ export function WeatherSection() {
     };
   }, []);
 
+  function toggleSelected(date: string) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedDate((current) => (current === date ? null : date));
+  }
+
+  function setHovered(date: string | null) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setHoveredDate(date);
+  }
+
   if (!forecast) return null;
 
   return (
@@ -67,21 +91,33 @@ export function WeatherSection() {
 
       <View style={styles.row}>
         {forecast.map((day, index) => {
-          const { icon, category } = getWeatherInfo(day.weatherCode);
+          const { icon, category, label } = getWeatherInfo(day.weatherCode);
           const precipitation = Math.round(day.precipitationProbability);
           const fillHeight = `${Math.min(100, Math.max(0, precipitation))}%` as const;
-
           const isToday = index === 0;
+          const isSelected = selectedDate === day.date;
+          const isOpen = isSelected || hoveredDate === day.date;
+          const windLabel = getWindDirectionLabel(day.windDirection);
+          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? 'Desconhecido';
 
           return (
-            <View key={day.date} style={styles.day}>
+            <Pressable
+              key={day.date}
+              onPress={() => toggleSelected(day.date)}
+              onHoverIn={() => setHovered(day.date)}
+              onHoverOut={() => setHovered(null)}
+              style={({ pressed }) => [
+                styles.card,
+                isToday && styles.cardToday,
+                pressed && styles.cardPressed,
+              ]}>
               <ThemedText style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
                 {formatDayLabel(day.date, index)}
               </ThemedText>
 
-              <View style={[styles.circle, isToday && styles.circleToday]}>
+              <View style={styles.circle}>
                 <View style={[styles.fill, { height: fillHeight }]} />
-                <AnimatedWeatherIcon icon={icon} category={category} size={22} />
+                <AnimatedWeatherIcon icon={icon} category={category} size={20} />
               </View>
 
               <View style={styles.precipRow}>
@@ -89,9 +125,59 @@ export function WeatherSection() {
                 <ThemedText style={styles.precipText}>{precipitation}%</ThemedText>
               </View>
 
-              <ThemedText style={styles.tempMax}>{Math.round(day.tempMax)}°</ThemedText>
-              <ThemedText style={styles.tempMin}>{Math.round(day.tempMin)}°</ThemedText>
-            </View>
+              <View style={styles.tempRow}>
+                <View style={[styles.tempBox, styles.tempBoxMin]}>
+                  <ThemedText style={styles.tempBoxText}>{Math.round(day.tempMin)}°</ThemedText>
+                </View>
+                <View style={[styles.tempBox, styles.tempBoxMax]}>
+                  <ThemedText style={styles.tempBoxText}>{Math.round(day.tempMax)}°</ThemedText>
+                </View>
+              </View>
+
+              {isOpen && (
+                <View style={styles.details}>
+                  <View style={styles.detailsDivider} />
+
+                  <ThemedText style={styles.detailsLabel}>{label}</ThemedText>
+
+                  <View style={styles.detailRow}>
+                    <Ionicons name="navigate" size={12} color="#22C55E" />
+                    <ThemedText style={styles.detailText}>
+                      {windLabel} · {windSpeedLabel}
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Ionicons
+                      name="sunny"
+                      size={12}
+                      color={day.uvIndex !== null ? getUvColor(day.uvIndex) : '#64748B'}
+                    />
+                    <ThemedText style={styles.detailText}>
+                      {day.uvIndex !== null
+                        ? `UV ${Math.round(day.uvIndex)} · ${getUvLabel(day.uvIndex)}`
+                        : 'UV indisponível'}
+                    </ThemedText>
+                  </View>
+
+                  {day.warning && (
+                    <View style={styles.warningBox}>
+                      <View style={styles.warningHeader}>
+                        <View
+                          style={[styles.warningDot, { backgroundColor: WARNING_LEVEL_COLORS[day.warning.level] }]}
+                        />
+                        <ThemedText style={styles.warningTitle}>
+                          {WARNING_LEVEL_LABELS[day.warning.level]} · {day.warning.type}
+                        </ThemedText>
+                      </View>
+                      {day.warning.text ? (
+                        <ThemedText style={styles.warningText}>{day.warning.text}</ThemedText>
+                      ) : null}
+                    </View>
+                  )}
+                </View>
+              )}
+            </Pressable>
           );
         })}
       </View>
@@ -111,12 +197,27 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingHorizontal: Spacing.four,
   },
-  day: {
+  card: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    backgroundColor: '#1E293B',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    overflow: 'hidden',
+  },
+  cardToday: {
+    borderWidth: 2,
+    borderColor: '#CF8444',
+  },
+  cardPressed: {
+    opacity: 0.7,
   },
   dayLabel: {
     color: '#A0AEC0',
@@ -127,19 +228,15 @@ const styles = StyleSheet.create({
     color: '#CF8444',
   },
   circle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#334155',
     borderWidth: 1,
     borderColor: '#475569',
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  circleToday: {
-    borderWidth: 2,
-    borderColor: '#CF8444',
   },
   fill: {
     position: 'absolute',
@@ -155,16 +252,87 @@ const styles = StyleSheet.create({
   },
   precipText: {
     color: '#60A5FA',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
-  tempMax: {
+  tempRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  tempBox: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 30,
+    alignItems: 'center',
+  },
+  tempBoxMin: {
+    backgroundColor: '#3B82F6',
+  },
+  tempBoxMax: {
+    backgroundColor: '#F97316',
+  },
+  tempBoxText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
   },
-  tempMin: {
-    color: '#64748B',
+  details: {
+    width: '100%',
+    gap: 6,
+    marginTop: 2,
+  },
+  detailsDivider: {
+    height: 1,
+    backgroundColor: '#334155',
+    marginBottom: 2,
+  },
+  detailsLabel: {
+    color: '#FFFFFF',
     fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  detailText: {
+    color: '#A0AEC0',
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  warningBox: {
+    marginTop: 2,
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    gap: 3,
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  warningDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  warningTitle: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  warningText: {
+    color: '#64748B',
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: 'center',
   },
 });
