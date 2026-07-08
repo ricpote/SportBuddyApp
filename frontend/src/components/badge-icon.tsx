@@ -7,23 +7,17 @@ type Props = {
   badgeId: string;
   icon: string;
   size?: number;
-  locked?: boolean;
 };
 
-export function BadgeIcon({ badgeId, icon, size = 56, locked = false }: Props) {
+export function BadgeIcon({ badgeId, icon, size = 56 }: Props) {
   const image = badgeImages[badgeId];
 
   return (
-    <View
-      style={[
-        styles.wrapper,
-        { width: size, height: size, borderRadius: size / 2 },
-        locked && styles.locked,
-      ]}>
+    <View style={[styles.wrapper, { width: size, height: size, borderRadius: size / 2 }]}>
       {image ? (
         <Image source={image} style={styles.image} resizeMode="contain" />
       ) : (
-        <Ionicons name={icon as any} size={size * 0.55} color={locked ? '#475569' : '#CF8444'} />
+        <Ionicons name={icon as any} size={size * 0.55} color="#CF8444" />
       )}
     </View>
   );
@@ -37,9 +31,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
     overflow: 'hidden',
-  },
-  locked: {
-    opacity: 0.45,
   },
   image: {
     width: '100%',

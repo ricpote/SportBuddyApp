@@ -5,32 +5,16 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { BadgeIcon } from '@/components/badge-icon';
 import { Spacing } from '@/constants/theme';
-import { getBadgeCatalog, getMyBadges, setDisplayedBadge } from '@/services/badges';
-import { Badge } from '@/types/badge';
-
-type DisplayBadge = Badge & {
-  unlocked: boolean;
-  isDisplayed: boolean;
-};
+import { getMyBadges, setDisplayedBadge } from '@/services/badges';
+import { UserBadge } from '@/types/badge';
 
 export function BadgesSection() {
-  const [badges, setBadges] = useState<DisplayBadge[] | null>(null);
+  const [badges, setBadges] = useState<UserBadge[] | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    Promise.all([getBadgeCatalog(), getMyBadges()])
-      .then(([catalog, mine]) => {
-        const mineById = new Map(mine.map((badge) => [badge.id, badge]));
-        const merged: DisplayBadge[] = catalog.map((badge) => {
-          const unlocked = mineById.get(badge.id);
-          return {
-            ...badge,
-            unlocked: !!unlocked,
-            isDisplayed: unlocked?.isDisplayed ?? false,
-          };
-        });
-        setBadges(merged);
-      })
+    getMyBadges()
+      .then(setBadges)
       .catch(() => setBadges(null));
   }, []);
 
@@ -40,12 +24,7 @@ export function BadgesSection() {
     }, [load])
   );
 
-  async function handlePress(badge: DisplayBadge) {
-    if (!badge.unlocked) {
-      Alert.alert(badge.name, badge.description);
-      return;
-    }
-
+  async function handlePress(badge: UserBadge) {
     if (updatingId) return;
     setUpdatingId(badge.id);
     try {
@@ -64,7 +43,7 @@ export function BadgesSection() {
     <View style={styles.container}>
       <ThemedText type="subtitle" style={styles.title}>Badges</ThemedText>
       <ThemedText type="small" style={styles.subtitle}>
-        Toca num badge desbloqueado para o mostrar no teu perfil.
+        Toca num badge para o afixar no teu perfil.
       </ThemedText>
 
       <View style={styles.grid}>
@@ -74,7 +53,7 @@ export function BadgesSection() {
             onPress={() => handlePress(badge)}
             style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
             <View style={badge.isDisplayed ? styles.displayedRing : styles.ringPlaceholder}>
-              <BadgeIcon badgeId={badge.id} icon={badge.icon} locked={!badge.unlocked} />
+              <BadgeIcon badgeId={badge.id} icon={badge.icon} />
             </View>
             <ThemedText type="small" style={styles.badgeName} numberOfLines={2}>
               {badge.name}
