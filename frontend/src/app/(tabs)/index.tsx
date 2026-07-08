@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { WeatherSection } from '@/components/weather-section';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { listActivities } from '@/services/activities';
@@ -101,6 +102,9 @@ export default function HomeScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+          {/* SECÇÃO DE METEOROLOGIA */}
+          <WeatherSection />
 
           {/* SECÇÃO DE FILTROS */}
           <ScrollView
