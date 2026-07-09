@@ -83,7 +83,6 @@ export class ActivitiesService {
     const activity = createActivityObject(docRef.id, createdBy, data);
 
     await docRef.set(activity);
-    await usersService.incrementStat(createdBy, "activitiesCreated", 1);
 
     return activity;
   }
@@ -103,10 +102,12 @@ export class ActivitiesService {
       new Date(activity.date) < new Date()
     ) {
       const now = new Date();
-      await this.activitiesRef.doc(activityId).update({
-        status: "completed" as ActivityStatus,
-        updatedAt: now,
-      });
+      const participants = activity.participantsList.filter(id => id !== activity.createdBy);
+      await Promise.all([
+        this.activitiesRef.doc(activityId).update({ status: "completed" as ActivityStatus, updatedAt: now }),
+        usersService.incrementStat(activity.createdBy, "activitiesCreated", 1),
+        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
+      ]);
       return { ...activity, status: "completed", updatedAt: now };
     }
 
@@ -286,18 +287,8 @@ export class ActivitiesService {
       throw new Error("Activity not found");
     }
 
-    const statsUpdates: Promise<void>[] = [];
-
-    statsUpdates.push(
-      usersService.incrementStat(activity.createdBy, "activitiesCreated", -1)
-    );
-
-    for (const participantId of activity.participantsList) {
-      if (participantId !== activity.createdBy) {
-        statsUpdates.push(
-          usersService.incrementStat(participantId, "activitiesJoined", -1)
-        );
-      }
+    if (activity.status === "completed") {
+      throw new Error("Cannot delete a completed activity");
     }
 
     const notificationsSnapshot = await db
@@ -311,7 +302,6 @@ export class ActivitiesService {
       await batch.commit();
     }
 
-    await Promise.all(statsUpdates);
     await db.recursiveDelete(this.activitiesRef.doc(activityId));
   }
 
@@ -398,11 +388,6 @@ export class ActivitiesService {
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now, promoted };
     });
 
-    await usersService.incrementStat(participantId, "activitiesJoined", -1);
-    if (result.promoted) {
-      await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
-    }
-
     await notificationsService.createNotification(
       participantId,
       "participant_removed",
@@ -451,8 +436,6 @@ export class ActivitiesService {
     });
 
     if (result.joined) {
-      await usersService.incrementStat(userId, "activitiesJoined", 1);
-
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_joined",
@@ -531,11 +514,6 @@ export class ActivitiesService {
     });
 
     if (result.leftParticipants) {
-      await usersService.incrementStat(userId, "activitiesJoined", -1);
-      if (result.promoted) {
-        await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
-      }
-
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_left",
@@ -581,8 +559,6 @@ export class ActivitiesService {
 
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now };
     });
-
-    await usersService.incrementStat(userId, "activitiesJoined", 1);
 
     await notificationsService.createNotification(
       userId,

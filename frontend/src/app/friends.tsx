@@ -1,25 +1,12 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { Friend, FriendRequest } from '@/types/friend';
-// Serviço pronto a usar quando o backend existir:
-// import { getFriends, getPendingRequests, acceptFriendRequest, rejectFriendRequest, removeFriend } from '@/services/friends';
-
-// ── DADOS FICTÍCIOS ──────────────────────────────────────────────────────────
-// Substituir por getPendingRequests()/getFriends() dentro de um useFocusEffect
-// quando os endpoints estiverem prontos.
-const MOCK_REQUESTS: FriendRequest[] = [
-  { friendshipId: 'r1', from: { id: 'u1', name: 'Ana Costa' }, createdAt: new Date().toISOString() },
-  { friendshipId: 'r2', from: { id: 'u2', name: 'Bruno Dias' }, createdAt: new Date().toISOString() },
-];
-const MOCK_FRIENDS: Friend[] = [
-  { friendshipId: 'f1', user: { id: 'u3', name: 'Carla Nunes' } },
-  { friendshipId: 'f2', user: { id: 'u4', name: 'Diogo Reis' } },
-  { friendshipId: 'f3', user: { id: 'u5', name: 'Eva Marques' } },
-];
+import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend } from '@/services/friends';
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -27,23 +14,48 @@ function initials(name: string) {
 }
 
 export default function FriendsScreen() {
-  const [requests, setRequests] = useState<FriendRequest[]>(MOCK_REQUESTS);
-  const [friends, setFriends] = useState<Friend[]>(MOCK_FRIENDS);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function handleAccept(req: FriendRequest) {
-    // Backend real: await acceptFriendRequest(req.friendshipId);
-    setRequests((prev) => prev.filter((r) => r.friendshipId !== req.friendshipId));
-    setFriends((prev) => [{ friendshipId: req.friendshipId, user: req.from }, ...prev]);
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        setLoading(true);
+        try {
+          const [reqs, frs] = await Promise.all([getPendingRequests(), getFriends()]);
+          setRequests(reqs);
+          setFriends(frs);
+        } finally {
+          setLoading(false);
+        }
+      }
+      load();
+    }, [])
+  );
+
+  async function handleAccept(req: FriendRequest) {
+    await acceptFriendRequest(req.requestId);
+    setRequests((prev) => prev.filter((r) => r.requestId !== req.requestId));
+    setFriends((prev) => [{ userId: req.requestId, user: req.from }, ...prev]);
   }
 
-  function handleReject(friendshipId: string) {
-    // Backend real: await rejectFriendRequest(friendshipId);
-    setRequests((prev) => prev.filter((r) => r.friendshipId !== friendshipId));
+  async function handleReject(requestId: string) {
+    await rejectFriendRequest(requestId);
+    setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
   }
 
-  function handleRemove(friendshipId: string) {
-    // Backend real: await removeFriend(friendshipId);
-    setFriends((prev) => prev.filter((f) => f.friendshipId !== friendshipId));
+  async function handleRemove(friendId: string) {
+    await removeFriend(friendId);
+    setFriends((prev) => prev.filter((f) => f.userId !== friendId));
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#CF8444" />
+      </View>
+    );
   }
 
   return (
@@ -53,12 +65,11 @@ export default function FriendsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        {/* PEDIDOS DE AMIZADE */}
         {requests.length > 0 && (
           <>
             <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
             {requests.map((req) => (
-              <View key={req.friendshipId} style={styles.row}>
+              <View key={req.requestId} style={styles.row}>
                 <View style={styles.avatar}>
                   <ThemedText style={styles.avatarText}>{initials(req.from.name)}</ThemedText>
                 </View>
@@ -67,7 +78,7 @@ export default function FriendsScreen() {
                   <Pressable style={styles.acceptBtn} onPress={() => handleAccept(req)}>
                     <Ionicons name="checkmark" size={18} color="#10B981" />
                   </Pressable>
-                  <Pressable style={styles.rejectBtn} onPress={() => handleReject(req.friendshipId)}>
+                  <Pressable style={styles.rejectBtn} onPress={() => handleReject(req.requestId)}>
                     <Ionicons name="close" size={18} color="#FF6B6B" />
                   </Pressable>
                 </View>
@@ -76,7 +87,6 @@ export default function FriendsScreen() {
           </>
         )}
 
-        {/* OS MEUS AMIGOS */}
         <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
         {friends.length === 0 ? (
           <View style={styles.empty}>
@@ -85,27 +95,22 @@ export default function FriendsScreen() {
           </View>
         ) : (
           friends.map((f) => (
-            <View key={f.friendshipId} style={styles.row}>
+            <View key={f.userId} style={styles.row}>
               <View style={styles.avatar}>
                 <ThemedText style={styles.avatarText}>{initials(f.user.name)}</ThemedText>
               </View>
               <ThemedText style={styles.name}>{f.user.name}</ThemedText>
               <View style={styles.actions}>
-                {/* Chat 1-1 — em breve (fica pronto quando a conversa direta existir) */}
                 <Pressable style={styles.chatBtn} disabled>
                   <Ionicons name="chatbubble-ellipses-outline" size={18} color="#475569" />
                 </Pressable>
-                <Pressable style={styles.rejectBtn} onPress={() => handleRemove(f.friendshipId)}>
+                <Pressable style={styles.rejectBtn} onPress={() => handleRemove(f.userId)}>
                   <Ionicons name="person-remove-outline" size={18} color="#FF6B6B" />
                 </Pressable>
               </View>
             </View>
           ))
         )}
-
-        <ThemedText style={styles.note}>
-          Dados de demonstração. Ligar aos endpoints de amigos quando o backend estiver pronto.
-        </ThemedText>
       </View>
     </ScrollView>
   );
@@ -114,6 +119,7 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   scrollView: { backgroundColor: '#0F172A' },
   scrollContent: { flexGrow: 1, paddingVertical: Spacing.four },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' },
   container: {
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -182,12 +188,5 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     textAlign: 'center',
-  },
-  note: {
-    color: '#475569',
-    fontSize: 12,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: Spacing.three,
   },
 });

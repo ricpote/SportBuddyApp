@@ -41,6 +41,8 @@ export type User = {
 
   stats: UserStats;
 
+  friends: string[];
+
   createdAt: Date;
   updatedAt: Date;
 };
@@ -95,6 +97,8 @@ export function createUserObject(
       fairPlayVotesReceived: 0,
       badges: [],
     },
+
+    friends: [],
 
     createdAt: now,
     updatedAt: now,

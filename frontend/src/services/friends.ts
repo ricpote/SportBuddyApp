@@ -20,16 +20,16 @@ export function sendFriendRequest(addresseeId: string): Promise<{ message: strin
 }
 
 // Aceitar um pedido recebido.
-export function acceptFriendRequest(friendshipId: string): Promise<{ message: string }> {
-  return api.patch<{ message: string }>(`/api/friends/${friendshipId}/accept`);
+export function acceptFriendRequest(requestId: string): Promise<{ message: string }> {
+  return api.patch<{ message: string }>(`/api/friends/${requestId}/accept`);
 }
 
 // Rejeitar um pedido recebido.
-export function rejectFriendRequest(friendshipId: string): Promise<{ message: string }> {
-  return api.patch<{ message: string }>(`/api/friends/${friendshipId}/reject`);
+export function rejectFriendRequest(requestId: string): Promise<{ message: string }> {
+  return api.patch<{ message: string }>(`/api/friends/${requestId}/reject`);
 }
 
 // Remover uma amizade existente.
-export function removeFriend(friendshipId: string): Promise<{ message: string }> {
-  return api.delete<{ message: string }>(`/api/friends/${friendshipId}`);
+export function removeFriend(friendId: string): Promise<{ message: string }> {
+  return api.delete<{ message: string }>(`/api/friends/${friendId}`);
 }
