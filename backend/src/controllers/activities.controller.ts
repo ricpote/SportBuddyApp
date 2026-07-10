@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { activitiesService } from "../services/activities.service";
 import { usersService } from "../services/users.service";
+import { friendsService } from "../services/friends.service";
 import { Activity, ActivityStatus, CreateActivityDto, SkillLevel } from "../models/activity.model";
 import { parseCreateActivityDto } from "../util/activityValidation.util";
 import { requireAdmin } from "../util/admin.util";
@@ -32,6 +33,29 @@ export async function getMyActivities(
   } catch (error) {
     res.status(500).json({
       message: error instanceof Error ? error.message : "Error getting user activities",
+    });
+  }
+}
+
+export async function getFriendsActivities(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const friends = await friendsService.getFriends(req.user.uid);
+    const friendIds = friends.map((friend) => friend.userId);
+
+    const activities = await activitiesService.getFriendsActivities(friendIds);
+
+    res.status(200).json(activities);
+  } catch (error) {
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Error getting friends' activities",
     });
   }
 }

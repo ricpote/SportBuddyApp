@@ -4,6 +4,7 @@ import {
   listActivities,
   listAdminActivities,
   getMyActivities,
+  getFriendsActivities,
   createActivity,
   getActivityById,
   updateActivity,
@@ -23,6 +24,7 @@ router.get("/", authMiddleware, listActivities);
 router.get("/admin/all", authMiddleware, listAdminActivities);
 
 router.get("/me", authMiddleware, getMyActivities);
+router.get("/friends", authMiddleware, getFriendsActivities);
 
 router.post("/", authMiddleware, createActivity);
 

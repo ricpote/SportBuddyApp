@@ -172,6 +172,41 @@ export class ActivitiesService {
     return activities;
   }
 
+  async getFriendsActivities(friendIds: string[]): Promise<Activity[]> {
+    if (friendIds.length === 0) return [];
+
+    const now = new Date();
+    const chunks: string[][] = [];
+    for (let i = 0; i < friendIds.length; i += 10) {
+      chunks.push(friendIds.slice(i, i + 10));
+    }
+
+    const snapshots = await Promise.all(
+      chunks.map((ids) =>
+        this.activitiesRef.where("participantsList", "array-contains-any", ids).get()
+      )
+    );
+
+    const seen = new Set<string>();
+    const activities: Activity[] = [];
+
+    for (const snapshot of snapshots) {
+      for (const doc of snapshot.docs) {
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+
+        const activity = normalizeActivity({ id: doc.id, ...doc.data() });
+        const isUpcoming = (activity.status === "open" || activity.status === "full") && new Date(activity.date) > now;
+
+        if (isUpcoming) {
+          activities.push(activity);
+        }
+      }
+    }
+
+    return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
   async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
     let participantQuery: FirebaseFirestore.Query = this.activitiesRef
       .where("participantsList", "array-contains", userId)
