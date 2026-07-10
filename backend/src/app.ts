@@ -8,6 +8,7 @@ import sportsRoutes from "./routes/sports.routes";
 import messagesRoutes from "./routes/messages.route";
 import notificationsRoutes from "./routes/notifications.route";
 import friendsRoutes from "./routes/friends.route";
+import conversationsRoutes from "./routes/conversations.route";
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use("/api/sports", sportsRoutes);
 app.use("/api/activities/:activityId/messages", messagesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/friends", friendsRoutes);
+app.use("/api/conversations", conversationsRoutes);
 
 export default app;
