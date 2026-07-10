@@ -236,6 +236,18 @@ export class UsersService {
       .update({ [`stats.${field}`]: FieldValue.increment(delta) });
   }
 
+  async searchUsers(query: string, requesterId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const snapshot = await this.usersRef.where("status", "==", "active").get();
+
+    return snapshot.docs
+      .map((doc) => doc.data() as User)
+      .filter((u) => u.id !== requesterId && u.name.toLowerCase().startsWith(q))
+      .map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }));
+  }
+
   async listUsers(filters: ListUsersFilters = {}): Promise<User[]> {
     let query: FirebaseFirestore.Query = this.usersRef;
 

@@ -5,6 +5,7 @@ import {
   updateMe,
   createMyProfile,
   getUserProfile,
+  searchUsers,
   listUsers,
   updateUserRole,
   banUser,
@@ -18,6 +19,9 @@ const router = Router();
 router.post("/profile", authMiddleware, createMyProfile);
 router.get("/me", authMiddleware, getMe);
 router.patch("/me", authMiddleware, updateMe);
+
+// Search
+router.get("/search", authMiddleware, searchUsers);
 
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);

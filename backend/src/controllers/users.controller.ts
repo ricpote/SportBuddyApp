@@ -83,6 +83,37 @@ export async function updateMe(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function searchUsers(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const q = typeof req.query.q === "string" ? req.query.q : "";
+    if (!q.trim()) {
+      res.status(200).json([]);
+      return;
+    }
+
+    const user = await usersService.getUserByFirebaseUid(req.user.uid);
+    if (!user) {
+      res.status(404).json({ message: "User profile not found" });
+      return;
+    }
+
+    const results = await usersService.searchUsers(q, user.id);
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : "Error searching users",
+    });
+  }
+}
+
 export async function getUserProfile(
   req: AuthenticatedRequest<UserParams>,
   res: Response
