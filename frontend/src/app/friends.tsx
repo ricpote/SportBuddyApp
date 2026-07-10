@@ -1,12 +1,16 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { Friend, FriendRequest } from '@/types/friend';
-import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend } from '@/services/friends';
+import { useAuth } from '@/contexts/auth-context';
+import { Friend, FriendRequest, FriendUser } from '@/types/friend';
+import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend, sendFriendRequest } from '@/services/friends';
+import { searchUsers } from '@/services/users';
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -14,9 +18,43 @@ function initials(name: string) {
 }
 
 export default function FriendsScreen() {
+  const { user: me } = useAuth();
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pesquisa de perfis por nome
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<FriendUser[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [sentIds, setSentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults(null);
+      setSearching(false);
+      setSearchError(null);
+      return;
+    }
+
+    setSearching(true);
+    const timer = setTimeout(() => {
+      searchUsers(trimmed)
+        .then((users) => {
+          setResults(users.filter((u) => u.id !== me?.uid));
+          setSearchError(null);
+        })
+        .catch(() => {
+          setResults([]);
+          setSearchError('Não foi possível pesquisar. Tenta de novo.');
+        })
+        .finally(() => setSearching(false));
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [query, me?.uid]);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +88,22 @@ export default function FriendsScreen() {
     setFriends((prev) => prev.filter((f) => f.userId !== friendId));
   }
 
+  async function handleSendRequest(user: FriendUser) {
+    try {
+      await sendFriendRequest(user.id);
+      setSentIds((prev) => [...prev, user.id]);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '';
+      if (message === 'Já enviaste um pedido a este utilizador' || message === 'Já são amigos') {
+        setSentIds((prev) => [...prev, user.id]);
+      } else {
+        setSearchError(message || 'Erro ao enviar pedido');
+      }
+    }
+  }
+
+  const friendIds = friends.map((f) => f.userId);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -65,6 +119,71 @@ export default function FriendsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#64748B" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Procurar pessoas pelo nome..."
+            placeholderTextColor="#64748B"
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => setQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color="#64748B" />
+            </Pressable>
+          )}
+        </View>
+
+        {searchError && <ThemedText style={styles.searchError}>{searchError}</ThemedText>}
+
+        {results !== null && (
+          <>
+            <ThemedText style={styles.sectionTitle}>
+              Resultados{searching ? '...' : ` (${results.length})`}
+            </ThemedText>
+            {results.length === 0 && !searching ? (
+              <View style={styles.empty}>
+                <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+              </View>
+            ) : (
+              results.map((u) => {
+                const isFriend = friendIds.includes(u.id);
+                const isSent = sentIds.includes(u.id);
+                return (
+                  <Pressable
+                    key={u.id}
+                    style={styles.row}
+                    onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
+                  >
+                    <View style={styles.avatar}>
+                      <ThemedText style={styles.avatarText}>{initials(u.name)}</ThemedText>
+                    </View>
+                    <ThemedText style={styles.name}>{u.name}</ThemedText>
+                    <View style={styles.actions}>
+                      {isFriend ? (
+                        <View style={styles.acceptBtn}>
+                          <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
+                        </View>
+                      ) : isSent ? (
+                        <View style={styles.chatBtn}>
+                          <Ionicons name="hourglass-outline" size={18} color="#475569" />
+                        </View>
+                      ) : (
+                        <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
+                          <Ionicons name="person-add-outline" size={18} color="#CF8444" />
+                        </Pressable>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
+          </>
+        )}
+
         {requests.length > 0 && (
           <>
             <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
@@ -132,6 +251,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: Spacing.two,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingHorizontal: Spacing.three,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+    height: '100%',
+  },
+  searchError: {
+    color: '#FF6B6B',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  addBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#CF844420',
   },
   row: {
     flexDirection: 'row',
