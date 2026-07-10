@@ -3,6 +3,8 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
   type User as FirebaseUser,
@@ -20,6 +22,7 @@ type AuthContextValue = {
   profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -75,6 +78,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    const credential = await signInWithPopup(auth, provider);
+    const firebaseUser = credential.user;
+
+    try {
+      await getMyProfile();
+    } catch {
+      const baseName = firebaseUser.displayName ?? 'User';
+      const email = firebaseUser.email ?? '';
+
+      try {
+        await api.post('/api/users/profile', { name: baseName, email });
+      } catch (err) {
+        // Se o nome já estiver ocupado, tenta uma vez com um sufixo numérico
+        if (err instanceof Error && err.message.includes('nome')) {
+          const suffix = Math.floor(1000 + Math.random() * 9000);
+          await api.post('/api/users/profile', { name: `${baseName} ${suffix}`, email });
+        } else {
+          throw err;
+        }
+      }
+
+      await loadProfile(firebaseUser);
+    }
+  }
+
   async function signOut() {
     setProfile(null);
     await firebaseSignOut(auth);
@@ -93,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileLoading,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
         refreshProfile,
       }}>

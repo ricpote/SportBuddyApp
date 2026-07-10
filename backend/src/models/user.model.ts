@@ -43,6 +43,7 @@ export type User = {
 
   stats: UserStats;
 
+  friends: string[];
   displayedBadge?: string;
 
   createdAt: Date;
@@ -99,6 +100,8 @@ export function createUserObject(
       fairPlayVotesReceived: 0,
       badges: [],
     },
+
+    friends: [],
 
     createdAt: now,
     updatedAt: now,

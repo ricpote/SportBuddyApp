@@ -50,8 +50,8 @@ export default function EditProfileScreen() {
     try {
       await updateMyProfile({ name: name.trim(), bio: bio.trim() || undefined });
       router.back();
-    } catch {
-      setError('Erro ao guardar. Tenta novamente.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao guardar. Tenta novamente.');
     } finally {
       setSubmitting(false);
     }

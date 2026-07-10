@@ -9,6 +9,10 @@ export type NotificationType =
   | "activity_reminder"
   | "activity_auto_cancelled"
   | "new_message"
+  | "mvp_voting_open"
+  | "mvp_result"
+  | "friend_request"
+  | "friend_request_accepted"
   | "badge_earned";
 
 export type Notification = {

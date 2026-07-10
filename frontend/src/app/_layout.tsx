@@ -57,8 +57,20 @@ function RootNavigator() {
           options={{ headerShown: true, title: 'Chat' }}
         />
         <Stack.Screen
+          name="direct-chat/[id]"
+          options={{ headerShown: true, title: 'Chat' }}
+        />
+        <Stack.Screen
           name="user/[id]"
           options={{ headerShown: true, title: 'Perfil' }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{ headerShown: true, title: 'Notificações' }}
+        />
+        <Stack.Screen
+          name="friends"
+          options={{ headerShown: true, title: 'Amigos' }}
         />
       </Stack.Protected>
       <Stack.Protected guard={!user}>

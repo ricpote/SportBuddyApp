@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -13,39 +13,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { getActivity } from '@/services/activities';
-import { getMessages, sendMessage } from '@/services/messages';
-import { getUserProfile } from '@/services/users';
-import { Activity } from '@/types/activity';
-import { Message } from '@/types/message';
-import { PublicUser } from '@/types/user';
+import { getDirectMessages, sendDirectMessage } from '@/services/conversations';
+import { DirectMessage } from '@/types/message';
 
 const POLL_INTERVAL_MS = 4000;
 
-function avatarColor(userId: string): string {
-  const colors = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
-  return colors[hash % colors.length];
-}
-
-export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function DirectChatScreen() {
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
   const { markRead } = useChatBadge();
-  const [activity, setActivity] = useState<Activity | null>(null);
-  const [profiles, setProfiles] = useState<Map<string, PublicUser>>(new Map());
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const listRef = useRef<FlatList<Message>>(null);
+  const listRef = useRef<FlatList<DirectMessage>>(null);
   const latestCountRef = useRef(0);
 
   useEffect(() => {
@@ -55,25 +41,9 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (!id) return;
-    getActivity(id)
-      .then((a) => {
-        setActivity(a);
-        Promise.allSettled(a.participantsList.map((uid) => getUserProfile(uid))).then((results) => {
-          const map = new Map<string, PublicUser>();
-          results.forEach((r, i) => {
-            if (r.status === 'fulfilled') map.set(a.participantsList[i], r.value);
-          });
-          setProfiles(map);
-        });
-      })
-      .catch(() => {});
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
 
     function fetchMessages() {
-      getMessages(id!)
+      getDirectMessages(id!)
         .then((data) => {
           setMessages(data);
           if (data.length > latestCountRef.current) {
@@ -98,7 +68,7 @@ export default function ChatScreen() {
     setSending(true);
     setError(null);
     try {
-      const msg = await sendMessage(id, trimmed);
+      const msg = await sendDirectMessage(id, trimmed);
       setMessages((prev) => [...prev, msg]);
       setText('');
       latestCountRef.current += 1;
@@ -111,46 +81,22 @@ export default function ChatScreen() {
     }
   }
 
-  function renderMessage({ item, index }: { item: Message; index: number }) {
+  function renderMessage({ item }: { item: DirectMessage }) {
     const isOwn = item.senderId === user?.uid;
-    const profile = profiles.get(item.senderId);
-    const initial = (profile?.name ?? '?').charAt(0).toUpperCase();
-    const color = avatarColor(item.senderId);
-
-    const prev = messages[index - 1];
-    const showAvatar = !isOwn && item.senderId !== prev?.senderId;
-    const showName = !isOwn && item.senderId !== prev?.senderId;
 
     return (
       <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
-        {!isOwn && (
-          <Pressable
-            style={[styles.avatar, { backgroundColor: showAvatar ? color : 'transparent' }]}
-            onPress={() => showAvatar && router.push({ pathname: '/user/[id]', params: { id: item.senderId } })}>
-            {showAvatar && (
-              <ThemedText style={styles.avatarText}>{initial}</ThemedText>
-            )}
-          </Pressable>
-        )}
-
-        <View style={[styles.bubbleCol, isOwn && { alignItems: 'flex-end' }]}>
-          {showName && profile && (
-            <ThemedText style={styles.senderName}>
-              {profile.name}
-            </ThemedText>
-          )}
-          <View
-            style={[
-              styles.bubbleInner,
-              isOwn ? styles.bubbleOwn : styles.bubbleOther,
-            ]}>
-            <ThemedText style={{ color: isOwn ? '#FFFFFF' : '#E2E8F0', fontSize: 15 }}>
-              {item.text}
-            </ThemedText>
-            <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#94A3B8' }]}>
-              {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-            </ThemedText>
-          </View>
+        <View
+          style={[
+            styles.bubbleInner,
+            isOwn ? styles.bubbleOwn : styles.bubbleOther,
+          ]}>
+          <ThemedText style={{ color: isOwn ? '#FFFFFF' : '#E2E8F0', fontSize: 15 }}>
+            {item.text}
+          </ThemedText>
+          <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#94A3B8' }]}>
+            {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+          </ThemedText>
         </View>
       </View>
     );
@@ -161,9 +107,11 @@ export default function ChatScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      {/* Nome do amigo no topo em vez de "Chat" genérico */}
+      {name ? <Stack.Screen options={{ title: name }} /> : null}
       <View style={[styles.flex, styles.centered]}>
         <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
-          
+
           <FlatList
             ref={listRef}
             data={messages}
@@ -180,14 +128,6 @@ export default function ChatScreen() {
 
           {error && (
             <ThemedText style={styles.error}>{error}</ThemedText>
-          )}
-
-          {activity?.status === 'completed' && (
-            <View style={styles.completedBanner}>
-              <ThemedText type="small" style={styles.completedText}>
-                Atividade terminada — podes continuar a conversar com o grupo.
-              </ThemedText>
-            </View>
           )}
 
           <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
@@ -212,7 +152,7 @@ export default function ChatScreen() {
               <Ionicons name="send" size={20} color="#FFFFFF" style={{ marginLeft: 4 }} />
             </Pressable>
           </View>
-          
+
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -220,12 +160,12 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { 
-    flex: 1, 
-    backgroundColor: '#0F172A' 
+  flex: {
+    flex: 1,
+    backgroundColor: '#0F172A',
   },
-  centered: { 
-    alignItems: 'center' 
+  centered: {
+    alignItems: 'center',
   },
   listContent: {
     padding: Spacing.three,
@@ -240,7 +180,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: Spacing.two,
     marginVertical: 4,
   },
   rowOwn: {
@@ -249,30 +188,8 @@ const styles = StyleSheet.create({
   rowOther: {
     justifyContent: 'flex-start',
   },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginBottom: 2, // Alinhar ligeiramente com a base do balão
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  bubbleCol: {
-    maxWidth: '75%',
-    gap: 4,
-  },
-  senderName: {
-    fontSize: 12,
-    color: '#A0AEC0',
-    marginLeft: 4,
-  },
   bubbleInner: {
+    maxWidth: '75%',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -330,17 +247,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.one,
-  },
-  completedBanner: {
-    backgroundColor: '#10B98120',
-    borderTopWidth: 1,
-    borderTopColor: '#10B981',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  completedText: {
-    color: '#10B981',
-    textAlign: 'center',
-    fontSize: 13,
   },
 });
