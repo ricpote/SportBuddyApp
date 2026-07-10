@@ -5,6 +5,7 @@ import {
   updateMe,
   createMyProfile,
   getUserProfile,
+  searchUsers,
   listUsers,
   updateUserRole,
   banUser,
@@ -23,6 +24,9 @@ router.get("/me", authMiddleware, getMe);
 router.patch("/me", authMiddleware, updateMe);
 router.patch("/me/displayed-badge", authMiddleware, setDisplayedBadge);
 router.get("/me/badges", authMiddleware, getMyBadges);
+
+// Search
+router.get("/search", authMiddleware, searchUsers);
 
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);

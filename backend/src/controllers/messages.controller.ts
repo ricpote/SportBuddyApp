@@ -23,6 +23,11 @@ export async function sendMessage(
       return;
     }
 
+    if (text.trim().length > 2000) {
+      res.status(400).json({ message: "A mensagem é demasiado longa" });
+      return;
+    }
+
     const user = await usersService.getUserByFirebaseUid(req.user.uid);
 
     if (!user) {

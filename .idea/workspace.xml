@@ -6,14 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="cenas ja testadas">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/services/activities.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/activities.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/util/geo.util.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/util/geo.util.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/explore.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/explore.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/profile.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/profile.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/_layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/activity/[id].tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/app-tabs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/app-tabs.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/users.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/users.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +51,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "delete",
+    "git-widget-placeholder": "oauth-and-mvp",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/NOVA/3 Ano 2 Sem/ADC/Projeto_Final/frontend",
     "node.js.detected.package.eslint": "true",
@@ -129,6 +121,17 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="a" />

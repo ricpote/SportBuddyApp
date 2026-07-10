@@ -27,8 +27,16 @@ export function parseCreateActivityDto(body: any): CreateActivityDto {
     throw new Error("title is required");
   }
 
+  if (body.title.trim().length > 100) {
+    throw new Error("title is too long");
+  }
+
   if (!isNonEmptyString(body.description)) {
     throw new Error("description is required");
+  }
+
+  if (body.description.trim().length > 1000) {
+    throw new Error("description is too long");
   }
 
   if (!isNonEmptyString(body.sportId)) {
