@@ -37,7 +37,7 @@ export default function FriendsScreen() {
   async function handleAccept(req: FriendRequest) {
     await acceptFriendRequest(req.requestId);
     setRequests((prev) => prev.filter((r) => r.requestId !== req.requestId));
-    setFriends((prev) => [{ userId: req.requestId, user: req.from }, ...prev]);
+    setFriends((prev) => [{ userId: req.from.id, user: req.from }, ...prev]);
   }
 
   async function handleReject(requestId: string) {
