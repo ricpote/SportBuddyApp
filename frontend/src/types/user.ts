@@ -18,6 +18,7 @@ export type UserProfile = {
   bio?: string;
   avatarUrl?: string;
   stats: UserStats;
+  friends?: string[];
 };
 
 export type PublicUser = Omit<UserProfile, 'email'>;
