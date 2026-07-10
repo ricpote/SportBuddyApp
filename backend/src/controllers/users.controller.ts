@@ -95,7 +95,14 @@ export async function getUserProfile(
       return res.status(404).json({ message: "User not found" });
     }
 
-    return res.json(toPublicProfile(user));
+    // Não expor dados privados (localização e lista de amigos) de outros
+    // utilizadores; devolver apenas se o requester é amigo deste perfil.
+    const { location: _location, friends, ...publicFields } = toPublicProfile(user);
+    const isFriend = req.user
+      ? (friends ?? []).includes(req.user.uid)
+      : false;
+
+    return res.json({ ...publicFields, isFriend });
   } catch {
     return res.status(500).json({ message: "Error getting user profile" });
   }

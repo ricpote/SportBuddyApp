@@ -9,7 +9,7 @@ type ChatBadgeContextValue = {
   unreadCount: number;
   unreadIds: string[];
   markRead: (activityId: string) => Promise<void>;
-  checkUnread: (activityIds: string[]) => Promise<void>;
+  checkUnread: (activityIds: string[], currentUserId?: string) => Promise<void>;
 };
 
 const ChatBadgeContext = createContext<ChatBadgeContextValue | undefined>(undefined);
@@ -31,7 +31,7 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const checkUnread = useCallback(async (activityIds: string[]) => {
+  const checkUnread = useCallback(async (activityIds: string[], currentUserId?: string) => {
     if (activityIds.length === 0) { setUnreadIds(new Set()); return; }
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -40,8 +40,12 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
       const results = await Promise.allSettled(
         activityIds.map(async (activityId) => {
           const messages = await getMessages(activityId);
-          if (messages.length === 0) return { activityId, unread: false };
-          const lastMsgTime = new Date(messages[messages.length - 1].createdAt).getTime();
+          // As nossas próprias mensagens não contam como "por ler"
+          const fromOthers = currentUserId
+            ? messages.filter((m) => m.senderId !== currentUserId)
+            : messages;
+          if (fromOthers.length === 0) return { activityId, unread: false };
+          const lastMsgTime = new Date(fromOthers[fromOthers.length - 1].createdAt).getTime();
           const lastSeen = lastSeenMap[activityId] ?? 0;
           return { activityId, unread: lastMsgTime > lastSeen };
         })

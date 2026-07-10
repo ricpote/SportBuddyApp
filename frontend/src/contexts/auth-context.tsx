@@ -86,10 +86,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await getMyProfile();
     } catch {
-      await api.post('/api/users/profile', {
-        name: firebaseUser.displayName ?? 'User',
-        email: firebaseUser.email ?? '',
-      });
+      const baseName = firebaseUser.displayName ?? 'User';
+      const email = firebaseUser.email ?? '';
+
+      try {
+        await api.post('/api/users/profile', { name: baseName, email });
+      } catch (err) {
+        // Se o nome já estiver ocupado, tenta uma vez com um sufixo numérico
+        if (err instanceof Error && err.message.includes('nome')) {
+          const suffix = Math.floor(1000 + Math.random() * 9000);
+          await api.post('/api/users/profile', { name: `${baseName} ${suffix}`, email });
+        } else {
+          throw err;
+        }
+      }
+
       await loadProfile(firebaseUser);
     }
   }

@@ -20,6 +20,12 @@ export class FriendsService {
     const requesterDoc = await db.collection("users").doc(requesterId).get();
     if (!requesterDoc.exists) throw new Error("Utilizador não encontrado");
 
+    const addresseeDoc = await db.collection("users").doc(addresseeId).get();
+    if (!addresseeDoc.exists) throw new Error("Utilizador não encontrado");
+    if (addresseeDoc.data()!.status !== "active") {
+      throw new Error("Não é possível adicionar este utilizador");
+    }
+
     const requester = requesterDoc.data()!;
     if (((requester.friends ?? []) as string[]).includes(addresseeId)) {
       throw new Error("Já são amigos");

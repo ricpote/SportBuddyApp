@@ -25,7 +25,7 @@ export default function ChatsScreen() {
         // CORREÇÃO: (a.participantsList || []) impede o erro de undefined
         .filter((a) => a.status !== 'cancelled' && (a.participantsList || []).includes(user?.uid ?? ''))
         .map((a) => a.id);
-      checkUnread(chattableIds);
+      checkUnread(chattableIds, user?.uid);
     }).catch(() => setActivities([]));
   }, [checkUnread, user?.uid]);
 
@@ -39,7 +39,7 @@ export default function ChatsScreen() {
       const chattableIds = data
         .filter((a) => a.status !== 'cancelled' && (a.participantsList || []).includes(user?.uid ?? ''))
         .map((a) => a.id);
-      checkUnread(chattableIds);
+      checkUnread(chattableIds, user?.uid);
     } catch {
       setActivities([]);
     } finally {

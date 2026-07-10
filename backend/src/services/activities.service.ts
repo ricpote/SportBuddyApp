@@ -240,9 +240,23 @@ export class ActivitiesService {
 
     const now = new Date();
     const changes: Record<string, unknown> = { updatedAt: now };
-    if (data.title !== undefined) changes.title = data.title;
-    if (data.description !== undefined) changes.description = data.description;
-    if (data.date !== undefined) changes.date = data.date;
+    if (data.title !== undefined) {
+      const title = data.title.trim();
+      if (!title) throw new Error("O título não pode ficar vazio");
+      if (title.length > 100) throw new Error("O título é demasiado longo");
+      changes.title = title;
+    }
+    if (data.description !== undefined) {
+      const description = data.description.trim();
+      if (!description) throw new Error("A descrição não pode ficar vazia");
+      if (description.length > 1000) throw new Error("A descrição é demasiado longa");
+      changes.description = description;
+    }
+    if (data.date !== undefined) {
+      if (Number.isNaN(data.date.getTime())) throw new Error("Data inválida");
+      if (data.date <= now) throw new Error("A data tem de ser no futuro");
+      changes.date = data.date;
+    }
     if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
     if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
     if (data.maxParticipants !== undefined) {

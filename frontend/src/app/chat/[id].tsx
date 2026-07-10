@@ -79,6 +79,8 @@ export default function ChatScreen() {
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+            // Estamos com o chat aberto, por isso o que chega fica logo visto
+            markRead(id!);
           }
         })
         .catch(() => {});
@@ -87,7 +89,7 @@ export default function ChatScreen() {
     fetchMessages();
     const interval = setInterval(fetchMessages, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, markRead]);
 
   async function handleSend() {
     const trimmed = text.trim();
@@ -100,6 +102,7 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, msg]);
       setText('');
       latestCountRef.current += 1;
+      markRead(id);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
