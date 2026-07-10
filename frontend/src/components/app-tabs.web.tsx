@@ -116,17 +116,19 @@ export function CustomTabList({ isDesktop, ...props }: CustomTabListProps) {
       ]}>
 
       {isDesktop && (
-        <View style={styles.brandContainer}>
-          <Image
-            source={require('../../assets/images/sportbuddyIcon.png')}
-            style={styles.logoIcon}
-            resizeMode="contain"
-          />
-          <View>
-            <ThemedText type="smallBold" style={styles.brandText}>SportBuddy</ThemedText>
-            <ThemedText style={styles.brandSlogan}>Connect & Play</ThemedText>
+        <Link href="/" style={styles.brandLink}>
+          <View style={styles.brandContainer}>
+            <Image
+              source={require('../../assets/images/sportbuddyIcon.png')}
+              style={styles.logoIcon}
+              resizeMode="contain"
+            />
+            <View>
+              <ThemedText type="smallBold" style={styles.brandText}>SportBuddy</ThemedText>
+              <ThemedText style={styles.brandSlogan}>Connect & Play</ThemedText>
+            </View>
           </View>
-        </View>
+        </Link>
       )}
 
       <View style={[styles.tabsWrapper, { flexDirection: isDesktop ? 'column' : 'row' }]}>
@@ -163,6 +165,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#1E293B',
     flexDirection: 'row',
     justifyContent: 'center',
+  },
+  brandLink: {
+    textDecorationLine: 'none',
   },
   brandContainer: {
     flexDirection: 'row',
