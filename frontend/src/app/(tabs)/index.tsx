@@ -10,11 +10,13 @@ import { WeatherSection } from '@/components/weather-section';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { listActivities } from '@/services/activities';
+import { listActivities, getFriendsActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { getNotifications } from '@/services/notifications';
+import { getFriends } from '@/services/friends';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
+import { Friend } from '@/types/friend';
 
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   beginner: 'Iniciante',
@@ -52,6 +54,8 @@ export default function HomeScreen() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendsActivities, setFriendsActivities] = useState<Activity[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,11 +68,33 @@ export default function HomeScreen() {
       getNotifications()
         .then((list) => setUnreadCount(list.filter((n) => !n.read).length))
         .catch(() => setUnreadCount(0));
+      getFriends()
+        .then(setFriends)
+        .catch(() => setFriends([]));
+      getFriendsActivities()
+        .then(setFriendsActivities)
+        .catch(() => setFriendsActivities([]));
     }, [])
   );
 
   // sportId -> nome da modalidade, para mostrar no cartão e filtrar por nome
   const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
+
+  // friendId -> primeiro nome, para mostrar quem vai em cada atividade recomendada
+  const friendNameById = new Map(
+    friends.map((f) => [f.userId, f.user.name.split(' ')[0]])
+  );
+
+  function friendsGoingLabel(activity: Activity) {
+    const names = activity.participantsList
+      .map((id) => friendNameById.get(id))
+      .filter((name): name is string => !!name);
+
+    if (names.length === 0) return '';
+    if (names.length === 1) return `${names[0]} vai participar`;
+    if (names.length === 2) return `${names[0]} e ${names[1]} vão participar`;
+    return `${names[0]} e mais ${names.length - 1} amigos vão participar`;
+  }
 
   // Chips de filtro: "Todos" + as modalidades que existem
   const filters = [ALL_FILTER, ...sports.map((s) => s.name)];
@@ -179,6 +205,58 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
+
+          {/* SECÇÃO "RECOMENDADO PARA TI" — atividades futuras onde amigos já estão inscritos */}
+          {friendsActivities.length > 0 && (
+            <View style={styles.recommendedSection}>
+              <View style={styles.activitiesHeader}>
+                <ThemedText type="subtitle" style={{ color: '#FFFFFF', fontSize: 20 }}>
+                  Recomendado para ti
+                </ThemedText>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recommendedList}
+              >
+                {friendsActivities.map((activity) => (
+                  <Pressable
+                    key={activity.id}
+                    onPress={() =>
+                      router.push({ pathname: '/activity/[id]', params: { id: activity.id } })
+                    }
+                    style={({ pressed }) => [styles.recommendedCard, pressed && styles.pressed]}
+                  >
+                    <View style={styles.sportBadge}>
+                      <Ionicons name="football-outline" size={14} color="#FFFFFF" />
+                      <ThemedText style={styles.sportBadgeText}>
+                        {sportNameById.get(activity.sportId) ?? activity.sportId}
+                      </ThemedText>
+                    </View>
+
+                    <ThemedText type="subtitle" style={styles.activityTitle} numberOfLines={1}>
+                      {activity.title}
+                    </ThemedText>
+
+                    <View style={styles.infoRow}>
+                      <Ionicons name="calendar-outline" size={14} color="#A0AEC0" />
+                      <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
+                      <Ionicons name="time-outline" size={14} color="#A0AEC0" style={{ marginLeft: 10 }} />
+                      <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
+                    </View>
+
+                    <View style={styles.friendsGoingRow}>
+                      <Ionicons name="people-outline" size={14} color="#CF8444" style={{ marginTop: 2 }} />
+                      <ThemedText style={styles.friendsGoingText} numberOfLines={2}>
+                        {friendsGoingLabel(activity)}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* SECÇÃO DE ATIVIDADES */}
           <View style={styles.activitiesHeader}>
@@ -397,6 +475,37 @@ const styles = StyleSheet.create({
   },
   filterTextActive: {
     color: '#0F172A',
+  },
+  recommendedSection: {
+    marginBottom: Spacing.five,
+  },
+  recommendedList: {
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.three,
+  },
+  recommendedCard: {
+    width: 260,
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  friendsGoingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+  },
+  friendsGoingText: {
+    color: '#CF8444',
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   activitiesHeader: {
     flexDirection: 'row',
