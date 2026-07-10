@@ -11,6 +11,9 @@ import {
   banUser,
   reactivateUser,
   deleteUser,
+  setDisplayedBadge,
+  getMyBadges,
+  getUserBadges,
 } from "../controllers/users.controller";
 
 const router = Router();
@@ -19,12 +22,15 @@ const router = Router();
 router.post("/profile", authMiddleware, createMyProfile);
 router.get("/me", authMiddleware, getMe);
 router.patch("/me", authMiddleware, updateMe);
+router.patch("/me/displayed-badge", authMiddleware, setDisplayedBadge);
+router.get("/me/badges", authMiddleware, getMyBadges);
 
 // Search
 router.get("/search", authMiddleware, searchUsers);
 
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);
+router.get("/:userId/badges", authMiddleware, getUserBadges);
 
 // Admin — user management
 router.get("/", authMiddleware, listUsers);

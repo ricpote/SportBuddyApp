@@ -234,6 +234,60 @@ export class UsersService {
     await this.usersRef
       .doc(userId)
       .update({ [`stats.${field}`]: FieldValue.increment(delta) });
+
+    if (delta > 0) {
+      this.triggerBadgeCheck(userId);
+    }
+  }
+
+  async incrementSportStat(
+    userId: string,
+    sportId: string,
+    delta: 1 | -1
+  ): Promise<void> {
+    await this.usersRef.doc(userId).update({
+      [`stats.bySport.${sportId}.joined`]: FieldValue.increment(delta),
+    });
+
+    if (delta > 0) {
+      this.triggerBadgeCheck(userId);
+    }
+  }
+
+  private triggerBadgeCheck(userId: string): void {
+    // Lazy require to avoid a circular import between users.service and badges.service.
+    const { badgesService } = require("./badges.service") as typeof import("./badges.service");
+    badgesService.checkAndAwardBadges(userId).catch((error) => {
+      console.error(`Error checking badges for user ${userId}:`, error);
+    });
+  }
+
+  async setDisplayedBadge(
+    firebaseUid: string,
+    badgeId: string | null
+  ): Promise<User> {
+    const user = await this.getUserByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      throw new Error("User profile not found");
+    }
+
+    if (badgeId !== null && !user.stats.badges.includes(badgeId)) {
+      throw new Error("Badge not unlocked by this user");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      displayedBadge: badgeId ?? undefined,
+      updatedAt: new Date(),
+    };
+
+    await this.usersRef.doc(firebaseUid).update({
+      displayedBadge: badgeId ?? FieldValue.delete(),
+      updatedAt: updatedUser.updatedAt,
+    });
+
+    return updatedUser;
   }
 
   async searchUsers(query: string, requesterId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {

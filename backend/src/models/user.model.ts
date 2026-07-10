@@ -21,6 +21,8 @@ export type UserStats = {
   mvpVotesReceived: number;
   fairPlayVotesReceived: number;
   badges: string[];
+  badgesUnlockedAt?: Record<string, string>;
+  bySport?: Record<string, { joined: number }>;
 };
 
 export type User = {
@@ -42,6 +44,7 @@ export type User = {
   stats: UserStats;
 
   friends: string[];
+  displayedBadge?: string;
 
   createdAt: Date;
   updatedAt: Date;

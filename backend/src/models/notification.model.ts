@@ -12,7 +12,8 @@ export type NotificationType =
   | "mvp_voting_open"
   | "mvp_result"
   | "friend_request"
-  | "friend_request_accepted";
+  | "friend_request_accepted"
+  | "badge_earned";
 
 export type Notification = {
   id: string;
@@ -36,7 +37,7 @@ export function createNotificationObject(
     userId,
     type,
     message,
-    ...(activityId ? { activityId } : {}),
+    ...(activityId !== undefined ? { activityId } : {}),
     read: false,
     createdAt: new Date(),
   };
