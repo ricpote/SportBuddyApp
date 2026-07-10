@@ -1,6 +1,7 @@
 import { api } from '@/services/api';
+import { AdminUser, PublicUser, UserProfile,UserRole  } from '@/types/user';
 import { FriendUser } from '@/types/friend';
-import { AdminUser, PublicUser, UserProfile } from '@/types/user';
+
 
 export function getMyProfile(): Promise<UserProfile> {
   return api.get<UserProfile>('/api/users/me');
@@ -21,6 +22,10 @@ export function updateMyProfile(data: { name?: string; bio?: string }): Promise<
   return api.patch<UserProfile>('/api/users/me', data);
 }
 
+export function uploadMyAvatar(imageData: string): Promise<UserProfile> {
+  return api.post<UserProfile>('/api/users/me/avatar', { imageData });
+}
+
 export function listAdminUsers(): Promise<AdminUser[]> {
   return api.get<AdminUser[]>('/api/users');
 }
@@ -35,4 +40,8 @@ export function reactivateUser(userId: string): Promise<AdminUser> {
 
 export function deleteUser(userId: string): Promise<{ message: string }> {
   return api.delete<{ message: string }>(`/api/users/${userId}`);
+}
+
+export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
+  return api.patch<AdminUser>(`/api/users/${userId}/role`, { role });
 }

@@ -1,6 +1,6 @@
 import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, Image } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, Image, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,14 +12,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
 import { api } from '@/services/api';
 import { getMyActivities } from '@/services/activities';
+import { uploadMyAvatar } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { relativeDate } from '@/utils/date';
 
 type ProfileData = {
   name: string;
-  email: string;
+  email?: string;
   role: string;
   bio?: string; // <-- Adicionado aqui para o TypeScript saber que existe
+  avatarUrl?: string;
   stats: {
     activitiesCreated: number;
     activitiesJoined: number;
@@ -33,6 +35,40 @@ const STATUS_LABELS: Record<Activity['status'], string> = {
   completed: 'Terminada',
 };
 
+async function compressImageDataUrl(dataUrl: string): Promise<string> {
+  if (Platform.OS !== 'web') {
+    return dataUrl;
+  }
+
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+
+    image.onload = () => {
+      const maxSize = 192;
+      const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+
+      if (!context) {
+        reject(new Error('Nao foi possivel processar a imagem'));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    };
+
+    image.onerror = () => reject(new Error('Nao foi possivel processar a imagem'));
+    image.src = dataUrl;
+  });
+}
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
@@ -40,9 +76,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
-  
-  // Estado para a foto de perfil
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -83,17 +117,28 @@ export default function ProfileScreen() {
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.4,
+        base64: true,
       });
 
-      if (!result.canceled) {
-        setProfileImage(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]?.base64) {
+        setUploadingAvatar(true);
+
+        const mimeType = result.assets[0].mimeType ?? 'image/jpeg';
+        const rawImageData = `data:${mimeType};base64,${result.assets[0].base64}`;
+        const imageData = await compressImageDataUrl(rawImageData);
+        const updatedProfile = await uploadMyAvatar(imageData);
+
+        setProfile(updatedProfile);
       }
     } catch (error) {
       console.log('Erro ao selecionar imagem:', error);
+      setUploadingAvatar(false);
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -115,9 +160,9 @@ export default function ProfileScreen() {
           {/* IMAGEM + INFO */}
           <View style={styles.profileHeaderRow}>
             {/* Imagem de Perfil Circular */}
-            <Pressable onPress={handlePickImage} style={styles.imageWrapper}>
-              {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            <Pressable onPress={handlePickImage} style={styles.imageWrapper} disabled={uploadingAvatar}>
+              {profile?.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={styles.profileImage} />
               ) : (
                 <View style={styles.imagePlaceholder}>
                   <Ionicons name="person" size={36} color="#64748B" />
@@ -146,6 +191,9 @@ export default function ProfileScreen() {
               <ThemedText style={styles.profileRole}>
                 Função: {profile?.role ?? 'participant'}
               </ThemedText>
+              {uploadingAvatar && (
+                <ThemedText style={styles.uploadingText}>A guardar foto...</ThemedText>
+              )}
             </View>
           </View>
 
@@ -353,6 +401,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+  },
+  uploadingText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 4,
   },
   
   /* ESTILOS DA BIO */

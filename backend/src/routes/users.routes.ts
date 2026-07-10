@@ -3,6 +3,7 @@ import { authMiddleware } from "../middleware/auth.middleware";
 import {
   getMe,
   updateMe,
+  uploadMyAvatar,
   createMyProfile,
   getUserProfile,
   searchUsers,
@@ -22,6 +23,7 @@ const router = Router();
 router.post("/profile", authMiddleware, createMyProfile);
 router.get("/me", authMiddleware, getMe);
 router.patch("/me", authMiddleware, updateMe);
+router.post("/me/avatar", authMiddleware, uploadMyAvatar);
 router.patch("/me/displayed-badge", authMiddleware, setDisplayedBadge);
 router.get("/me/badges", authMiddleware, getMyBadges);
 

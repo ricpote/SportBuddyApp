@@ -7,6 +7,7 @@ import {
   Map,
   MapCameraChangedEvent,
   Pin,
+  useMap,
 } from '@vis.gl/react-google-maps';
 import { router } from 'expo-router';
 
@@ -18,13 +19,60 @@ const DEFAULT_CENTER = {
   lat: 38.7223,
   lng: -9.1393,
 };
+
 const mapId = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_MAP_ID;
 const DEFAULT_RADIUS_KM = 20;
+
+function UserLocationController({
+  location,
+  snapTick,
+}: {
+  location: { lat: number; lng: number } | null;
+  snapTick: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !location || snapTick === 0) return;
+    map.panTo(location);
+  }, [location, map, snapTick]);
+
+  return null;
+}
+
+function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation not available'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      reject,
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  });
+}
 
 export default function MapWebScreen() {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY;
 
   const [center, setCenter] = useState(DEFAULT_CENTER);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [snapTick, setSnapTick] = useState(0);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
@@ -55,30 +103,29 @@ export default function MapWebScreen() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Erro ao carregar atividades próximas'
+          : 'Erro ao carregar atividades proximas'
       );
     } finally {
       setLoading(false);
     }
   }
-  function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation not available'));
-        return;
+
+  async function refreshUserLocation(shouldSnap = false) {
+    try {
+      const nextLocation = await getBrowserLocation();
+      setUserLocation(nextLocation);
+
+      if (shouldSnap) {
+        setCenter(nextLocation);
+        setSnapTick((current) => current + 1);
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        reject
-      );
-    });
+      return nextLocation;
+    } catch {
+      return null;
+    }
   }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -87,11 +134,10 @@ export default function MapWebScreen() {
         setError(null);
 
         let nextCenter = DEFAULT_CENTER;
+        const currentLocation = await refreshUserLocation(true);
 
-        try {
-          nextCenter = await getBrowserLocation();
-        } catch {
-          nextCenter = DEFAULT_CENTER;
+        if (currentLocation) {
+          nextCenter = currentLocation;
         }
 
         const data = await listNearbyActivities({
@@ -110,7 +156,7 @@ export default function MapWebScreen() {
         setError(
           err instanceof Error
             ? err.message
-            : 'Erro ao carregar atividades próximas'
+            : 'Erro ao carregar atividades proximas'
         );
       } finally {
         if (!cancelled) {
@@ -119,11 +165,19 @@ export default function MapWebScreen() {
       }
     }
 
-    loadInitialActivities();
+    void loadInitialActivities();
 
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      void refreshUserLocation(false);
+    }, 60_000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   async function handleRadiusChange(nextRadius: number) {
@@ -135,13 +189,18 @@ export default function MapWebScreen() {
     await loadActivities(center.lat, center.lng, radiusKm);
   }
 
+  async function handleSnapToMyLocation() {
+    const nextLocation = await refreshUserLocation(true);
+
+    if (!nextLocation) {
+      setError('Nao foi possivel obter a tua localizacao');
+    }
+  }
+
   if (!apiKey) {
     return (
       <View style={styles.emptyContainer}>
         <ThemedText style={styles.title}>Google Maps API key em falta</ThemedText>
-        <ThemedText>
-
-        </ThemedText>
       </View>
     );
   }
@@ -159,14 +218,24 @@ export default function MapWebScreen() {
           streetViewControl={false}
           fullscreenControl={false}
           mapTypeControl={false}
-
           scaleControl={false}
           rotateControl={false}
           keyboardShortcuts={false}
           onCameraChanged={(event: MapCameraChangedEvent) => {
             setCenter(event.detail.center);
-          }}
-        >
+          }}>
+          <UserLocationController location={userLocation} snapTick={snapTick} />
+
+          {userLocation && (
+            <AdvancedMarker position={userLocation} title="A tua localizacao">
+              <Pin
+                background="#2563EB"
+                borderColor="#1D4ED8"
+                glyphColor="#FFFFFF"
+                scale={1.2}
+              />
+            </AdvancedMarker>
+          )}
 
           {validActivities.map((activity) => (
             <AdvancedMarker
@@ -176,8 +245,7 @@ export default function MapWebScreen() {
                 lng: activity.location.lng,
               }}
               title={activity.title}
-              onClick={() => setSelectedActivity(activity)}
-            >
+              onClick={() => setSelectedActivity(activity)}>
               <Pin
                 background="#CF8444"
                 borderColor="#7C4F28"
@@ -193,8 +261,7 @@ export default function MapWebScreen() {
                 lat: selectedActivity.location.lat,
                 lng: selectedActivity.location.lng,
               }}
-              onCloseClick={() => setSelectedActivity(null)}
-            >
+              onCloseClick={() => setSelectedActivity(null)}>
               <div style={{ maxWidth: 240 }}>
                 <strong>{selectedActivity.title}</strong>
 
@@ -227,8 +294,7 @@ export default function MapWebScreen() {
                     fontWeight: 700,
                     padding: '8px 12px',
                     cursor: 'pointer',
-                  }}
-                >
+                  }}>
                   Abrir atividade
                 </button>
               </div>
@@ -245,12 +311,10 @@ export default function MapWebScreen() {
             return (
               <Pressable
                 key={option}
-                onPress={() => handleRadiusChange(option)}
-                style={[styles.radiusButton, active && styles.radiusButtonActive]}
-              >
+                onPress={() => void handleRadiusChange(option)}
+                style={[styles.radiusButton, active && styles.radiusButtonActive]}>
                 <ThemedText
-                  style={[styles.radiusText, active && styles.radiusTextActive]}
-                >
+                  style={[styles.radiusText, active && styles.radiusTextActive]}>
                   {option} km
                 </ThemedText>
               </Pressable>
@@ -258,9 +322,15 @@ export default function MapWebScreen() {
           })}
         </View>
 
-        <Pressable onPress={handleSearchThisArea} style={styles.searchButton}>
+        <Pressable onPress={() => void handleSearchThisArea()} style={styles.searchButton}>
           <ThemedText style={styles.searchButtonText}>
-            Pesquisar nesta área
+            Pesquisar nesta area
+          </ThemedText>
+        </Pressable>
+
+        <Pressable onPress={() => void handleSnapToMyLocation()} style={styles.locationButton}>
+          <ThemedText style={styles.searchButtonText}>
+            Voltar para a minha localizacao
           </ThemedText>
         </Pressable>
 
@@ -329,6 +399,13 @@ const styles = StyleSheet.create({
   searchButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#0F172A',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  locationButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#1D4ED8',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,

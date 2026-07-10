@@ -40,6 +40,7 @@ function formatTime(iso: string) {
 }
 
 export default function HomeScreen() {
+  const { user, profile } = useAuth();
   const { user } = useAuth();
   const { unreadCount: chatUnread } = useChatBadge();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
@@ -87,8 +88,8 @@ export default function HomeScreen() {
         <View style={[styles.header, styles.headerRow]}>
           <View style={styles.profileHeader}>
             {/* Foto de Perfil */}
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.profilePic} />
+            {profile?.avatarUrl || user?.photoURL ? (
+              <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
             ) : (
               <View style={styles.profilePicPlaceholder}>
                 <Ionicons name="person" size={24} color="#64748B" />

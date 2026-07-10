@@ -14,7 +14,7 @@ import badgesRoutes from "./routes/badges.route";
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 app.get("/", (req, res) => {
   res.json({
