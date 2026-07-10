@@ -116,6 +116,10 @@ export async function uploadMyAvatar(
   } catch (error) {
     return res.status(400).json({
       message: error instanceof Error ? error.message : "Error saving avatar",
+    });
+  }
+}
+
 export async function searchUsers(
   req: AuthenticatedRequest,
   res: Response

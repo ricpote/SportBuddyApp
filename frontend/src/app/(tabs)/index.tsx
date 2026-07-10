@@ -44,7 +44,6 @@ function formatTime(iso: string) {
 
 export default function HomeScreen() {
   const { user, profile } = useAuth();
-  const { user } = useAuth();
   const { unreadCount: chatUnread } = useChatBadge();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
 
