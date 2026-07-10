@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { Friend, FriendRequest, FriendUser } from '@/types/friend';
+import { openConversation } from '@/services/conversations';
 import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend, sendFriendRequest } from '@/services/friends';
 import { searchUsers } from '@/services/users';
 
@@ -94,6 +95,14 @@ export default function FriendsScreen() {
   async function handleRemove(friendId: string) {
     await removeFriend(friendId);
     setFriends((prev) => prev.filter((f) => f.userId !== friendId));
+  }
+
+  // Abre (ou cria) a conversa direta com este amigo e vai para o chat
+  async function handleOpenChat(friend: Friend) {
+    try {
+      const { conversationId } = await openConversation(friend.userId);
+      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friend.user.name } });
+    } catch {}
   }
 
   async function handleSendRequest(user: FriendUser) {
@@ -253,8 +262,8 @@ export default function FriendsScreen() {
               </View>
               <ThemedText style={styles.name}>{f.user.name}</ThemedText>
               <View style={styles.actions}>
-                <Pressable style={styles.chatBtn} disabled>
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#475569" />
+                <Pressable style={styles.chatBtn} onPress={() => handleOpenChat(f)}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#CF8444" />
                 </Pressable>
                 <Pressable style={styles.rejectBtn} onPress={() => handleRemove(f.userId)}>
                   <Ionicons name="person-remove-outline" size={18} color="#FF6B6B" />

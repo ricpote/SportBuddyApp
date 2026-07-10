@@ -57,6 +57,10 @@ function RootNavigator() {
           options={{ headerShown: true, title: 'Chat' }}
         />
         <Stack.Screen
+          name="direct-chat/[id]"
+          options={{ headerShown: true, title: 'Chat' }}
+        />
+        <Stack.Screen
           name="user/[id]"
           options={{ headerShown: true, title: 'Perfil' }}
         />
