@@ -18,8 +18,9 @@ export type UserProfile = {
   bio?: string;
   avatarUrl?: string;
   stats: UserStats;
-  friends?: string[];
 };
 
-export type PublicUser = Omit<UserProfile, 'email'>;
+// Perfil público de outro utilizador. Não inclui email, localização nem a
+// lista de amigos; o backend devolve apenas isFriend (se EU sou amigo dele).
+export type PublicUser = Omit<UserProfile, 'email'> & { isFriend?: boolean };
 export type AdminUser = UserProfile & { firebaseUid?: string };

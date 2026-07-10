@@ -34,7 +34,7 @@ export default function UserProfileScreen() {
     getUserProfile(id)
       .then((p) => {
         setProfile(p);
-        if (me?.uid && p.friends?.includes(me.uid)) setFriendStatus('friends');
+        if (p.isFriend) setFriendStatus('friends');
       })
       .catch(() => setProfile(null));
   }, [id, me?.uid]);

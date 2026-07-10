@@ -32,6 +32,10 @@ export class UsersService {
       throw new Error("O nome é obrigatório");
     }
 
+    if (name.length > 60) {
+      throw new Error("O nome é demasiado longo");
+    }
+
     if (!email) {
       throw new Error("O email é obrigatório");
     }
@@ -131,8 +135,16 @@ export class UsersService {
         throw new Error("O nome é obrigatório");
       }
 
+      if (name.length > 60) {
+        throw new Error("O nome é demasiado longo");
+      }
+
       await this.assertNameAndEmailAvailable(name, undefined, firebaseUid);
       data = { ...data, name };
+    }
+
+    if (data.bio !== undefined && data.bio.length > 300) {
+      throw new Error("A bio é demasiado longa");
     }
 
     const updatedUser: User = {
