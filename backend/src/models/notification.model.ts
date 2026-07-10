@@ -8,14 +8,19 @@ export type NotificationType =
   | "activity_cancelled"
   | "activity_reminder"
   | "activity_auto_cancelled"
-  | "new_message";
+  | "new_message"
+  | "mvp_voting_open"
+  | "mvp_result"
+  | "friend_request"
+  | "friend_request_accepted"
+  | "badge_earned";
 
 export type Notification = {
   id: string;
   userId: string;
   type: NotificationType;
   message: string;
-  activityId: string;
+  activityId?: string;
   read: boolean;
   createdAt: Date;
 };
@@ -25,14 +30,14 @@ export function createNotificationObject(
   userId: string,
   type: NotificationType,
   message: string,
-  activityId: string
+  activityId?: string
 ): Notification {
   return {
     id,
     userId,
     type,
     message,
-    activityId,
+    ...(activityId !== undefined ? { activityId } : {}),
     read: false,
     createdAt: new Date(),
   };

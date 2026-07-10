@@ -17,7 +17,7 @@ import { useChatBadge } from '@/contexts/chat-badge-context';
 
 export default function AppTabs() {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768 || Platform.OS === 'web';
+  const isDesktop = width >= 768;
   const { unreadCount } = useChatBadge();
   const { profile } = useAuth();
   const showAdminTab = profile?.role === 'admin';
@@ -29,31 +29,31 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList isDesktop={isDesktop}>
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home-outline">Home</TabButton>
+            <TabButton icon="home-outline" isDesktop={isDesktop}>Home</TabButton>
           </TabTrigger>
 
           <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton icon="search-outline">Discover</TabButton>
+            <TabButton icon="search-outline" isDesktop={isDesktop}>Discover</TabButton>
           </TabTrigger>
 
           <Link href="/create-activity" asChild>
-            <TabButton icon="add-outline">Create</TabButton>
+            <TabButton icon="add-outline" isDesktop={isDesktop}>Create</TabButton>
           </Link>
           <TabTrigger name="chats" href="/chats" asChild>
-            <TabButton icon="chatbubbles-outline" badge={unreadCount}>Chats</TabButton>
+            <TabButton icon="chatbubbles-outline" badge={unreadCount} isDesktop={isDesktop}>Chats</TabButton>
           </TabTrigger>
 
           <TabTrigger name="map" href="/map" asChild>
-            <TabButton icon="map-outline">Map</TabButton>
+            <TabButton icon="map-outline" isDesktop={isDesktop}>Map</TabButton>
           </TabTrigger>
 
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton icon="person-outline">Profile</TabButton>
+            <TabButton icon="person-outline" isDesktop={isDesktop}>Profile</TabButton>
           </TabTrigger>
 
           {showAdminTab && (
             <TabTrigger name="admin" href={'/admin' as never} asChild>
-              <TabButton icon="shield-checkmark-outline">Admin</TabButton>
+              <TabButton icon="shield-checkmark-outline" isDesktop={isDesktop}>Admin</TabButton>
             </TabTrigger>
           )}
         </CustomTabList>
@@ -62,24 +62,25 @@ export default function AppTabs() {
   );
 }
 
-type TabButtonProps = TabTriggerSlotProps & { icon?: any; badge?: number };
+type TabButtonProps = TabTriggerSlotProps & { icon?: any; badge?: number; isDesktop?: boolean };
 
-export function TabButton({ children, isFocused, icon, badge, ...props }: TabButtonProps) {
+export function TabButton({ children, isFocused, icon, badge, isDesktop, ...props }: TabButtonProps) {
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
       <View
         style={[
           styles.tabButtonView,
+          !isDesktop && styles.tabButtonViewMobile,
           isFocused && { backgroundColor: 'rgba(207, 132, 68, 0.15)' }
         ]}>
 
-        <View style={styles.iconWrap}>
+        <View style={[styles.iconWrap, !isDesktop && { marginRight: 0 }]}>
           {icon && (
             <Ionicons
               name={icon}
               size={20}
               color={isFocused ? '#CF8444' : '#64748B'}
-              style={{ marginRight: 12 }}
+              style={{ marginRight: isDesktop ? 12 : 0 }}
             />
           )}
           {!!badge && badge > 0 && (
@@ -89,13 +90,15 @@ export function TabButton({ children, isFocused, icon, badge, ...props }: TabBut
           )}
         </View>
 
-        <ThemedText
-          type="smallBold"
-          style={{ color: isFocused ? '#CF8444' : '#A0AEC0', fontSize: 16 }}>
-          {children}
-        </ThemedText>
+        {isDesktop && (
+          <ThemedText
+            type="smallBold"
+            style={{ color: isFocused ? '#CF8444' : '#A0AEC0', fontSize: 16 }}>
+            {children}
+          </ThemedText>
+        )}
 
-        {isFocused && <View style={styles.activeDot} />}
+        {isDesktop && isFocused && <View style={styles.activeDot} />}
       </View>
     </Pressable>
   );
@@ -154,7 +157,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: '100%',
-    padding: Spacing.three,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
     borderTopWidth: 1,
     borderTopColor: '#1E293B',
     flexDirection: 'row',
@@ -214,6 +218,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
+  },
+  tabButtonViewMobile: {
+    paddingHorizontal: 10,
   },
   activeDot: {
     width: 6,

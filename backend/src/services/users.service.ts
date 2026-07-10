@@ -25,15 +25,67 @@ export class UsersService {
       throw new Error("User profile already exists");
     }
 
+    const name = data.name?.trim();
+    const email = data.email?.trim().toLowerCase();
+
+    if (!name) {
+      throw new Error("O nome é obrigatório");
+    }
+
+    if (name.length > 60) {
+      throw new Error("O nome é demasiado longo");
+    }
+
+    if (!email) {
+      throw new Error("O email é obrigatório");
+    }
+
+    await this.assertNameAndEmailAvailable(name, email);
+
     // We use Firebase UID as the Firestore document ID.
     // This makes it easy to find the logged-in user.
-    const user = createUserObject(firebaseUid, firebaseUid, data);
+    const user = createUserObject(firebaseUid, firebaseUid, {
+      ...data,
+      name,
+      email,
+    });
 
     const userDoc = JSON.parse(JSON.stringify(user));
 
     await this.usersRef.doc(firebaseUid).set(userDoc);
 
     return user;
+  }
+
+  // Garante que não há dois perfis com o mesmo nome ou email
+  // (comparação sem maiúsculas/minúsculas; ignora contas apagadas).
+  private async assertNameAndEmailAvailable(
+    name: string,
+    email?: string,
+    excludeUserId?: string
+  ): Promise<void> {
+    const snapshot = await this.usersRef.get();
+
+    const normalizedName = name.toLowerCase();
+    const normalizedEmail = email?.toLowerCase();
+
+    for (const doc of snapshot.docs) {
+      if (doc.id === excludeUserId) continue;
+
+      const user = doc.data() as User;
+      if (user.status === "deleted") continue;
+
+      if (user.name?.trim().toLowerCase() === normalizedName) {
+        throw new Error("Já existe um utilizador com este nome");
+      }
+
+      if (
+        normalizedEmail &&
+        user.email?.trim().toLowerCase() === normalizedEmail
+      ) {
+        throw new Error("Já existe um utilizador com este email");
+      }
+    }
   }
 
   async getUserByFirebaseUid(firebaseUid: string): Promise<User | null> {
@@ -74,6 +126,25 @@ export class UsersService {
 
     if (!user) {
       throw new Error("User profile not found");
+    }
+
+    if (data.name !== undefined) {
+      const name = data.name.trim();
+
+      if (!name) {
+        throw new Error("O nome é obrigatório");
+      }
+
+      if (name.length > 60) {
+        throw new Error("O nome é demasiado longo");
+      }
+
+      await this.assertNameAndEmailAvailable(name, undefined, firebaseUid);
+      data = { ...data, name };
+    }
+
+    if (data.bio !== undefined && data.bio.length > 300) {
+      throw new Error("A bio é demasiado longa");
     }
 
     const updatedUser: User = {
@@ -163,6 +234,72 @@ export class UsersService {
     await this.usersRef
       .doc(userId)
       .update({ [`stats.${field}`]: FieldValue.increment(delta) });
+
+    if (delta > 0) {
+      this.triggerBadgeCheck(userId);
+    }
+  }
+
+  async incrementSportStat(
+    userId: string,
+    sportId: string,
+    delta: 1 | -1
+  ): Promise<void> {
+    await this.usersRef.doc(userId).update({
+      [`stats.bySport.${sportId}.joined`]: FieldValue.increment(delta),
+    });
+
+    if (delta > 0) {
+      this.triggerBadgeCheck(userId);
+    }
+  }
+
+  private triggerBadgeCheck(userId: string): void {
+    // Lazy require to avoid a circular import between users.service and badges.service.
+    const { badgesService } = require("./badges.service") as typeof import("./badges.service");
+    badgesService.checkAndAwardBadges(userId).catch((error) => {
+      console.error(`Error checking badges for user ${userId}:`, error);
+    });
+  }
+
+  async setDisplayedBadge(
+    firebaseUid: string,
+    badgeId: string | null
+  ): Promise<User> {
+    const user = await this.getUserByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      throw new Error("User profile not found");
+    }
+
+    if (badgeId !== null && !user.stats.badges.includes(badgeId)) {
+      throw new Error("Badge not unlocked by this user");
+    }
+
+    const updatedUser: User = {
+      ...user,
+      displayedBadge: badgeId ?? undefined,
+      updatedAt: new Date(),
+    };
+
+    await this.usersRef.doc(firebaseUid).update({
+      displayedBadge: badgeId ?? FieldValue.delete(),
+      updatedAt: updatedUser.updatedAt,
+    });
+
+    return updatedUser;
+  }
+
+  async searchUsers(query: string, requesterId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+
+    const snapshot = await this.usersRef.where("status", "==", "active").get();
+
+    return snapshot.docs
+      .map((doc) => doc.data() as User)
+      .filter((u) => u.id !== requesterId && u.name.toLowerCase().startsWith(q))
+      .map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }));
   }
 
   async listUsers(filters: ListUsersFilters = {}): Promise<User[]> {

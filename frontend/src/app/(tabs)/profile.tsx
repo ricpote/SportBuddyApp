@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
+import { BadgesSection } from '@/components/badges-section';
 import { MaxContentWidth, Spacing, TopTabInset, BottomTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
@@ -222,6 +223,8 @@ export default function ProfileScreen() {
             <ThemedText style={styles.statLabel}>Organizadas</ThemedText>
           </View>
         </View>
+
+        <BadgesSection />
 
         {/* ALERTAS */}
         {pendingCount > 0 && (

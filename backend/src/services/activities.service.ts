@@ -83,7 +83,6 @@ export class ActivitiesService {
     const activity = createActivityObject(docRef.id, createdBy, data);
 
     await docRef.set(activity);
-    await usersService.incrementStat(createdBy, "activitiesCreated", 1);
 
     return activity;
   }
@@ -103,10 +102,12 @@ export class ActivitiesService {
       new Date(activity.date) < new Date()
     ) {
       const now = new Date();
-      await this.activitiesRef.doc(activityId).update({
-        status: "completed" as ActivityStatus,
-        updatedAt: now,
-      });
+      const participants = activity.participantsList.filter(id => id !== activity.createdBy);
+      await Promise.all([
+        this.activitiesRef.doc(activityId).update({ status: "completed" as ActivityStatus, updatedAt: now }),
+        usersService.incrementStat(activity.createdBy, "activitiesCreated", 1),
+        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
+      ]);
       return { ...activity, status: "completed", updatedAt: now };
     }
 
@@ -239,9 +240,23 @@ export class ActivitiesService {
 
     const now = new Date();
     const changes: Record<string, unknown> = { updatedAt: now };
-    if (data.title !== undefined) changes.title = data.title;
-    if (data.description !== undefined) changes.description = data.description;
-    if (data.date !== undefined) changes.date = data.date;
+    if (data.title !== undefined) {
+      const title = data.title.trim();
+      if (!title) throw new Error("O título não pode ficar vazio");
+      if (title.length > 100) throw new Error("O título é demasiado longo");
+      changes.title = title;
+    }
+    if (data.description !== undefined) {
+      const description = data.description.trim();
+      if (!description) throw new Error("A descrição não pode ficar vazia");
+      if (description.length > 1000) throw new Error("A descrição é demasiado longa");
+      changes.description = description;
+    }
+    if (data.date !== undefined) {
+      if (Number.isNaN(data.date.getTime())) throw new Error("Data inválida");
+      if (data.date <= now) throw new Error("A data tem de ser no futuro");
+      changes.date = data.date;
+    }
     if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
     if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
     if (data.maxParticipants !== undefined) {
@@ -286,18 +301,8 @@ export class ActivitiesService {
       throw new Error("Activity not found");
     }
 
-    const statsUpdates: Promise<void>[] = [];
-
-    statsUpdates.push(
-      usersService.incrementStat(activity.createdBy, "activitiesCreated", -1)
-    );
-
-    for (const participantId of activity.participantsList) {
-      if (participantId !== activity.createdBy) {
-        statsUpdates.push(
-          usersService.incrementStat(participantId, "activitiesJoined", -1)
-        );
-      }
+    if (activity.status === "completed") {
+      throw new Error("Cannot delete a completed activity");
     }
 
     const notificationsSnapshot = await db
@@ -311,7 +316,6 @@ export class ActivitiesService {
       await batch.commit();
     }
 
-    await Promise.all(statsUpdates);
     await db.recursiveDelete(this.activitiesRef.doc(activityId));
   }
 
@@ -398,11 +402,6 @@ export class ActivitiesService {
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now, promoted };
     });
 
-    await usersService.incrementStat(participantId, "activitiesJoined", -1);
-    if (result.promoted) {
-      await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
-    }
-
     await notificationsService.createNotification(
       participantId,
       "participant_removed",
@@ -451,8 +450,6 @@ export class ActivitiesService {
     });
 
     if (result.joined) {
-      await usersService.incrementStat(userId, "activitiesJoined", 1);
-
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_joined",
@@ -531,11 +528,6 @@ export class ActivitiesService {
     });
 
     if (result.leftParticipants) {
-      await usersService.incrementStat(userId, "activitiesJoined", -1);
-      if (result.promoted) {
-        await usersService.incrementStat(result.promoted, "activitiesJoined", 1);
-      }
-
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_left",
@@ -582,8 +574,6 @@ export class ActivitiesService {
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now };
     });
 
-    await usersService.incrementStat(userId, "activitiesJoined", 1);
-
     await notificationsService.createNotification(
       userId,
       "waitlist_admitted",
@@ -623,6 +613,63 @@ export class ActivitiesService {
 
       return { ...activity, waitlist: updatedWaitlist, updatedAt: now };
     });
+  }
+
+  async voteMvp(activityId: string, voterId: string, votedForId: string): Promise<void> {
+    const activity = await this.getActivityById(activityId);
+
+    if (!activity) throw new Error("Activity not found");
+    if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
+    if (activity.votingClosedAt) throw new Error("MVP voting is closed");
+    if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
+    if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
+    if (voterId === votedForId) throw new Error("You cannot vote for yourself");
+    if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
+
+    const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
+    const now = new Date();
+    const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
+
+    if (allVoted) {
+      await this.closeMvpVoting(activityId, activity, updatedVotes, now);
+    } else {
+      await this.activitiesRef.doc(activityId).update({ mvpVotes: updatedVotes, updatedAt: now });
+    }
+  }
+
+  private async closeMvpVoting(
+    activityId: string,
+    activity: Activity,
+    votes: Record<string, string>,
+    now: Date
+  ): Promise<void> {
+    const tally: Record<string, number> = {};
+    for (const votedFor of Object.values(votes)) {
+      tally[votedFor] = (tally[votedFor] ?? 0) + 1;
+    }
+
+    const maxVotes = Math.max(...Object.values(tally));
+    const winners = Object.keys(tally).filter(id => tally[id] === maxVotes);
+
+    await this.activitiesRef.doc(activityId).update({
+      mvpVotes: votes,
+      mvpWinners: winners,
+      votingClosedAt: now,
+      updatedAt: now,
+    });
+
+    for (const winnerId of winners) {
+      await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
+    }
+
+    await notificationsService.createNotificationForMany(
+      activity.participantsList,
+      "mvp_result",
+      winners.length === 1
+        ? `A votação de MVP da atividade "${activity.title}" terminou!`
+        : `A votação de MVP da atividade "${activity.title}" terminou com empate!`,
+      activityId
+    );
   }
 }
 

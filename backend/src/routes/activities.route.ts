@@ -14,6 +14,7 @@ import {
   admitFromWaitlist,
   rejectFromWaitlist,
   deleteActivityAsAdmin,
+  voteMvp,
 } from "../controllers/activities.controller";
 
 const router = Router();
@@ -36,22 +37,15 @@ router.delete("/:activityId/admin", authMiddleware, deleteActivityAsAdmin);
 
 router.patch("/:activityId/cancel", authMiddleware, cancelActivity);
 
-router.patch(
-  "/:activityId/remove-participant",
-  authMiddleware,
-  removeParticipant
-);
+router.patch("/:activityId/remove-participant",authMiddleware,
+  removeParticipant);
 
-router.patch(
-  "/:activityId/admit-from-waitlist",
-  authMiddleware,
-  admitFromWaitlist
-);
+router.patch("/:activityId/admit-from-waitlist",authMiddleware,
+  admitFromWaitlist);
 
-router.patch(
-  "/:activityId/reject-from-waitlist",
-  authMiddleware,
-  rejectFromWaitlist
-);
+router.patch("/:activityId/reject-from-waitlist",authMiddleware,
+  rejectFromWaitlist);
+
+router.post("/:activityId/vote-mvp", authMiddleware, voteMvp);
 
 export default router;

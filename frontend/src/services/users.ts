@@ -1,8 +1,17 @@
 import { api } from '@/services/api';
 import { AdminUser, PublicUser, UserProfile,UserRole  } from '@/types/user';
+import { FriendUser } from '@/types/friend';
+
 
 export function getMyProfile(): Promise<UserProfile> {
   return api.get<UserProfile>('/api/users/me');
+}
+
+// Procurar utilizadores pelo nome (para adicionar amigos).
+// NOTA: endpoint do plano combinado — falta implementar no backend:
+// GET /api/users/search?q=... → [{ id, name, avatarUrl? }]
+export function searchUsers(query: string): Promise<FriendUser[]> {
+  return api.get<FriendUser[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
 }
 
 export function getUserProfile(userId: string): Promise<PublicUser> {

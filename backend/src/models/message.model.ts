@@ -19,3 +19,26 @@ export function createMessageObject(id: string, activityId: string, senderId: st
     createdAt: new Date(),
   };
 }
+
+export type Conversation = {
+  id: string;
+  participants: string[];
+  lastMessage?: string;
+  lastMessageAt?: Date;
+  createdAt: Date;
+};
+
+export type DirectMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: Date;
+};
+
+export type ConversationDto = {
+  id: string;
+  otherUser: { id: string; name: string; avatarUrl?: string };
+  lastMessage?: string;
+  lastMessageAt?: Date;
+};

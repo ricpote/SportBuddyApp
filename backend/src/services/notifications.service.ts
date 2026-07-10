@@ -14,7 +14,7 @@ export class NotificationsService {
     userId: string,
     type: NotificationType,
     message: string,
-    activityId: string
+    activityId?: string
   ): Promise<Notification> {
     const docRef = this.notificationsRef.doc();
     const notification = createNotificationObject(docRef.id, userId, type, message, activityId);

@@ -21,6 +21,8 @@ export type UserStats = {
   mvpVotesReceived: number;
   fairPlayVotesReceived: number;
   badges: string[];
+  badgesUnlockedAt?: Record<string, string>;
+  bySport?: Record<string, { joined: number }>;
 };
 
 export type User = {
@@ -40,6 +42,9 @@ export type User = {
   location?: UserLocation;
 
   stats: UserStats;
+
+  friends: string[];
+  displayedBadge?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -95,6 +100,8 @@ export function createUserObject(
       fairPlayVotesReceived: 0,
       badges: [],
     },
+
+    friends: [],
 
     createdAt: now,
     updatedAt: now,
