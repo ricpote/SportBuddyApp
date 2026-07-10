@@ -44,7 +44,9 @@ export type Activity = {
 
   mvpVotes: Record<string, string>;
   mvpWinners: string[];
-  votingClosedAt?: Date;
+  // null enquanto a votação está aberta — tem de existir no documento
+  // para a query do cron (where votingClosedAt == null) o encontrar.
+  votingClosedAt?: Date | null;
 
   createdAt: Date;
   updatedAt: Date;
@@ -100,6 +102,7 @@ export function createActivityObject(
 
     mvpVotes: {},
     mvpWinners: [],
+    votingClosedAt: null,
 
     createdAt: now,
     updatedAt: now,
