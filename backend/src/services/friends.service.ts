@@ -1,5 +1,6 @@
 import { db } from "../config/firebase";
 import { FieldValue } from "firebase-admin/firestore";
+import { notificationsService } from "./notifications.service";
 import {
   FriendRequest,
   FriendDto,
@@ -51,6 +52,12 @@ export class FriendsService {
 
     const ref = this.requestsRef.doc();
     await ref.set(createFriendRequestObject(ref.id, requesterId, addresseeId));
+
+    await notificationsService.createNotification(
+      addresseeId,
+      "friend_request",
+      `${requester.name} enviou-te um pedido de amizade.`
+    );
   }
 
   async getPendingRequests(userId: string): Promise<FriendRequestDto[]> {
@@ -99,6 +106,14 @@ export class FriendsService {
     });
     batch.delete(this.requestsRef.doc(requestId));
     await batch.commit();
+
+    const addresseeDoc = await db.collection("users").doc(request.addresseeId).get();
+    const addresseeName = addresseeDoc.data()?.name ?? "Alguém";
+    await notificationsService.createNotification(
+      request.requesterId,
+      "friend_request_accepted",
+      `${addresseeName} aceitou o teu pedido de amizade.`
+    );
   }
 
   async rejectRequest(requestId: string, userId: string): Promise<void> {

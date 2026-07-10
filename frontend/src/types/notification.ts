@@ -9,14 +9,16 @@ export type NotificationType =
   | 'activity_reminder'
   | 'activity_auto_cancelled'
   | 'new_message'
-  | 'mvp_result';
+  | 'mvp_result'
+  | 'friend_request'
+  | 'friend_request_accepted';
 
 export type Notification = {
   id: string;
   userId: string;
   type: NotificationType;
   message: string;
-  activityId: string;
+  activityId?: string;
   read: boolean;
   createdAt: string;
 };

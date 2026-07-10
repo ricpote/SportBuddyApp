@@ -26,6 +26,8 @@ const TYPE_ICON: Record<NotificationType, { icon: keyof typeof Ionicons.glyphMap
   activity_auto_cancelled: { icon: 'close-circle-outline', color: '#FF6B6B' },
   new_message: { icon: 'chatbubble-ellipses-outline', color: '#60A5FA' },
   mvp_result: { icon: 'trophy-outline', color: '#CF8444' },
+  friend_request: { icon: 'person-add-outline', color: '#60A5FA' },
+  friend_request_accepted: { icon: 'people-outline', color: '#10B981' },
 };
 
 export default function NotificationsScreen() {
@@ -63,7 +65,9 @@ export default function NotificationsScreen() {
       );
       markNotificationAsRead(notification.id).catch(() => {});
     }
-    if (notification.activityId) {
+    if (notification.type === 'friend_request' || notification.type === 'friend_request_accepted') {
+      router.push('/friends');
+    } else if (notification.activityId) {
       router.push({ pathname: '/activity/[id]', params: { id: notification.activityId } });
     }
   }
