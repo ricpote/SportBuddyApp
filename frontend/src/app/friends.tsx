@@ -29,6 +29,14 @@ export default function FriendsScreen() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sentIds, setSentIds] = useState<string[]>([]);
+  const [searchMode, setSearchMode] = useState(false);
+
+  function exitSearch() {
+    setSearchMode(false);
+    setQuery('');
+    setResults(null);
+    setSearchError(null);
+  }
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -119,70 +127,95 @@ export default function FriendsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={18} color="#64748B" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Procurar pessoas pelo nome..."
-            placeholderTextColor="#64748B"
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {query.length > 0 && (
-            <Pressable onPress={() => setQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color="#64748B" />
-            </Pressable>
-          )}
-        </View>
-
-        {searchError && <ThemedText style={styles.searchError}>{searchError}</ThemedText>}
-
-        {results !== null && (
+        {searchMode ? (
           <>
-            <ThemedText style={styles.sectionTitle}>
-              Resultados{searching ? '...' : ` (${results.length})`}
-            </ThemedText>
-            {results.length === 0 && !searching ? (
+            <View style={styles.searchHeader}>
+              <Pressable onPress={exitSearch} hitSlop={8}>
+                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+              </Pressable>
+              <ThemedText style={styles.searchHeaderTitle}>Adicionar amigo</ThemedText>
+            </View>
+
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={18} color="#64748B" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Procurar pessoas pelo nome..."
+                placeholderTextColor="#64748B"
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="#64748B" />
+                </Pressable>
+              )}
+            </View>
+
+            {searchError && <ThemedText style={styles.searchError}>{searchError}</ThemedText>}
+
+            {results === null ? (
               <View style={styles.empty}>
-                <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+                <Ionicons name="search-outline" size={48} color="#334155" style={{ marginBottom: 8 }} />
+                <ThemedText style={styles.emptyText}>Escreve pelo menos 2 letras para procurar.</ThemedText>
               </View>
             ) : (
-              results.map((u) => {
-                const isFriend = friendIds.includes(u.id);
-                const isSent = sentIds.includes(u.id);
-                return (
-                  <Pressable
-                    key={u.id}
-                    style={styles.row}
-                    onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
-                  >
-                    <View style={styles.avatar}>
-                      <ThemedText style={styles.avatarText}>{initials(u.name)}</ThemedText>
-                    </View>
-                    <ThemedText style={styles.name}>{u.name}</ThemedText>
-                    <View style={styles.actions}>
-                      {isFriend ? (
-                        <View style={styles.acceptBtn}>
-                          <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
+              <>
+                <ThemedText style={styles.sectionTitle}>
+                  Resultados{searching ? '...' : ` (${results.length})`}
+                </ThemedText>
+                {results.length === 0 && !searching ? (
+                  <View style={styles.empty}>
+                    <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+                  </View>
+                ) : (
+                  results.map((u) => {
+                    const isFriend = friendIds.includes(u.id);
+                    const isSent = sentIds.includes(u.id);
+                    return (
+                      <Pressable
+                        key={u.id}
+                        style={styles.row}
+                        onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
+                      >
+                        <View style={styles.avatar}>
+                          <ThemedText style={styles.avatarText}>{initials(u.name)}</ThemedText>
                         </View>
-                      ) : isSent ? (
-                        <View style={styles.chatBtn}>
-                          <Ionicons name="hourglass-outline" size={18} color="#475569" />
+                        <ThemedText style={styles.name}>{u.name}</ThemedText>
+                        <View style={styles.actions}>
+                          {isFriend ? (
+                            <View style={styles.acceptBtn}>
+                              <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
+                            </View>
+                          ) : isSent ? (
+                            <View style={styles.chatBtn}>
+                              <Ionicons name="hourglass-outline" size={18} color="#475569" />
+                            </View>
+                          ) : (
+                            <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
+                              <Ionicons name="person-add-outline" size={18} color="#CF8444" />
+                            </Pressable>
+                          )}
                         </View>
-                      ) : (
-                        <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
-                          <Ionicons name="person-add-outline" size={18} color="#CF8444" />
-                        </Pressable>
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })
+                      </Pressable>
+                    );
+                  })
+                )}
+              </>
             )}
           </>
-        )}
+        ) : (
+          <>
+        <Pressable
+          style={({ pressed }) => [styles.addFriendBtn, pressed && styles.addFriendBtnPressed]}
+          onPress={() => setSearchMode(true)}
+        >
+          <Ionicons name="person-add" size={18} color="#0F172A" />
+          <ThemedText style={styles.addFriendBtnText}>Adicionar amigo</ThemedText>
+        </Pressable>
 
         {requests.length > 0 && (
           <>
@@ -230,6 +263,8 @@ export default function FriendsScreen() {
             </View>
           ))
         )}
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -251,6 +286,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: Spacing.two,
+  },
+  addFriendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#CF8444',
+    borderRadius: 12,
+    height: 48,
+  },
+  addFriendBtnPressed: {
+    opacity: 0.8,
+  },
+  addFriendBtnText: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   searchBox: {
     flexDirection: 'row',
