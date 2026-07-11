@@ -12,6 +12,7 @@ import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 import { relativeDate } from '@/utils/date';
+import { SportIcon } from '@/utils/sport-icon';
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
   open: 'Aberta',
@@ -177,9 +178,15 @@ export default function ExploreScreen() {
 
         {/* FILTRO: MODALIDADES */}
         {sports.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRowScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator style={styles.sportChipsScroll} contentContainerStyle={styles.chipRowScroll}>
             <Pressable onPress={() => setSportFilter(null)}>
               <View style={[styles.chip, sportFilter === null && styles.chipActive]}>
+                <Ionicons
+                  name="apps-outline"
+                  size={16}
+                  color={sportFilter === null ? '#0F172A' : '#A0AEC0'}
+                  style={{ marginRight: 5 }}
+                />
                 <ThemedText type="small" style={[styles.chipText, sportFilter === null && styles.chipTextActive]}>
                   Todas as modalidades
                 </ThemedText>
@@ -192,6 +199,12 @@ export default function ExploreScreen() {
                   key={sport.id}
                   onPress={() => setSportFilter(sportFilter === sport.id ? null : sport.id)}>
                   <View style={[styles.chip, isActive && styles.chipActive]}>
+                    <SportIcon
+                      sportName={sport.name}
+                      size={16}
+                      color={isActive ? '#0F172A' : '#A0AEC0'}
+                      style={{ marginRight: 5 }}
+                    />
                     <ThemedText type="small" style={[styles.chipText, isActive && styles.chipTextActive]}>
                       {sport.name}
                     </ThemedText>
@@ -309,7 +322,11 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingBottom: Spacing.one,
   },
+  sportChipsScroll: {
+    marginBottom: Spacing.two,
+  },
   chip: {
+    flexDirection: 'row',
     backgroundColor: '#1E293B',
     paddingVertical: 8,
     paddingHorizontal: 16,

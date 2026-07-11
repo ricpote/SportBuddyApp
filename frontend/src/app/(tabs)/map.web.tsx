@@ -330,7 +330,7 @@ export default function MapWebScreen() {
 
         <Pressable onPress={() => void handleSnapToMyLocation()} style={styles.locationButton}>
           <ThemedText style={styles.searchButtonText}>
-            Voltar para a minha localizacao
+            Voltar para a minha localização
           </ThemedText>
         </Pressable>
 

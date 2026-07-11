@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { AvatarCircle } from '@/components/avatar-circle';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
@@ -22,7 +23,7 @@ import { DirectMessage } from '@/types/message';
 const POLL_INTERVAL_MS = 4000;
 
 export default function DirectChatScreen() {
-  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { id, name, avatarUrl } = useLocalSearchParams<{ id: string; name?: string; avatarUrl?: string }>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -107,8 +108,21 @@ export default function DirectChatScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      {/* Nome do amigo no topo em vez de "Chat" genérico */}
-      {name ? <Stack.Screen options={{ title: name }} /> : null}
+      {/* Nome (e foto) do amigo no topo em vez de "Chat" genérico */}
+      {name ? (
+        <Stack.Screen
+          options={{
+            headerTitle: () => (
+              <View style={styles.headerTitle}>
+                <AvatarCircle name={name} avatarUrl={avatarUrl} size={32} />
+                <ThemedText type="smallBold" style={styles.headerTitleText} numberOfLines={1}>
+                  {name}
+                </ThemedText>
+              </View>
+            ),
+          }}
+        />
+      ) : null}
       <View style={[styles.flex, styles.centered]}>
         <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
 
@@ -176,6 +190,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#64748B',
     marginTop: 40,
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  headerTitleText: {
+    color: '#FFFFFF',
+    maxWidth: 180,
   },
   row: {
     flexDirection: 'row',

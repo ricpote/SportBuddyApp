@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AvatarCircle } from '@/components/avatar-circle';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
@@ -114,7 +115,6 @@ export default function ChatScreen() {
   function renderMessage({ item, index }: { item: Message; index: number }) {
     const isOwn = item.senderId === user?.uid;
     const profile = profiles.get(item.senderId);
-    const initial = (profile?.name ?? '?').charAt(0).toUpperCase();
     const color = avatarColor(item.senderId);
 
     const prev = messages[index - 1];
@@ -125,10 +125,15 @@ export default function ChatScreen() {
       <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
         {!isOwn && (
           <Pressable
-            style={[styles.avatar, { backgroundColor: showAvatar ? color : 'transparent' }]}
+            style={styles.avatar}
             onPress={() => showAvatar && router.push({ pathname: '/user/[id]', params: { id: item.senderId } })}>
             {showAvatar && (
-              <ThemedText style={styles.avatarText}>{initial}</ThemedText>
+              <AvatarCircle
+                name={profile?.name ?? '?'}
+                avatarUrl={profile?.avatarUrl}
+                size={36}
+                backgroundColor={color}
+              />
             )}
           </Pressable>
         )}
@@ -257,11 +262,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
     marginBottom: 2, // Alinhar ligeiramente com a base do balão
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   bubbleCol: {
     maxWidth: '75%',

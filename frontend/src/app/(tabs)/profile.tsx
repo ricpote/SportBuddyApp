@@ -1,5 +1,5 @@
 import { Link, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, Image, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,23 +10,10 @@ import { BadgesSection } from '@/components/badges-section';
 import { MaxContentWidth, Spacing, TopTabInset, BottomTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
-import { api } from '@/services/api';
 import { getMyActivities } from '@/services/activities';
 import { uploadMyAvatar } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { relativeDate } from '@/utils/date';
-
-type ProfileData = {
-  name: string;
-  email?: string;
-  role: string;
-  bio?: string; // <-- Adicionado aqui para o TypeScript saber que existe
-  avatarUrl?: string;
-  stats: {
-    activitiesCreated: number;
-    activitiesJoined: number;
-  };
-};
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
   open: 'Aberta',
@@ -70,31 +57,12 @@ async function compressImageDataUrl(dataUrl: string): Promise<string> {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const { pendingCount, refresh: refreshBadge } = usePendingWaitlist();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    let cancelled = false;
-    api
-      .get<ProfileData>('/api/users/me')
-      .then((data) => {
-        if (!cancelled) setProfile(data);
-      })
-      .catch(() => {
-        if (!cancelled) setProfile(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,9 +98,8 @@ export default function ProfileScreen() {
         const mimeType = result.assets[0].mimeType ?? 'image/jpeg';
         const rawImageData = `data:${mimeType};base64,${result.assets[0].base64}`;
         const imageData = await compressImageDataUrl(rawImageData);
-        const updatedProfile = await uploadMyAvatar(imageData);
-
-        setProfile(updatedProfile);
+        await uploadMyAvatar(imageData);
+        await refreshProfile();
       }
     } catch (error) {
       console.log('Erro ao selecionar imagem:', error);

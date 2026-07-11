@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { BadgeIcon } from '@/components/badge-icon';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useTheme } from '@/hooks/use-theme';
+import { getUserBadges } from '@/services/badges';
 import { sendFriendRequest } from '@/services/friends';
 import { getUserProfile } from '@/services/users';
 import { PublicUser } from '@/types/user';
+import { UserBadge } from '@/types/badge';
 
 type FriendStatus = 'none' | 'sending' | 'sent' | 'friends';
 
@@ -28,6 +31,7 @@ export default function UserProfileScreen() {
   const [profile, setProfile] = useState<PublicUser | null | undefined>(undefined);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('none');
   const [friendError, setFriendError] = useState<string | null>(null);
+  const [displayedBadge, setDisplayedBadge] = useState<UserBadge | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -37,6 +41,10 @@ export default function UserProfileScreen() {
         if (p.isFriend) setFriendStatus('friends');
       })
       .catch(() => setProfile(null));
+
+    getUserBadges(id)
+      .then((badges) => setDisplayedBadge(badges.find((b) => b.isDisplayed) ?? null))
+      .catch(() => setDisplayedBadge(null));
   }, [id, me?.uid]);
 
   async function handleAddFriend() {
@@ -83,10 +91,22 @@ export default function UserProfileScreen() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <ThemedView style={styles.container}>
         <View style={styles.header}>
-          <View style={[styles.avatar, { backgroundColor: color }]}>
-            <ThemedText style={styles.avatarText}>{initial}</ThemedText>
-          </View>
+          {profile.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: color }]}>
+              <ThemedText style={styles.avatarText}>{initial}</ThemedText>
+            </View>
+          )}
           <ThemedText type="title">{profile.name}</ThemedText>
+          {displayedBadge && (
+            <View style={styles.badgeRow}>
+              <BadgeIcon badgeId={displayedBadge.id} icon={displayedBadge.icon} size={28} />
+              <ThemedText type="smallBold" style={{ color: '#CF8444' }}>
+                {displayedBadge.name}
+              </ThemedText>
+            </View>
+          )}
           {profile.bio ? (
             <ThemedText themeColor="textSecondary" style={styles.bio}>{profile.bio}</ThemedText>
           ) : null}
@@ -187,6 +207,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
@@ -195,6 +220,11 @@ const styles = StyleSheet.create({
   bio: {
     textAlign: 'center',
     paddingHorizontal: Spacing.four,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   statsCard: {
     flexDirection: 'row',

@@ -17,6 +17,7 @@ import { getFriends } from '@/services/friends';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
 import { Friend } from '@/types/friend';
+import { SportIcon } from '@/utils/sport-icon';
 
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   beginner: 'Iniciante',
@@ -173,7 +174,8 @@ export default function HomeScreen() {
           {/* SECÇÃO DE FILTROS */}
           <ScrollView
             horizontal
-            showsHorizontalScrollIndicator={false}
+            showsHorizontalScrollIndicator
+            style={styles.filtersScroll}
             contentContainerStyle={styles.filtersContainer}
           >
             {filters.map((filter) => {
@@ -187,9 +189,16 @@ export default function HomeScreen() {
                     isActive && styles.filterChipActive
                   ]}
                 >
-                  {filter === ALL_FILTER && (
+                  {filter === ALL_FILTER ? (
                     <Ionicons
                       name="medal-outline"
+                      size={16}
+                      color={isActive ? "#0F172A" : "#A0AEC0"}
+                      style={{ marginRight: 5 }}
+                    />
+                  ) : (
+                    <SportIcon
+                      sportName={filter}
                       size={16}
                       color={isActive ? "#0F172A" : "#A0AEC0"}
                       style={{ marginRight: 5 }}
@@ -229,7 +238,7 @@ export default function HomeScreen() {
                     style={({ pressed }) => [styles.recommendedCard, pressed && styles.pressed]}
                   >
                     <View style={styles.sportBadge}>
-                      <Ionicons name="football-outline" size={14} color="#FFFFFF" />
+                      <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#FFFFFF" />
                       <ThemedText style={styles.sportBadgeText}>
                         {sportNameById.get(activity.sportId) ?? activity.sportId}
                       </ThemedText>
@@ -289,7 +298,7 @@ export default function HomeScreen() {
                       <View style={styles.activityCard}>
                         <View style={styles.cardImagePlaceholder}>
                           <View style={styles.sportBadge}>
-                            <Ionicons name="football-outline" size={14} color="#FFFFFF" />
+                            <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#FFFFFF" />
                             <ThemedText style={styles.sportBadgeText}>
                               {sportNameById.get(activity.sportId) ?? activity.sportId}
                             </ThemedText>
@@ -449,11 +458,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: BottomTabInset + Spacing.four,
   },
+  filtersScroll: {
+    marginBottom: Spacing.five,
+  },
   filtersContainer: {
     paddingHorizontal: Spacing.four,
     gap: Spacing.two,
-    marginBottom: Spacing.five,
-    height: 40,
+    paddingBottom: Spacing.two,
+    minHeight: 40,
   },
   filterChip: {
     flexDirection: 'row',

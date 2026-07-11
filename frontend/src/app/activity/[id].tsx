@@ -1,5 +1,5 @@
-import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,6 +20,7 @@ import { getSport } from '@/services/sports';
 import { getUserProfile } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
+import { SportIcon } from '@/utils/sport-icon';
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
   open: 'Aberta',
@@ -244,8 +245,17 @@ export default function ActivityDetailScreen() {
 
         {/* CARTÃO DE DETALHES */}
         <View style={styles.card}>
-          <Row icon="person-outline" label="Organizador" value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)} />
-          <Row icon="football-outline" label="Modalidade" value={sport?.name ?? activity.sportId} />
+          <Row
+            icon="person-outline"
+            label="Organizador"
+            value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)}
+            onPress={() => goToUserProfile(activity.createdBy)}
+          />
+          <Row
+            iconElement={<SportIcon sportName={sport?.name} size={16} color="#64748B" />}
+            label="Modalidade"
+            value={sport?.name ?? activity.sportId}
+          />
           <Row icon="speedometer-outline" label="Dificuldade" value={DIFFICULTY_LABELS[activity.difficultyLevel]} />
           <Row
             icon="calendar-outline"
@@ -307,12 +317,14 @@ export default function ActivityDetailScreen() {
                 <ThemedText style={styles.voteHint}>Escolhe o melhor jogador da atividade:</ThemedText>
                 {otherParticipants.map((pid) => (
                   <View key={pid} style={styles.memberRow}>
-                    <View style={styles.memberInfo}>
+                    <Pressable
+                      style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
+                      onPress={() => goToUserProfile(pid)}>
                       <Ionicons name="person-circle-outline" size={24} color="#64748B" />
                       <ThemedText style={styles.memberName}>
                         {participantNames.get(pid) ?? shortId(pid)}
                       </ThemedText>
-                    </View>
+                    </Pressable>
                     <Pressable
                       disabled={submitting}
                       style={styles.voteButton}
@@ -348,12 +360,14 @@ export default function ActivityDetailScreen() {
                     .filter((participantId) => participantId !== activity.createdBy)
                     .map((participantId) => (
                       <View key={participantId} style={styles.memberRow}>
-                        <View style={styles.memberInfo}>
+                        <Pressable
+                          style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
+                          onPress={() => goToUserProfile(participantId)}>
                           <Ionicons name="person-circle-outline" size={24} color="#64748B" />
                           <ThemedText style={styles.memberName}>
                             {participantNames.get(participantId) ?? shortId(participantId)}
                           </ThemedText>
-                        </View>
+                        </Pressable>
                         <Pressable
                           disabled={submitting}
                           style={styles.removeButton}
@@ -378,12 +392,14 @@ export default function ActivityDetailScreen() {
 
                     {activity.waitlist.map((userId) => (
                       <View key={userId} style={styles.memberRow}>
-                        <View style={styles.memberInfo}>
+                        <Pressable
+                          style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
+                          onPress={() => goToUserProfile(userId)}>
                           <Ionicons name="time-outline" size={24} color="#CF8444" />
                           <ThemedText style={styles.memberName}>
                             {participantNames.get(userId) ?? shortId(userId)}
                           </ThemedText>
-                        </View>
+                        </Pressable>
                         {activity.status === 'open' ? (
                           <View style={styles.waitlistActions}>
                             <Pressable 
@@ -500,18 +516,48 @@ function shortId(uid: string) {
   return `Utilizador ${uid.slice(0, 6)}…`;
 }
 
+function goToUserProfile(userId: string) {
+  router.push({ pathname: '/user/[id]', params: { id: userId } });
+}
+
 // Componente Row melhorado com ícone
-function Row({ icon, label, value, highlightValue = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; highlightValue?: boolean }) {
-  return (
+function Row({
+  icon,
+  iconElement,
+  label,
+  value,
+  highlightValue = false,
+  onPress,
+}: {
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconElement?: ReactNode;
+  label: string;
+  value: string;
+  highlightValue?: boolean;
+  onPress?: () => void;
+}) {
+  const content = (
     <View style={styles.row}>
       <View style={styles.rowLabelContainer}>
-        <Ionicons name={icon} size={16} color="#64748B" />
+        {iconElement ?? (icon ? <Ionicons name={icon} size={16} color="#64748B" /> : null)}
         <ThemedText style={styles.rowLabelText}>{label}</ThemedText>
       </View>
-      <ThemedText style={[styles.rowValueText, highlightValue && { color: '#CF8444', fontWeight: 'bold' }]}>
+      <ThemedText
+        style={[
+          styles.rowValueText,
+          (highlightValue || onPress) && { color: '#CF8444', fontWeight: 'bold' },
+        ]}>
         {value}
       </ThemedText>
     </View>
+  );
+
+  if (!onPress) return content;
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      {content}
+    </Pressable>
   );
 }
 

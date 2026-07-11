@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { AvatarCircle } from '@/components/avatar-circle';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
@@ -75,14 +76,17 @@ export default function ChatsScreen() {
     }
   }
 
-  async function startChatWith(friendId: string, friendName: string) {
+  async function startChatWith(friendId: string, friendName: string, friendAvatarUrl?: string) {
     if (opening) return;
     setOpening(friendId);
     setNewChatError(null);
     try {
       const { conversationId } = await openConversation(friendId);
       setNewChatMode(false);
-      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friendName } });
+      router.push({
+        pathname: '/direct-chat/[id]',
+        params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl },
+      });
     } catch (e) {
       setNewChatError(e instanceof Error ? e.message : 'Erro ao abrir conversa');
     } finally {
@@ -131,18 +135,27 @@ export default function ChatsScreen() {
 
   function renderConversationCard(conversation: Conversation) {
     const isUnread = unreadConversationIds.includes(conversation.id);
-    const initial = conversation.otherUser.name.trim().charAt(0).toUpperCase();
 
     return (
       <Link
         key={conversation.id}
-        href={{ pathname: '/direct-chat/[id]', params: { id: conversation.id, name: conversation.otherUser.name } }}
+        href={{
+          pathname: '/direct-chat/[id]',
+          params: {
+            id: conversation.id,
+            name: conversation.otherUser.name,
+            avatarUrl: conversation.otherUser.avatarUrl,
+          },
+        }}
         asChild>
         <Pressable style={({ pressed }) => pressed && styles.pressed}>
           <View style={[styles.card, styles.conversationCard]}>
-            <View style={[styles.avatar, { backgroundColor: avatarColor(conversation.otherUser.id) }]}>
-              <ThemedText style={styles.avatarText}>{initial}</ThemedText>
-            </View>
+            <AvatarCircle
+              name={conversation.otherUser.name}
+              avatarUrl={conversation.otherUser.avatarUrl}
+              size={44}
+              backgroundColor={avatarColor(conversation.otherUser.id)}
+            />
             <View style={styles.conversationBody}>
               <View style={styles.cardHeader}>
                 <View style={styles.titleRow}>
@@ -170,18 +183,20 @@ export default function ChatsScreen() {
   }
 
   function renderFriendRow(friend: Friend) {
-    const initial = friend.user.name.trim().charAt(0).toUpperCase();
     const isOpening = opening === friend.userId;
 
     return (
       <Pressable
         key={friend.userId}
-        onPress={() => startChatWith(friend.userId, friend.user.name)}
+        onPress={() => startChatWith(friend.userId, friend.user.name, friend.user.avatarUrl)}
         style={({ pressed }) => pressed && styles.pressed}>
         <View style={[styles.card, styles.conversationCard, isOpening && { opacity: 0.6 }]}>
-          <View style={[styles.avatar, { backgroundColor: avatarColor(friend.userId) }]}>
-            <ThemedText style={styles.avatarText}>{initial}</ThemedText>
-          </View>
+          <AvatarCircle
+            name={friend.user.name}
+            avatarUrl={friend.user.avatarUrl}
+            size={44}
+            backgroundColor={avatarColor(friend.userId)}
+          />
           <View style={styles.conversationBody}>
             <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
               {friend.user.name}
@@ -409,19 +424,6 @@ const styles = StyleSheet.create({
   conversationBody: {
     flex: 1,
     gap: 4,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   cardHeader: {
     flexDirection: 'row',

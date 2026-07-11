@@ -10,6 +10,7 @@ import { createActivity } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { SkillLevel } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
+import { SportIcon } from '@/utils/sport-icon';
 
 const DIFFICULTY_OPTIONS: SkillLevel[] = [
   'beginner',
@@ -172,6 +173,12 @@ export default function CreateActivityScreen() {
                   return (
                     <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
                       <View style={[styles.chip, isActive && styles.chipActive]}>
+                        <SportIcon
+                          sportName={sport.name}
+                          size={16}
+                          color={isActive ? '#0F172A' : '#A0AEC0'}
+                          style={{ marginRight: 6 }}
+                        />
                         <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
                           {sport.name}
                         </ThemedText>
@@ -309,6 +316,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#1E293B',
     paddingVertical: 10,
     paddingHorizontal: 16,

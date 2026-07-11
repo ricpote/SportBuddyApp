@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -16,6 +16,18 @@ const SEARCH_DEBOUNCE_MS = 400;
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
+  if (avatarUrl) {
+    return <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />;
+  }
+
+  return (
+    <View style={styles.avatar}>
+      <ThemedText style={styles.avatarText}>{initials(name)}</ThemedText>
+    </View>
+  );
 }
 
 export default function FriendsScreen() {
@@ -101,7 +113,10 @@ export default function FriendsScreen() {
   async function handleOpenChat(friend: Friend) {
     try {
       const { conversationId } = await openConversation(friend.userId);
-      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friend.user.name } });
+      router.push({
+        pathname: '/direct-chat/[id]',
+        params: { id: conversationId, name: friend.user.name, avatarUrl: friend.user.avatarUrl },
+      });
     } catch {}
   }
 
@@ -190,9 +205,7 @@ export default function FriendsScreen() {
                         style={styles.row}
                         onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
                       >
-                        <View style={styles.avatar}>
-                          <ThemedText style={styles.avatarText}>{initials(u.name)}</ThemedText>
-                        </View>
+                        <AvatarCircle name={u.name} avatarUrl={u.avatarUrl} />
                         <ThemedText style={styles.name}>{u.name}</ThemedText>
                         <View style={styles.actions}>
                           {isFriend ? (
@@ -231,9 +244,7 @@ export default function FriendsScreen() {
             <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
             {requests.map((req) => (
               <View key={req.requestId} style={styles.row}>
-                <View style={styles.avatar}>
-                  <ThemedText style={styles.avatarText}>{initials(req.from.name)}</ThemedText>
-                </View>
+                <AvatarCircle name={req.from.name} avatarUrl={req.from.avatarUrl} />
                 <ThemedText style={styles.name}>{req.from.name}</ThemedText>
                 <View style={styles.actions}>
                   <Pressable style={styles.acceptBtn} onPress={() => handleAccept(req)}>
@@ -257,10 +268,12 @@ export default function FriendsScreen() {
         ) : (
           friends.map((f) => (
             <View key={f.userId} style={styles.row}>
-              <View style={styles.avatar}>
-                <ThemedText style={styles.avatarText}>{initials(f.user.name)}</ThemedText>
-              </View>
-              <ThemedText style={styles.name}>{f.user.name}</ThemedText>
+              <Pressable
+                style={({ pressed }) => [styles.friendInfo, pressed && styles.pressed]}
+                onPress={() => router.push({ pathname: '/user/[id]', params: { id: f.userId } })}>
+                <AvatarCircle name={f.user.name} avatarUrl={f.user.avatarUrl} />
+                <ThemedText style={styles.name}>{f.user.name}</ThemedText>
+              </Pressable>
               <View style={styles.actions}>
                 <Pressable style={styles.chatBtn} onPress={() => handleOpenChat(f)}>
                   <Ionicons name="chatbubble-ellipses-outline" size={18} color="#CF8444" />
@@ -368,6 +381,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   avatarText: {
     color: '#0F172A',
     fontSize: 15,
@@ -378,9 +396,18 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
     fontSize: 15,
   },
+  friendInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   actions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   acceptBtn: {
     padding: 8,
