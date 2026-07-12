@@ -3,12 +3,26 @@ import { CreateBadgeDto } from "../models/badge.model";
 
 export type SeedBadge = { id: string } & CreateBadgeDto;
 
+// Maps Portuguese sport names to the image key prefix used in the frontend
+const SPORT_IMAGE_KEY: Record<string, string> = {
+  futebol: "football",
+  basquetebol: "basketball",
+  ciclismo: "cycling",
+  corrida: "running",
+  "natação": "swimming",
+  natacao: "swimming",
+  padel: "paddle",
+  "ténis": "tennis",
+  tenis: "tennis",
+  voleibol: "volleyball",
+};
+
 const PARTICIPATION_BADGES: SeedBadge[] = [
   {
     id: "joined_1",
     name: "Estreante",
     description: "Participou em 1 atividade",
-    icon: "star-outline",
+    icon: "participation_bronze",
     criteriaType: "activitiesJoined",
     threshold: 1,
   },
@@ -16,7 +30,7 @@ const PARTICIPATION_BADGES: SeedBadge[] = [
     id: "joined_10",
     name: "Regular",
     description: "Participou em 10 atividades",
-    icon: "star-half",
+    icon: "participation_silver",
     criteriaType: "activitiesJoined",
     threshold: 10,
   },
@@ -24,7 +38,7 @@ const PARTICIPATION_BADGES: SeedBadge[] = [
     id: "joined_50",
     name: "Veterano",
     description: "Participou em 50 atividades",
-    icon: "star",
+    icon: "participation_gold",
     criteriaType: "activitiesJoined",
     threshold: 50,
   },
@@ -35,7 +49,7 @@ const MVP_BADGES: SeedBadge[] = [
     id: "mvp_1",
     name: "MVP",
     description: "Foi eleito MVP 1 vez",
-    icon: "trophy-outline",
+    icon: "mvp_bronze",
     criteriaType: "mvpVotesReceived",
     threshold: 1,
   },
@@ -43,7 +57,7 @@ const MVP_BADGES: SeedBadge[] = [
     id: "mvp_10",
     name: "Lenda",
     description: "Foi eleito MVP 10 vezes",
-    icon: "trophy",
+    icon: "mvp_silver",
     criteriaType: "mvpVotesReceived",
     threshold: 10,
   },
@@ -52,15 +66,18 @@ const MVP_BADGES: SeedBadge[] = [
 async function buildSportBadges(): Promise<SeedBadge[]> {
   const sports = await sportsService.listSports();
 
-  return sports.map((sport) => ({
-    id: `sport_${sport.id}_10`,
-    name: `Fã de ${sport.name}`,
-    description: `Participou em 10 atividades de ${sport.name}`,
-    icon: "medal-outline",
-    criteriaType: "activitiesJoinedBySport" as const,
-    threshold: 10,
-    sportId: sport.id,
-  }));
+  return sports.map((sport) => {
+    const imageKey = SPORT_IMAGE_KEY[sport.name.trim().toLowerCase()] ?? "participation";
+    return {
+      id: `sport_${sport.id}_10`,
+      name: `Fã de ${sport.name}`,
+      description: `Participou em 10 atividades de ${sport.name}`,
+      icon: `${imageKey}_bronze`,
+      criteriaType: "activitiesJoinedBySport" as const,
+      threshold: 10,
+      sportId: sport.id,
+    };
+  });
 }
 
 /**

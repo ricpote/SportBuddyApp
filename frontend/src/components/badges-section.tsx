@@ -53,7 +53,7 @@ export function BadgesSection() {
             onPress={() => handlePress(badge)}
             style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
             <View style={badge.isDisplayed ? styles.displayedRing : styles.ringPlaceholder}>
-              <BadgeIcon badgeId={badge.id} icon={badge.icon} />
+              <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
             </View>
             <ThemedText type="small" style={styles.badgeName} numberOfLines={2}>
               {badge.name}
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   item: {
-    width: 76,
+    width: 80,
     alignItems: 'center',
     gap: 4,
   },
