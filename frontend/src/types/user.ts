@@ -17,6 +17,9 @@ export type UserProfile = {
   status: UserStatus;
   bio?: string;
   avatarUrl?: string;
+  sports?: string[];
+  location?: string | { name?: string };
+  createdAt?: string;
   stats: UserStats;
 };
 

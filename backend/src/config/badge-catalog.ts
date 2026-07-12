@@ -42,6 +42,14 @@ const PARTICIPATION_BADGES: SeedBadge[] = [
     criteriaType: "activitiesJoined",
     threshold: 50,
   },
+  {
+    id: "joined_100",
+    name: "Lendário",
+    description: "Participou em 100 atividades",
+    icon: "participation_diamond",
+    criteriaType: "activitiesJoined",
+    threshold: 100,
+  },
 ];
 
 const MVP_BADGES: SeedBadge[] = [
@@ -61,22 +69,45 @@ const MVP_BADGES: SeedBadge[] = [
     criteriaType: "mvpVotesReceived",
     threshold: 10,
   },
+  {
+    id: "mvp_25",
+    name: "Ícone",
+    description: "Foi eleito MVP 25 vezes",
+    icon: "mvp_gold",
+    criteriaType: "mvpVotesReceived",
+    threshold: 25,
+  },
+  {
+    id: "mvp_50",
+    name: "Imortal",
+    description: "Foi eleito MVP 50 vezes",
+    icon: "mvp_diamond",
+    criteriaType: "mvpVotesReceived",
+    threshold: 50,
+  },
 ];
 
 async function buildSportBadges(): Promise<SeedBadge[]> {
   const sports = await sportsService.listSports();
 
-  return sports.map((sport) => {
+  const tiers = [
+    { suffix: "10",  threshold: 10,  iconTier: "bronze",  nameFn: (s: string) => `Fã de ${s}`,          descFn: (s: string) => `Participou em 10 atividades de ${s}` },
+    { suffix: "25",  threshold: 25,  iconTier: "silver",  nameFn: (s: string) => `Adepto de ${s}`,      descFn: (s: string) => `Participou em 25 atividades de ${s}` },
+    { suffix: "50",  threshold: 50,  iconTier: "gold",    nameFn: (s: string) => `Especialista de ${s}`,descFn: (s: string) => `Participou em 50 atividades de ${s}` },
+    { suffix: "100", threshold: 100, iconTier: "diamond", nameFn: (s: string) => `Mestre de ${s}`,      descFn: (s: string) => `Participou em 100 atividades de ${s}` },
+  ];
+
+  return sports.flatMap((sport) => {
     const imageKey = SPORT_IMAGE_KEY[sport.name.trim().toLowerCase()] ?? "participation";
-    return {
-      id: `sport_${sport.id}_10`,
-      name: `Fã de ${sport.name}`,
-      description: `Participou em 10 atividades de ${sport.name}`,
-      icon: `${imageKey}_bronze`,
+    return tiers.map((tier) => ({
+      id: `sport_${sport.id}_${tier.suffix}`,
+      name: tier.nameFn(sport.name),
+      description: tier.descFn(sport.name),
+      icon: `${imageKey}_${tier.iconTier}`,
       criteriaType: "activitiesJoinedBySport" as const,
-      threshold: 10,
+      threshold: tier.threshold,
       sportId: sport.id,
-    };
+    }));
   });
 }
 

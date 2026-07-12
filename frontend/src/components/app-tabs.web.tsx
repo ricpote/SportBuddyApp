@@ -24,7 +24,7 @@ export default function AppTabs() {
 
   return (
     <Tabs>
-      <TabSlot style={{ flex: 1, marginLeft: isDesktop ? 250 : 0 }} />
+      <TabSlot style={{ flex: 1 }} />
 
       <TabList asChild>
         <CustomTabList isDesktop={isDesktop}>
@@ -112,7 +112,7 @@ export function CustomTabList({ isDesktop, ...props }: CustomTabListProps) {
       {...props}
       style={[
         styles.tabListContainer,
-        isDesktop ? styles.sidebarContainer : styles.bottomBarContainer
+        isDesktop ? { display: 'none' } : styles.bottomBarContainer
       ]}>
 
       {isDesktop && (

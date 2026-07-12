@@ -37,7 +37,7 @@ export const badgeImages: Record<string, ImageSourcePropType> = {
   swimming_diamond:  require('../../assets/images/badges/swimming_diamond.png'),
 
   tennis_bronze:   require('../../assets/images/badges/tennis_bronze.png'),
-  // tennis_silver:   require('../../assets/images/badges/tennis_silver.png'),
+  tennis_silver:   require('../../assets/images/badges/tennis_silver.png'),
   tennis_gold:     require('../../assets/images/badges/tennis_gold.png'),
   tennis_diamond:  require('../../assets/images/badges/tennis_diamond.png'),
 

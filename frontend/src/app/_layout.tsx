@@ -2,11 +2,13 @@
 import { useFonts } from 'expo-font';
 import { Archivo_700Bold, Archivo_900Black } from '@expo-google-fonts/archivo';
 import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from '@expo-google-fonts/hanken-grotesk';
+import { Platform, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
+import { WebSidebar } from '@/components/web-sidebar';
 
 // 1. Criamos o nosso tema personalizado "Dark Premium"
 const SportBuddyTheme = {
@@ -24,15 +26,19 @@ const SportBuddyTheme = {
 
 function RootNavigator() {
   const { user, initializing } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   if (initializing) {
     return null;
   }
 
   return (
-    <Stack 
-      // 2. Aplicamos estilos globais aos cabeçalhos de navegação
-      screenOptions={{ 
+    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+      {isDesktop && !!user && <WebSidebar />}
+      <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
         headerShown: false,
         headerStyle: { backgroundColor: '#0c0c0d' },
         headerTintColor: '#e8823f', // Cor da seta de "voltar atrás"
@@ -75,11 +81,17 @@ function RootNavigator() {
           name="friends"
           options={{ headerShown: true, title: 'Amigos' }}
         />
+        <Stack.Screen
+          name="badges"
+          options={{ headerShown: true, title: 'Badges', presentation: 'modal' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!user}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
+      </View>
+    </View>
   );
 }
 

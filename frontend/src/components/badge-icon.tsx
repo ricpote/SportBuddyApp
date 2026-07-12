@@ -12,10 +12,17 @@ type Props = {
 export function BadgeIcon({ badgeId, icon, size = 56 }: Props) {
   const image = badgeImages[icon] ?? badgeImages[badgeId];
 
+  const imgSize = size * 2.6;
+  const imgOffset = -(imgSize - size) / 2;
+
   return (
     <View style={[styles.wrapper, { width: size, height: size }]}>
       {image ? (
-        <Image source={image} style={styles.image} resizeMode="contain" />
+        <Image
+          source={image}
+          style={[styles.image, { width: imgSize, height: imgSize, top: imgOffset, left: imgOffset }]}
+          resizeMode="contain"
+        />
       ) : (
         <View style={[styles.iconWrapper, { borderRadius: size / 2 }]}>
           <Ionicons name={icon as any} size={size * 0.55} color="#e8823f" />
@@ -42,7 +49,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: {
-    width: '170%',
-    height: '170%',
+    position: 'absolute',
   },
 });
