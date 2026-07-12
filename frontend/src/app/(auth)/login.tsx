@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     height: 350,
     top: '35%',
     right: -120,
-    backgroundColor: '#6366F1',
-    opacity: 0.1,
+    backgroundColor: '#e8823f',
+    opacity: 0.08,
   },
   navbar: {
     flexDirection: 'row',
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(12, 12, 13, 0.75)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
