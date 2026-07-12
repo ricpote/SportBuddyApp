@@ -1,4 +1,4 @@
-import { Link, useFocusEffect } from 'expo-router';
+﻿import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,12 +98,12 @@ export default function ExploreScreen() {
 
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: '#0F172A' }]}
+      style={[styles.scrollView, { backgroundColor: '#0a0a0b' }]}
       refreshControl={
         <RefreshControl 
           refreshing={refreshing} 
           onRefresh={handleRefresh} 
-          tintColor="#CF8444" // Cor da rodinha de refresh
+          tintColor="#e8823f" // Cor da rodinha de refresh
         />
       }
       contentContainerStyle={[
@@ -114,12 +114,12 @@ export default function ExploreScreen() {
         
         {/* CABEÇALHO */}
         <View style={styles.header}>
-          <ThemedText type="title" style={{ color: '#FFFFFF' }}>Explorar</ThemedText>
+          <ThemedText type="title" style={{ color: '#f4f2ef' }}>Explorar</ThemedText>
           <Link href="/create-activity" asChild>
             <Pressable style={({ pressed }) => pressed && styles.pressed}>
               <View style={styles.createButton}>
-                <Ionicons name="add" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
-                <ThemedText style={{ color: '#FFFFFF' }} type="smallBold">
+                <Ionicons name="add" size={18} color="#f4f2ef" style={{ marginRight: 4 }} />
+                <ThemedText style={{ color: '#f4f2ef' }} type="smallBold">
                   Nova
                 </ThemedText>
               </View>
@@ -129,11 +129,11 @@ export default function ExploreScreen() {
 
         {/* BARRA DE PESQUISA */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#64748B" style={styles.searchIcon} />
+          <Ionicons name="search-outline" size={20} color="#8f8b85" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Pesquisar atividade..."
-            placeholderTextColor="#64748B"
+            placeholderTextColor="#8f8b85"
             value={searchText}
             onChangeText={setSearchText}
             clearButtonMode="while-editing"
@@ -184,7 +184,7 @@ export default function ExploreScreen() {
                 <Ionicons
                   name="apps-outline"
                   size={16}
-                  color={sportFilter === null ? '#0F172A' : '#A0AEC0'}
+                  color={sportFilter === null ? '#0a0a0b' : '#c9c5bf'}
                   style={{ marginRight: 5 }}
                 />
                 <ThemedText type="small" style={[styles.chipText, sportFilter === null && styles.chipTextActive]}>
@@ -202,7 +202,7 @@ export default function ExploreScreen() {
                     <SportIcon
                       sportName={sport.name}
                       size={16}
-                      color={isActive ? '#0F172A' : '#A0AEC0'}
+                      color={isActive ? '#0a0a0b' : '#c9c5bf'}
                       style={{ marginRight: 5 }}
                     />
                     <ThemedText type="small" style={[styles.chipText, isActive && styles.chipTextActive]}>
@@ -241,14 +241,14 @@ export default function ExploreScreen() {
                   </ThemedText>
                   
                   <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={14} color="#A0AEC0" />
+                    <Ionicons name="time-outline" size={14} color="#c9c5bf" />
                     <ThemedText type="small" style={styles.infoText}>
                       {relativeDate(activity.date)}
                     </ThemedText>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={14} color="#A0AEC0" />
+                    <Ionicons name="location-outline" size={14} color="#c9c5bf" />
                     <ThemedText type="small" style={styles.infoText}>
                       {activity.location.name}
                     </ThemedText>
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -303,10 +303,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: 12,
   },
   searchIcon: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: 48,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
   chipRowScroll: {
@@ -327,36 +327,36 @@ const styles = StyleSheet.create({
   },
   chip: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   chipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
   },
   chipText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0F172A', // Texto escuro para contrastar bem com o fundo laranja
+    color: '#1a1005', // Texto escuro para contrastar bem com o fundo laranja
   },
   pressed: {
     opacity: 0.7,
   },
   error: {
     textAlign: 'center',
-    color: '#FF6B6B',
+    color: '#eb8f84',
   },
   emptyText: {
     textAlign: 'center',
-    color: '#64748B',
+    color: '#8f8b85',
     marginTop: Spacing.four,
   },
   list: {
@@ -364,15 +364,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
   },
   card: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     padding: Spacing.four,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: Spacing.two,
   },
   activityTitle: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 18,
   },
   infoRow: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -390,21 +390,21 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     paddingTop: Spacing.two,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   statusBadge: {
-    backgroundColor: '#10B981', // Verde suave para os status
+    backgroundColor: '#9ccd6b', // Verde suave para os status
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 12,
     fontWeight: 'bold',
   },
   participantsText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
   },
 });

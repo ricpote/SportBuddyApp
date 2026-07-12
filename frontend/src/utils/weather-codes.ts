@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
 export type WeatherCategory =
@@ -56,11 +56,11 @@ export function getWeatherInfo(idWeatherType: number): WeatherInfo {
 export const WEATHER_CATEGORY_COLORS: Record<WeatherCategory, string> = {
   clear: '#FACC15',
   'partly-cloud': '#FACC15',
-  cloud: '#E2E8F0',
-  fog: '#CBD5E1',
+  cloud: '#f4f2ef',
+  fog: '#c9c5bf',
   drizzle: '#93C5FD',
   rain: '#60A5FA',
-  snow: '#FFFFFF',
+  snow: '#f4f2ef',
   storm: '#FDE68A',
 };
 

@@ -1,4 +1,4 @@
-import { Image, StyleSheet, View } from 'react-native';
+﻿import { Image, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { badgeImages } from '@/constants/badge-images';
@@ -17,7 +17,7 @@ export function BadgeIcon({ badgeId, icon, size = 56 }: Props) {
       {image ? (
         <Image source={image} style={styles.image} resizeMode="contain" />
       ) : (
-        <Ionicons name={icon as any} size={size * 0.55} color="#CF8444" />
+        <Ionicons name={icon as any} size={size * 0.55} color="#e8823f" />
       )}
     </View>
   );
@@ -27,9 +27,9 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
   },
   image: {

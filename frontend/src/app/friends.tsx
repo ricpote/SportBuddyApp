@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+﻿import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -139,7 +139,7 @@ export default function FriendsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#CF8444" />
+        <ActivityIndicator color="#e8823f" />
       </View>
     );
   }
@@ -155,17 +155,17 @@ export default function FriendsScreen() {
           <>
             <View style={styles.searchHeader}>
               <Pressable onPress={exitSearch} hitSlop={8}>
-                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+                <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
               </Pressable>
               <ThemedText style={styles.searchHeaderTitle}>Adicionar amigo</ThemedText>
             </View>
 
             <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={18} color="#64748B" />
+              <Ionicons name="search-outline" size={18} color="#8f8b85" />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Procurar pessoas pelo nome..."
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#8f8b85"
                 value={query}
                 onChangeText={setQuery}
                 autoCapitalize="none"
@@ -174,7 +174,7 @@ export default function FriendsScreen() {
               />
               {query.length > 0 && (
                 <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#64748B" />
+                  <Ionicons name="close-circle" size={18} color="#8f8b85" />
                 </Pressable>
               )}
             </View>
@@ -183,7 +183,7 @@ export default function FriendsScreen() {
 
             {results === null ? (
               <View style={styles.empty}>
-                <Ionicons name="search-outline" size={48} color="#334155" style={{ marginBottom: 8 }} />
+                <Ionicons name="search-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
                 <ThemedText style={styles.emptyText}>Escreve pelo menos 2 letras para procurar.</ThemedText>
               </View>
             ) : (
@@ -210,7 +210,7 @@ export default function FriendsScreen() {
                         <View style={styles.actions}>
                           {isFriend ? (
                             <View style={styles.acceptBtn}>
-                              <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
+                              <Ionicons name="checkmark-circle-outline" size={18} color="#9ccd6b" />
                             </View>
                           ) : isSent ? (
                             <View style={styles.chatBtn}>
@@ -218,7 +218,7 @@ export default function FriendsScreen() {
                             </View>
                           ) : (
                             <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
-                              <Ionicons name="person-add-outline" size={18} color="#CF8444" />
+                              <Ionicons name="person-add-outline" size={18} color="#e8823f" />
                             </Pressable>
                           )}
                         </View>
@@ -235,7 +235,7 @@ export default function FriendsScreen() {
           style={({ pressed }) => [styles.addFriendBtn, pressed && styles.addFriendBtnPressed]}
           onPress={() => setSearchMode(true)}
         >
-          <Ionicons name="person-add" size={18} color="#0F172A" />
+          <Ionicons name="person-add" size={18} color="#0a0a0b" />
           <ThemedText style={styles.addFriendBtnText}>Adicionar amigo</ThemedText>
         </Pressable>
 
@@ -248,10 +248,10 @@ export default function FriendsScreen() {
                 <ThemedText style={styles.name}>{req.from.name}</ThemedText>
                 <View style={styles.actions}>
                   <Pressable style={styles.acceptBtn} onPress={() => handleAccept(req)}>
-                    <Ionicons name="checkmark" size={18} color="#10B981" />
+                    <Ionicons name="checkmark" size={18} color="#9ccd6b" />
                   </Pressable>
                   <Pressable style={styles.rejectBtn} onPress={() => handleReject(req.requestId)}>
-                    <Ionicons name="close" size={18} color="#FF6B6B" />
+                    <Ionicons name="close" size={18} color="#eb8f84" />
                   </Pressable>
                 </View>
               </View>
@@ -262,7 +262,7 @@ export default function FriendsScreen() {
         <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
         {friends.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color="#334155" style={{ marginBottom: 8 }} />
+            <Ionicons name="people-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
             <ThemedText style={styles.emptyText}>Ainda não tens amigos. Adiciona a partir do perfil de alguém.</ThemedText>
           </View>
         ) : (
@@ -276,10 +276,10 @@ export default function FriendsScreen() {
               </Pressable>
               <View style={styles.actions}>
                 <Pressable style={styles.chatBtn} onPress={() => handleOpenChat(f)}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#CF8444" />
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#e8823f" />
                 </Pressable>
                 <Pressable style={styles.rejectBtn} onPress={() => handleRemove(f.userId)}>
-                  <Ionicons name="person-remove-outline" size={18} color="#FF6B6B" />
+                  <Ionicons name="person-remove-outline" size={18} color="#eb8f84" />
                 </Pressable>
               </View>
             </View>
@@ -293,9 +293,9 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollView: { backgroundColor: '#0F172A' },
+  scrollView: { backgroundColor: '#0a0a0b' },
   scrollContent: { flexGrow: 1, paddingVertical: Spacing.four },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0b' },
   container: {
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: Spacing.two,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     borderRadius: 12,
     height: 48,
   },
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   addFriendBtnText: {
-    color: '#0F172A',
+    color: '#1a1005',
     fontSize: 15,
     fontWeight: 'bold',
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   searchHeaderTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -340,44 +340,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: Spacing.three,
     height: 48,
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 15,
     height: '100%',
   },
   searchError: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     fontSize: 13,
     textAlign: 'center',
   },
   addBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#CF844420',
+    backgroundColor: 'rgba(232,130,63,0.12)',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 12,
     padding: Spacing.three,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -387,13 +387,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   avatarText: {
-    color: '#0F172A',
+    color: '#1a1005',
     fontSize: 15,
     fontWeight: 'bold',
   },
   name: {
     flex: 1,
-    color: '#E2E8F0',
+    color: '#f4f2ef',
     fontSize: 15,
   },
   friendInfo: {
@@ -412,24 +412,24 @@ const styles = StyleSheet.create({
   acceptBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#10B98120',
+    backgroundColor: 'rgba(156,205,107,0.15)',
   },
   rejectBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: 'rgba(235,143,132,0.15)',
   },
   chatBtn: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#33415540',
+    backgroundColor: '#14131540',
   },
   empty: {
     alignItems: 'center',
     paddingVertical: Spacing.five,
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
     textAlign: 'center',
   },

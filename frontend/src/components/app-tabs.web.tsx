@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import {
   TabList,
   TabListProps,
@@ -79,7 +79,7 @@ export function TabButton({ children, isFocused, icon, badge, isDesktop, ...prop
             <Ionicons
               name={icon}
               size={20}
-              color={isFocused ? '#CF8444' : '#64748B'}
+              color={isFocused ? '#e8823f' : '#8f8b85'}
               style={{ marginRight: isDesktop ? 12 : 0 }}
             />
           )}
@@ -93,7 +93,7 @@ export function TabButton({ children, isFocused, icon, badge, isDesktop, ...prop
         {isDesktop && (
           <ThemedText
             type="smallBold"
-            style={{ color: isFocused ? '#CF8444' : '#A0AEC0', fontSize: 16 }}>
+            style={{ color: isFocused ? '#e8823f' : '#c9c5bf', fontSize: 16 }}>
             {children}
           </ThemedText>
         )}
@@ -142,7 +142,7 @@ export function CustomTabList({ isDesktop, ...props }: CustomTabListProps) {
 const styles = StyleSheet.create({
   tabListContainer: {
     position: 'absolute',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
   },
   sidebarContainer: {
     left: 0,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.five,
     paddingHorizontal: Spacing.three,
     borderRightWidth: 1,
-    borderRightColor: '#1E293B',
+    borderRightColor: '#111012',
   },
   bottomBarContainer: {
     bottom: 0,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.two,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: '#111012',
     flexDirection: 'row',
     justifyContent: 'center',
   },
@@ -181,11 +181,11 @@ const styles = StyleSheet.create({
     height: 40,
   },
   brandText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 18,
   },
   brandSlogan: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 12,
   },
   tabsWrapper: {
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 10,
     fontWeight: 'bold',
     lineHeight: 12,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     marginLeft: 'auto',
   },
 });

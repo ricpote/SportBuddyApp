@@ -1,4 +1,7 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+﻿import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { Archivo_700Bold, Archivo_900Black } from '@expo-google-fonts/archivo';
+import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from '@expo-google-fonts/hanken-grotesk';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
@@ -10,12 +13,12 @@ const SportBuddyTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: '#CF8444',       // Laranja da app (botões nativos e setas)
-    background: '#0F172A',    // Fundo principal de todos os ecrãs
-    card: '#1E293B',          // Fundo das barras (headers e bottom tabs)
-    text: '#FFFFFF',          // Texto principal
-    border: '#334155',        // Linhas de separação nativas
-    notification: '#FF6B6B',  // Cor das bolinhas de notificação
+    primary: '#e8823f',
+    background: '#0a0a0b',
+    card: '#0c0c0d',
+    text: '#f4f2ef',
+    border: 'rgba(255,255,255,0.06)',
+    notification: '#eb8f84',
   },
 };
 
@@ -31,9 +34,9 @@ function RootNavigator() {
       // 2. Aplicamos estilos globais aos cabeçalhos de navegação
       screenOptions={{ 
         headerShown: false,
-        headerStyle: { backgroundColor: '#1E293B' },
-        headerTintColor: '#CF8444', // Cor da seta de "voltar atrás"
-        headerTitleStyle: { color: '#FFFFFF', fontWeight: 'bold' },
+        headerStyle: { backgroundColor: '#0c0c0d' },
+        headerTintColor: '#e8823f', // Cor da seta de "voltar atrás"
+        headerTitleStyle: { color: '#f4f2ef', fontWeight: 'bold' },
         headerShadowVisible: false, // Remove a linha feia por baixo do header
       }}
     >
@@ -81,8 +84,18 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Archivo_700Bold,
+    Archivo_900Black,
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
+    HankenGrotesk_700Bold,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
-    // 3. Forçamos o nosso tema para a app nunca ficar branca de repente
     <ThemeProvider value={SportBuddyTheme}>
       <AnimatedSplashOverlay />
       <AuthProvider>

@@ -1,4 +1,4 @@
-import { Image, StyleSheet, View } from 'react-native';
+﻿import { Image, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
@@ -9,7 +9,7 @@ type Props = {
   backgroundColor?: string;
 };
 
-export function AvatarCircle({ name, avatarUrl, size = 44, backgroundColor = '#334155' }: Props) {
+export function AvatarCircle({ name, avatarUrl, size = 44, backgroundColor = '#141315' }: Props) {
   const initial = name.trim().charAt(0).toUpperCase();
   const circleStyle = { width: size, height: size, borderRadius: size / 2 };
 
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
   },
 });

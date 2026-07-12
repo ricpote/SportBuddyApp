@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+﻿import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -149,10 +149,10 @@ export default function ChatScreen() {
               styles.bubbleInner,
               isOwn ? styles.bubbleOwn : styles.bubbleOther,
             ]}>
-            <ThemedText style={{ color: isOwn ? '#FFFFFF' : '#E2E8F0', fontSize: 15 }}>
+            <ThemedText style={{ color: isOwn ? '#f4f2ef' : '#f4f2ef', fontSize: 15 }}>
               {item.text}
             </ThemedText>
-            <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#94A3B8' }]}>
+            <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#8f8b85' }]}>
               {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
             </ThemedText>
           </View>
@@ -199,7 +199,7 @@ export default function ChatScreen() {
             <TextInput
               style={styles.input}
               placeholder="Escreve uma mensagem..."
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#8f8b85"
               value={text}
               onChangeText={setText}
               multiline
@@ -214,7 +214,7 @@ export default function ChatScreen() {
               ]}
               onPress={handleSend}
               disabled={!text.trim() || sending}>
-              <Ionicons name="send" size={20} color="#FFFFFF" style={{ marginLeft: 4 }} />
+              <Ionicons name="send" size={20} color="#f4f2ef" style={{ marginLeft: 4 }} />
             </Pressable>
           </View>
           
@@ -227,7 +227,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   flex: { 
     flex: 1, 
-    backgroundColor: '#0F172A' 
+    backgroundColor: '#0a0a0b' 
   },
   centered: { 
     alignItems: 'center' 
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   empty: {
     textAlign: 'center',
-    color: '#64748B',
+    color: '#8f8b85',
     marginTop: 40,
   },
   row: {
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   senderName: {
     fontSize: 12,
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     marginLeft: 4,
   },
   bubbleInner: {
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bubbleOwn: {
-    backgroundColor: '#CF8444', // Laranja do utilizador
+    backgroundColor: '#e8823f', // Laranja do utilizador
     borderBottomRightRadius: 4, // Cauda do balão à direita
   },
   bubbleOther: {
-    backgroundColor: '#1E293B', // Cinzento escuro do remetente
+    backgroundColor: '#111012', // Cinzento escuro do remetente
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderBottomLeftRadius: 4, // Cauda do balão à esquerda
   },
   bubbleTime: {
@@ -299,47 +299,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     gap: Spacing.two,
-    backgroundColor: '#0F172A', // Garante que a zona do input não é transparente
+    backgroundColor: '#0a0a0b', // Garante que a zona do input não é transparente
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   input: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: 20,
     paddingTop: 14, // Alinha verticalmente com o botão de enviar
     paddingBottom: 14,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   sendBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
   },
   error: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     textAlign: 'center',
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.one,
   },
   completedBanner: {
-    backgroundColor: '#10B98120',
+    backgroundColor: 'rgba(156,205,107,0.15)',
     borderTopWidth: 1,
-    borderTopColor: '#10B981',
+    borderTopColor: '#9ccd6b',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
   completedText: {
-    color: '#10B981',
+    color: '#9ccd6b',
     textAlign: 'center',
     fontSize: 13,
   },

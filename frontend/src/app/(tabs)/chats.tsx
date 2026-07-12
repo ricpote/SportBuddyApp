@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -202,7 +202,7 @@ export default function ChatsScreen() {
               {friend.user.name}
             </ThemedText>
           </View>
-          <Ionicons name="chatbubble-outline" size={20} color="#CF8444" />
+          <Ionicons name="chatbubble-outline" size={20} color="#e8823f" />
         </View>
       </Pressable>
     );
@@ -220,7 +220,7 @@ export default function ChatsScreen() {
         <View style={styles.container}>
           <View style={styles.newChatHeader}>
             <Pressable onPress={() => setNewChatMode(false)} hitSlop={12}>
-              <Ionicons name="arrow-back" size={24} color="#CF8444" />
+              <Ionicons name="arrow-back" size={24} color="#e8823f" />
             </Pressable>
             <ThemedText type="title" style={styles.pageTitle}>Nova conversa</ThemedText>
           </View>
@@ -252,7 +252,7 @@ export default function ChatsScreen() {
         styles.scrollContent,
         { paddingBottom: BottomTabInset + safeAreaInsets.bottom + Spacing.four, paddingTop: TopTabInset + Spacing.four },
       ]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#CF8444" />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e8823f" />}>
       <View style={styles.container}>
         <View style={styles.headerRow}>
           <ThemedText type="title" style={styles.pageTitle}>Chats</ThemedText>
@@ -261,7 +261,7 @@ export default function ChatsScreen() {
               onPress={enterNewChat}
               style={({ pressed }) => [styles.newChatBtn, pressed && styles.pressed]}
               hitSlop={8}>
-              <Ionicons name="add" size={24} color="#FFFFFF" />
+              <Ionicons name="add" size={24} color="#f4f2ef" />
             </Pressable>
           )}
         </View>
@@ -336,7 +336,7 @@ export default function ChatsScreen() {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#0F172A', // Fundo escuro principal
+    backgroundColor: '#0a0a0b', // Fundo escuro principal
   },
   scrollContent: {
     flexGrow: 1,
@@ -359,23 +359,23 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   pageTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     marginBottom: Spacing.two,
   },
   newChatBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabsRow: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     padding: 4,
     marginBottom: Spacing.two,
   },
@@ -389,31 +389,31 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   tabBtnActive: {
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   tabText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   tabDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     marginTop: Spacing.two,
     marginBottom: Spacing.one,
   },
   card: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: Spacing.four,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: 8,
   },
   conversationCard: {
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     flex: 1, // Para garantir que o título não empurra a data para fora do ecrã
   },
   cardTitle: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 16,
     flexShrink: 1, // Permite que o título corte com "..." se for muito longo
   },
@@ -445,10 +445,10 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   dateText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
     fontSize: 12,
   },
   cardFooter: {
@@ -456,14 +456,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     textAlign: 'center',
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     textAlign: 'center',
   },
   pressed: {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   APIProvider,
@@ -88,7 +88,7 @@ const [query, setQuery] = useState(value.address || '');
           value={query}
           onChangeText={setQuery}
           placeholder="Pesquisar morada ou local"
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           style={styles.input}
           onSubmitEditing={searchAddress}
         />
@@ -162,20 +162,20 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#0F172A',
+    color: '#1a1005',
   },
   button: {
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     borderRadius: 12,
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: '700',
   },
   map: {
@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   selectedBox: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: 12,
     borderRadius: 12,
     gap: 4,
   },
   selectedTitle: {
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
 });

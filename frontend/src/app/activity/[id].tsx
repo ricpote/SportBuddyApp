@@ -1,4 +1,4 @@
-import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+﻿import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,10 +31,10 @@ const STATUS_LABELS: Record<Activity['status'], string> = {
 
 // Cores dinâmicas para o estado da atividade
 const STATUS_COLORS: Record<Activity['status'], string> = {
-  open: '#10B981',      // Verde
-  full: '#CF8444',      // Laranja
-  cancelled: '#FF6B6B', // Vermelho
-  completed: '#64748B', // Cinzento
+  open: '#9ccd6b',      // Verde
+  full: '#e8823f',      // Laranja
+  cancelled: '#eb8f84', // Vermelho
+  completed: '#8f8b85', // Cinzento
 };
 
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
@@ -91,17 +91,17 @@ export default function ActivityDetailScreen() {
 
   if (activity === undefined) {
     return (
-      <View style={[styles.centered, { backgroundColor: '#0F172A' }]}>
-        <ThemedText style={{ color: '#64748B' }}>A carregar detalhes...</ThemedText>
+      <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
+        <ThemedText style={{ color: '#8f8b85' }}>A carregar detalhes...</ThemedText>
       </View>
     );
   }
 
   if (activity === null) {
     return (
-      <View style={[styles.centered, { backgroundColor: '#0F172A' }]}>
-        <Ionicons name="alert-circle-outline" size={48} color="#334155" style={{ marginBottom: 8 }} />
-        <ThemedText style={{ color: '#64748B' }}>Atividade não encontrada.</ThemedText>
+      <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
+        <ThemedText style={{ color: '#8f8b85' }}>Atividade não encontrada.</ThemedText>
       </View>
     );
   }
@@ -224,7 +224,7 @@ export default function ActivityDetailScreen() {
 
   return (
     <ScrollView 
-      style={{ backgroundColor: '#0F172A' }} 
+      style={{ backgroundColor: '#0a0a0b' }} 
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
@@ -252,7 +252,7 @@ export default function ActivityDetailScreen() {
             onPress={() => goToUserProfile(activity.createdBy)}
           />
           <Row
-            iconElement={<SportIcon sportName={sport?.name} size={16} color="#64748B" />}
+            iconElement={<SportIcon sportName={sport?.name} size={16} color="#8f8b85" />}
             label="Modalidade"
             value={sport?.name ?? activity.sportId}
           />
@@ -285,7 +285,7 @@ export default function ActivityDetailScreen() {
         {activity.status === 'completed' && isParticipant && (
           <View style={styles.card}>
             <View style={styles.voteHeader}>
-              <Ionicons name="trophy" size={20} color="#CF8444" />
+              <Ionicons name="trophy" size={20} color="#e8823f" />
               <ThemedText style={styles.sectionTitle}>MVP da atividade</ThemedText>
             </View>
             <View style={styles.divider} />
@@ -298,7 +298,7 @@ export default function ActivityDetailScreen() {
                   </ThemedText>
                   {mvpWinners.map((wid) => (
                     <View key={wid} style={styles.winnerRow}>
-                      <Ionicons name="trophy" size={18} color="#CF8444" />
+                      <Ionicons name="trophy" size={18} color="#e8823f" />
                       <ThemedText style={styles.winnerName}>
                         {participantNames.get(wid) ?? shortId(wid)}
                       </ThemedText>
@@ -320,7 +320,7 @@ export default function ActivityDetailScreen() {
                     <Pressable
                       style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
                       onPress={() => goToUserProfile(pid)}>
-                      <Ionicons name="person-circle-outline" size={24} color="#64748B" />
+                      <Ionicons name="person-circle-outline" size={24} color="#8f8b85" />
                       <ThemedText style={styles.memberName}>
                         {participantNames.get(pid) ?? shortId(pid)}
                       </ThemedText>
@@ -363,7 +363,7 @@ export default function ActivityDetailScreen() {
                         <Pressable
                           style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
                           onPress={() => goToUserProfile(participantId)}>
-                          <Ionicons name="person-circle-outline" size={24} color="#64748B" />
+                          <Ionicons name="person-circle-outline" size={24} color="#8f8b85" />
                           <ThemedText style={styles.memberName}>
                             {participantNames.get(participantId) ?? shortId(participantId)}
                           </ThemedText>
@@ -395,7 +395,7 @@ export default function ActivityDetailScreen() {
                         <Pressable
                           style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
                           onPress={() => goToUserProfile(userId)}>
-                          <Ionicons name="time-outline" size={24} color="#CF8444" />
+                          <Ionicons name="time-outline" size={24} color="#e8823f" />
                           <ThemedText style={styles.memberName}>
                             {participantNames.get(userId) ?? shortId(userId)}
                           </ThemedText>
@@ -430,7 +430,7 @@ export default function ActivityDetailScreen() {
                   href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }}
                   asChild>
                   <Pressable style={({ pressed }) => [styles.button, styles.primaryButton, pressed && styles.pressed]}>
-                    <Ionicons name="pencil" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Ionicons name="pencil" size={18} color="#f4f2ef" style={{ marginRight: 8 }} />
                     <ThemedText style={styles.primaryButtonText} type="smallBold">
                       Editar atividade
                     </ThemedText>
@@ -445,7 +445,7 @@ export default function ActivityDetailScreen() {
                   ]}
                   disabled={submitting}
                   onPress={handleCancel}>
-                  <Ionicons name="trash-outline" size={18} color="#FF6B6B" style={{ marginRight: 8 }} />
+                  <Ionicons name="trash-outline" size={18} color="#eb8f84" style={{ marginRight: 8 }} />
                   <ThemedText style={styles.dangerButtonText} type="smallBold">
                     {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
                   </ThemedText>
@@ -493,7 +493,7 @@ export default function ActivityDetailScreen() {
             <Pressable
               style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
               onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${activity.location.lat},${activity.location.lng}`)}>
-              <Ionicons name="map-outline" size={20} color="#A0AEC0" />
+              <Ionicons name="map-outline" size={20} color="#c9c5bf" />
               <ThemedText style={styles.utilityButtonText}>Ver Mapa</ThemedText>
             </Pressable>
           )}
@@ -501,7 +501,7 @@ export default function ActivityDetailScreen() {
           <Pressable
             style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
             onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color="#A0AEC0" />
+            <Ionicons name="share-social-outline" size={20} color="#c9c5bf" />
             <ThemedText style={styles.utilityButtonText}>Partilhar</ThemedText>
           </Pressable>
         </View>
@@ -539,13 +539,13 @@ function Row({
   const content = (
     <View style={styles.row}>
       <View style={styles.rowLabelContainer}>
-        {iconElement ?? (icon ? <Ionicons name={icon} size={16} color="#64748B" /> : null)}
+        {iconElement ?? (icon ? <Ionicons name={icon} size={16} color="#8f8b85" /> : null)}
         <ThemedText style={styles.rowLabelText}>{label}</ThemedText>
       </View>
       <ThemedText
         style={[
           styles.rowValueText,
-          (highlightValue || onPress) && { color: '#CF8444', fontWeight: 'bold' },
+          (highlightValue || onPress) && { color: '#e8823f', fontWeight: 'bold' },
         ]}>
         {value}
       </ThemedText>
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 24,
     fontWeight: 'bold',
     flex: 1,
@@ -599,23 +599,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
   descriptionText: {
-    color: '#CBD5E1',
+    color: '#c9c5bf',
     fontSize: 15,
     marginTop: Spacing.two,
     lineHeight: 22,
   },
   card: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     padding: Spacing.four,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: Spacing.three,
     marginBottom: Spacing.two,
   },
@@ -630,24 +630,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   rowLabelText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
   },
   rowValueText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 14,
     flexShrink: 1,
     textAlign: 'right',
     paddingLeft: 16,
   },
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
     fontWeight: 'bold',
   },
   divider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     marginVertical: 4,
   },
   memberRow: {
@@ -662,22 +662,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   memberName: {
-    color: '#E2E8F0',
+    color: '#f4f2ef',
     fontSize: 15,
   },
   removeButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: 'rgba(235,143,132,0.15)',
   },
   removeButtonText: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     fontSize: 12,
     fontWeight: 'bold',
   },
   emptyListText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   voteHint: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
     marginBottom: 4,
   },
@@ -697,12 +697,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#CF844420',
+    backgroundColor: 'rgba(232,130,63,0.12)',
     borderWidth: 1,
-    borderColor: '#CF8444',
+    borderColor: '#e8823f',
   },
   voteButtonText: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   winnerLabel: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 13,
     textTransform: 'uppercase',
     fontWeight: 'bold',
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   winnerName: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -735,10 +735,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#10B98120',
+    backgroundColor: 'rgba(156,205,107,0.15)',
   },
   admitButtonText: {
-    color: '#10B981',
+    color: '#9ccd6b',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -746,10 +746,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: 'rgba(235,143,132,0.15)',
   },
   rejectButtonText: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -761,19 +761,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButton: {
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
   dangerButton: {
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: 'rgba(235,143,132,0.15)',
     borderWidth: 1,
-    borderColor: '#FF6B6B',
+    borderColor: '#eb8f84',
   },
   dangerButtonText: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     fontSize: 16,
   },
   utilityButtonsRow: {
@@ -785,16 +785,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     height: 48,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   utilityButtonText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -803,12 +803,12 @@ const styles = StyleSheet.create({
   },
   error: {
     textAlign: 'center',
-    color: '#FF6B6B',
+    color: '#eb8f84',
     marginVertical: 8,
   },
   note: {
     textAlign: 'center',
-    color: '#CF8444',
+    color: '#e8823f',
     marginBottom: Spacing.two,
   },
 });

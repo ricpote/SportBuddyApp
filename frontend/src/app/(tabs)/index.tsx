@@ -1,4 +1,4 @@
-import { Link, router, useFocusEffect } from 'expo-router';
+﻿import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, ScrollView, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -108,7 +108,7 @@ export default function HomeScreen() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: '#0F172A' }]}>
+    <ThemedView style={[styles.container, { backgroundColor: '#0a0a0b' }]}>
       <SafeAreaView style={styles.safeArea}>
 
         {/* CABEÇALHO */}
@@ -119,7 +119,7 @@ export default function HomeScreen() {
               <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
             ) : (
               <View style={styles.profilePicPlaceholder}>
-                <Ionicons name="person" size={24} color="#64748B" />
+                <Ionicons name="person" size={24} color="#8f8b85" />
               </View>
             )}
             
@@ -138,7 +138,7 @@ export default function HomeScreen() {
           <View style={styles.headerIcons}>
             <Link href="/notifications" asChild>
               <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="notifications-outline" size={24} color="#f4f2ef" />
                 {unreadCount > 0 && (
                   <View style={styles.iconBadge}>
                     <ThemedText style={styles.iconBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</ThemedText>
@@ -149,7 +149,7 @@ export default function HomeScreen() {
 
             <Link href="/chats" asChild>
               <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#f4f2ef" />
                 {chatUnread > 0 && (
                   <View style={styles.iconBadge}>
                     <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
@@ -160,7 +160,7 @@ export default function HomeScreen() {
 
             <Link href="/friends" asChild>
               <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="people-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="people-outline" size={24} color="#f4f2ef" />
               </Pressable>
             </Link>
           </View>
@@ -193,14 +193,14 @@ export default function HomeScreen() {
                     <Ionicons
                       name="medal-outline"
                       size={16}
-                      color={isActive ? "#0F172A" : "#A0AEC0"}
+                      color={isActive ? "#0a0a0b" : "#c9c5bf"}
                       style={{ marginRight: 5 }}
                     />
                   ) : (
                     <SportIcon
                       sportName={filter}
                       size={16}
-                      color={isActive ? "#0F172A" : "#A0AEC0"}
+                      color={isActive ? "#0a0a0b" : "#c9c5bf"}
                       style={{ marginRight: 5 }}
                     />
                   )}
@@ -219,7 +219,7 @@ export default function HomeScreen() {
           {friendsActivities.length > 0 && (
             <View style={styles.recommendedSection}>
               <View style={styles.activitiesHeader}>
-                <ThemedText type="subtitle" style={{ color: '#FFFFFF', fontSize: 20 }}>
+                <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
                   Recomendado para ti
                 </ThemedText>
               </View>
@@ -238,7 +238,7 @@ export default function HomeScreen() {
                     style={({ pressed }) => [styles.recommendedCard, pressed && styles.pressed]}
                   >
                     <View style={styles.sportBadge}>
-                      <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#FFFFFF" />
+                      <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#f4f2ef" />
                       <ThemedText style={styles.sportBadgeText}>
                         {sportNameById.get(activity.sportId) ?? activity.sportId}
                       </ThemedText>
@@ -249,14 +249,14 @@ export default function HomeScreen() {
                     </ThemedText>
 
                     <View style={styles.infoRow}>
-                      <Ionicons name="calendar-outline" size={14} color="#A0AEC0" />
+                      <Ionicons name="calendar-outline" size={14} color="#c9c5bf" />
                       <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
-                      <Ionicons name="time-outline" size={14} color="#A0AEC0" style={{ marginLeft: 10 }} />
+                      <Ionicons name="time-outline" size={14} color="#c9c5bf" style={{ marginLeft: 10 }} />
                       <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
                     </View>
 
                     <View style={styles.friendsGoingRow}>
-                      <Ionicons name="people-outline" size={14} color="#CF8444" style={{ marginTop: 2 }} />
+                      <Ionicons name="people-outline" size={14} color="#e8823f" style={{ marginTop: 2 }} />
                       <ThemedText style={styles.friendsGoingText} numberOfLines={2}>
                         {friendsGoingLabel(activity)}
                       </ThemedText>
@@ -269,13 +269,13 @@ export default function HomeScreen() {
 
           {/* SECÇÃO DE ATIVIDADES */}
           <View style={styles.activitiesHeader}>
-            <ThemedText type="subtitle" style={{ color: '#FFFFFF', fontSize: 20 }}>
+            <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
               Atividades Próximas
             </ThemedText>
 
             <Link href="/explore" asChild>
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedText style={{ color: '#CF8444', fontWeight: 'bold' }}>
+                <ThemedText style={{ color: '#e8823f', fontWeight: 'bold' }}>
                   Ver todas {'>'}
                 </ThemedText>
               </Pressable>
@@ -298,14 +298,14 @@ export default function HomeScreen() {
                       <View style={styles.activityCard}>
                         <View style={styles.cardImagePlaceholder}>
                           <View style={styles.sportBadge}>
-                            <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#FFFFFF" />
+                            <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#f4f2ef" />
                             <ThemedText style={styles.sportBadgeText}>
                               {sportNameById.get(activity.sportId) ?? activity.sportId}
                             </ThemedText>
                           </View>
                           {activity.requiresApproval && (
                             <View style={styles.approvalBadge}>
-                              <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+                              <Ionicons name="lock-closed" size={12} color="#f4f2ef" />
                               <ThemedText style={styles.approvalBadgeText}>Entrada por aprovação</ThemedText>
                             </View>
                           )}
@@ -317,37 +317,37 @@ export default function HomeScreen() {
                           </ThemedText>
 
                           <View style={styles.infoRow}>
-                            <Ionicons name="calendar-outline" size={14} color="#A0AEC0" />
+                            <Ionicons name="calendar-outline" size={14} color="#c9c5bf" />
                             <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
-                            <Ionicons name="time-outline" size={14} color="#A0AEC0" style={{ marginLeft: 10 }} />
+                            <Ionicons name="time-outline" size={14} color="#c9c5bf" style={{ marginLeft: 10 }} />
                             <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
                           </View>
 
                           <View style={styles.infoRow}>
-                            <Ionicons name="location-outline" size={14} color="#A0AEC0" />
+                            <Ionicons name="location-outline" size={14} color="#c9c5bf" />
                             <ThemedText style={styles.infoText}>{activity.location.name}</ThemedText>
                           </View>
 
                           <View style={styles.cardFooter}>
                             <View style={[
                               styles.difficultyBadge,
-                              difficulty === 'Avançado' ? { backgroundColor: '#FF6B6B' } : {}
+                              difficulty === 'Avançado' ? { backgroundColor: '#eb8f84' } : {}
                             ]}>
                               <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
                             </View>
 
                             <View style={styles.spotsContainer}>
-                              <Ionicons name="people-outline" size={14} color="#A0AEC0" />
+                              <Ionicons name="people-outline" size={14} color="#c9c5bf" />
                               <ThemedText style={styles.spotsText}>
                                 {activity.participantsList.length}/{activity.maxParticipants}
                               </ThemedText>
                               {activity.status === 'full' && (
-                                <ThemedText style={[styles.spotsText, { color: '#FF6B6B' }]}>
+                                <ThemedText style={[styles.spotsText, { color: '#eb8f84' }]}>
                                   · Completa
                                 </ThemedText>
                               )}
                               {activity.waitlist.length > 0 && (
-                                <ThemedText style={[styles.spotsText, { color: '#CF8444' }]}>
+                                <ThemedText style={[styles.spotsText, { color: '#e8823f' }]}>
                                   +{activity.waitlist.length} em espera
                                 </ThemedText>
                               )}
@@ -360,7 +360,7 @@ export default function HomeScreen() {
               })
             ) : (
               <View style={styles.emptyState}>
-                <Ionicons name="sad-outline" size={48} color="#334155" />
+                <Ionicons name="sad-outline" size={48} color="#141315" />
                 <ThemedText style={styles.emptyStateTitle}>Nenhuma atividade encontrada</ThemedText>
                 <ThemedText style={styles.emptyStateText}>
                   {activeFilter === ALL_FILTER
@@ -412,15 +412,15 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#eb8f84',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: '#0F172A',
+    borderColor: '#0a0a0b',
   },
   iconBadgeText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -434,24 +434,24 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     borderWidth: 2,
-    borderColor: '#1E293B',
+    borderColor: '#111012',
   },
   profilePicPlaceholder: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   profileName: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 20,
   },
   greetingText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
     marginTop: 2,
   },
@@ -470,23 +470,23 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   filterChipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
   },
   filterText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontWeight: '600',
   },
   filterTextActive: {
-    color: '#0F172A',
+    color: '#1a1005',
   },
   recommendedSection: {
     marginBottom: Spacing.five,
@@ -497,10 +497,10 @@ const styles = StyleSheet.create({
   },
   recommendedCard: {
     width: 260,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     padding: Spacing.three,
     gap: Spacing.two,
   },
@@ -511,10 +511,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     paddingTop: Spacing.two,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   friendsGoingText: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 13,
     fontWeight: '600',
     flexShrink: 1,
@@ -535,33 +535,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     gap: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderStyle: 'dashed',
   },
   emptyStateTitle: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 16,
     fontWeight: 'bold',
   },
   emptyStateText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 20,
   },
   activityCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   cardImagePlaceholder: {
     height: 120,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     padding: Spacing.three,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   sportBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#9ccd6b',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sportBadgeText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   approvalBadgeText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   activityTitle: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 18,
     marginBottom: 4,
   },
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
   },
   cardFooter: {
@@ -621,16 +621,16 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     paddingTop: Spacing.two,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   difficultyBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#9ccd6b',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   difficultyText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   spotsText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
   },
   pressed: {

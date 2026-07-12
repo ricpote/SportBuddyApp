@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -264,7 +264,7 @@ export default function AdminScreen() {
             <Pressable
               style={({ pressed }) => [styles.refreshButton, pressed && styles.pressed]}
               onPress={() => void loadAdminData()}>
-              <Ionicons name="refresh-outline" size={16} color="#0F172A" />
+              <Ionicons name="refresh-outline" size={16} color="#0a0a0b" />
               <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
             </Pressable>
           </View>
@@ -302,7 +302,7 @@ export default function AdminScreen() {
             value={userSearch}
             onChangeText={setUserSearch}
             placeholder="Pesquisar por nome, email, role ou status"
-            placeholderTextColor="#64748B"
+            placeholderTextColor="#8f8b85"
           />
 
           <View style={styles.list}>
@@ -439,7 +439,7 @@ export default function AdminScreen() {
             value={activitySearch}
             onChangeText={setActivitySearch}
             placeholder="Pesquisar por titulo, local, sport ou criador"
-            placeholderTextColor="#64748B"
+            placeholderTextColor="#8f8b85"
           />
 
           <View style={styles.list}>
@@ -556,10 +556,10 @@ function ActionButton({
   onPress: () => void;
 }) {
   const tones = {
-    neutral: { backgroundColor: '#1E293B', borderColor: '#334155', textColor: '#E2E8F0' },
-    success: { backgroundColor: '#10B98120', borderColor: '#10B981', textColor: '#A7F3D0' },
-    warning: { backgroundColor: '#CF844420', borderColor: '#CF8444', textColor: '#FCD9B6' },
-    danger: { backgroundColor: '#FF6B6B20', borderColor: '#FF6B6B', textColor: '#FECACA' },
+    neutral: { backgroundColor: '#111012', borderColor: 'rgba(255,255,255,0.06)', textColor: '#f4f2ef' },
+    success: { backgroundColor: 'rgba(156,205,107,0.15)', borderColor: '#9ccd6b', textColor: '#A7F3D0' },
+    warning: { backgroundColor: 'rgba(232,130,63,0.12)', borderColor: '#e8823f', textColor: '#FCD9B6' },
+    danger: { backgroundColor: 'rgba(235,143,132,0.15)', borderColor: '#eb8f84', textColor: '#FECACA' },
   }[tone];
 
   return (
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   rolesLabel: {
-    color: '#CBD5E1',
+    color: '#c9c5bf',
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   roleChip: {
     backgroundColor: '#17253F',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -611,19 +611,19 @@ const styles = StyleSheet.create({
     borderColor: '#F59E0B',
   },
   roleChipText: {
-    color: '#CBD5E1',
+    color: '#c9c5bf',
     fontSize: 12,
     fontWeight: '700',
   },
   roleChipTextActive: {
-    color: '#0F172A',
+    color: '#1a1005',
   },
   disabledChip: {
     opacity: 0.45,
   },
   screen: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
   },
   content: {
     alignItems: 'center',
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     gap: Spacing.two,
     padding: Spacing.four,
   },
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111C31',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   heroTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 28,
     fontWeight: '700',
     maxWidth: 460,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   refreshButtonText: {
-    color: '#0F172A',
+    color: '#1a1005',
     fontWeight: '700',
   },
   statsRow: {
@@ -698,12 +698,12 @@ const styles = StyleSheet.create({
     borderColor: '#23314B',
   },
   statValue: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 28,
     fontWeight: '700',
   },
   statLabel: {
-    color: '#94A3B8',
+    color: '#8f8b85',
     marginTop: 4,
   },
   sectionCard: {
@@ -721,20 +721,20 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 22,
     fontWeight: '700',
   },
   sectionMeta: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 13,
   },
   searchInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    color: '#E2E8F0',
+    borderColor: 'rgba(255,255,255,0.06)',
+    color: '#f4f2ef',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   itemCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#223049',
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   itemSubtle: {
-    color: '#94A3B8',
+    color: '#8f8b85',
     fontSize: 13,
   },
   badgeRow: {
@@ -802,11 +802,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   helperText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 12,
   },
   subtleText: {
-    color: '#64748B',
+    color: '#8f8b85',
     textAlign: 'center',
   },
   errorText: {

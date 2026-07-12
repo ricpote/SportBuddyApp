@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -151,7 +151,7 @@ export function WeatherSection() {
                     <Ionicons
                       name="sunny"
                       size={12}
-                      color={day.uvIndex !== null ? getUvColor(day.uvIndex) : '#64748B'}
+                      color={day.uvIndex !== null ? getUvColor(day.uvIndex) : '#8f8b85'}
                     />
                     <ThemedText style={styles.detailText}>
                       {day.uvIndex !== null
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.five,
   },
   title: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 20,
     paddingHorizontal: Spacing.four,
   },
@@ -204,34 +204,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     paddingVertical: 10,
     paddingHorizontal: 4,
     overflow: 'hidden',
   },
   cardToday: {
     borderWidth: 2,
-    borderColor: '#CF8444',
+    borderColor: '#e8823f',
   },
   cardPressed: {
     opacity: 0.7,
   },
   dayLabel: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 12,
     fontWeight: '600',
   },
   dayLabelToday: {
-    color: '#CF8444',
+    color: '#e8823f',
   },
   circle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     borderWidth: 1,
     borderColor: '#475569',
     overflow: 'hidden',
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F97316',
   },
   tempBoxText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -284,11 +284,11 @@ const styles = StyleSheet.create({
   },
   detailsDivider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     marginBottom: 2,
   },
   detailsLabel: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 10,
     fontWeight: '600',
     textAlign: 'center',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     padding: 6,
     borderRadius: 8,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     gap: 3,
   },
   warningHeader: {
@@ -324,13 +324,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   warningTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 9,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   warningText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 9,
     lineHeight: 13,
     textAlign: 'center',

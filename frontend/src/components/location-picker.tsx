@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, View } from 'react-native';
+﻿import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 
@@ -29,7 +29,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
           });
         }}
         placeholder="Escreve a morada da atividade"
-        placeholderTextColor="#64748B"
+        placeholderTextColor="#8f8b85"
         style={styles.input}
       />
 
@@ -46,17 +46,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#0F172A',
+    color: '#1a1005',
   },
   helpText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
     fontSize: 12,
   },
 });

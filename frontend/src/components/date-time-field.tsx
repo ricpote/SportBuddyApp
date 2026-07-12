@@ -1,4 +1,4 @@
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+﻿import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -79,14 +79,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: Spacing.two,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   label: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -95,15 +95,15 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 52, // Mesma altura dos TextInput
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12, // Mesmos cantos arredondados
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
   inputText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
 });

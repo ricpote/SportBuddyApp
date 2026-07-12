@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import {
   AdvancedMarker,
@@ -231,7 +231,7 @@ export default function MapWebScreen() {
               <Pin
                 background="#2563EB"
                 borderColor="#1D4ED8"
-                glyphColor="#FFFFFF"
+                glyphColor="#f4f2ef"
                 scale={1.2}
               />
             </AdvancedMarker>
@@ -247,9 +247,9 @@ export default function MapWebScreen() {
               title={activity.title}
               onClick={() => setSelectedActivity(activity)}>
               <Pin
-                background="#CF8444"
+                background="#e8823f"
                 borderColor="#7C4F28"
-                glyphColor="#FFFFFF"
+                glyphColor="#f4f2ef"
                 scale={1.4}
               />
             </AdvancedMarker>
@@ -289,8 +289,8 @@ export default function MapWebScreen() {
                   style={{
                     border: 'none',
                     borderRadius: 8,
-                    background: '#CF8444',
-                    color: '#FFFFFF',
+                    background: '#e8823f',
+                    color: '#f4f2ef',
                     fontWeight: 700,
                     padding: '8px 12px',
                     cursor: 'pointer',
@@ -381,24 +381,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   radiusButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
   },
   radiusButtonActive: {
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   radiusText: {
-    color: '#0F172A',
+    color: '#1a1005',
     fontWeight: '700',
   },
   radiusTextActive: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   searchButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   searchButtonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: '700',
   },
   statusBox: {

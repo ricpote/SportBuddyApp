@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+﻿import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,11 +8,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 
-const BG = '#0F172A';
-const ORANGE = '#CF8444';
-const TEXT = '#FFFFFF';
-const TEXT_SEC = '#A0AEC0';
-const ERROR = '#FF6B6B';
+const BG = '#0a0a0b';
+const ORANGE = '#e8823f';
+const TEXT = '#f4f2ef';
+const TEXT_SEC = '#c9c5bf';
+const ERROR = '#eb8f84';
 
 export default function RegisterScreen() {
   const { signUp } = useAuth();

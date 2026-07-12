@@ -1,4 +1,4 @@
-import { Link, useFocusEffect } from 'expo-router';
+﻿import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, Image, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -111,7 +111,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: '#0F172A' }]}
+      style={[styles.scrollView, { backgroundColor: '#0a0a0b' }]}
       contentContainerStyle={[
         styles.contentContainer,
         {
@@ -132,12 +132,12 @@ export default function ProfileScreen() {
                 <Image source={{ uri: profile.avatarUrl }} style={styles.profileImage} />
               ) : (
                 <View style={styles.imagePlaceholder}>
-                  <Ionicons name="person" size={36} color="#64748B" />
+                  <Ionicons name="person" size={36} color="#8f8b85" />
                 </View>
               )}
               <View style={styles.onlineBadge} />
               <View style={styles.editImageBadge}>
-                <Ionicons name="camera" size={12} color="#FFFFFF" />
+                <Ionicons name="camera" size={12} color="#f4f2ef" />
               </View>
             </Pressable>
 
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
                 </ThemedText>
                 <Link href="/edit-profile" asChild>
                   <Pressable hitSlop={10}>
-                    <Ionicons name="pencil" size={16} color="#A0AEC0" />
+                    <Ionicons name="pencil" size={16} color="#c9c5bf" />
                   </Pressable>
                 </Link>
               </View>
@@ -179,13 +179,13 @@ export default function ProfileScreen() {
         {/* ESTATÍSTICAS EM GRELHA (Cartões Individuais) */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Ionicons name="calendar-outline" size={20} color="#CF8444" />
+            <Ionicons name="calendar-outline" size={20} color="#e8823f" />
             <ThemedText style={styles.statValue}>{joinedCount}</ThemedText>
             <ThemedText style={styles.statLabel}>Participadas</ThemedText>
           </View>
           
           <View style={styles.statCard}>
-            <Ionicons name="people-outline" size={20} color="#10B981" />
+            <Ionicons name="people-outline" size={20} color="#9ccd6b" />
             <ThemedText style={styles.statValue}>{createdCount}</ThemedText>
             <ThemedText style={styles.statLabel}>Organizadas</ThemedText>
           </View>
@@ -258,8 +258,8 @@ export default function ProfileScreen() {
         <Pressable
           style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
           onPress={signOut}>
-          <Ionicons name="log-out-outline" size={18} color="#FF6B6B" style={{ marginRight: 6 }} />
-          <ThemedText type="smallBold" style={{ color: '#FF6B6B' }}>Terminar sessão</ThemedText>
+          <Ionicons name="log-out-outline" size={18} color="#eb8f84" style={{ marginRight: 6 }} />
+          <ThemedText type="smallBold" style={{ color: '#eb8f84' }}>Terminar sessão</ThemedText>
         </Pressable>
         
       </View>
@@ -282,20 +282,20 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
   },
   card: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     padding: Spacing.four,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   
   /* ESTILOS DO CARTÃO PRINCIPAL */
   profileMainCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   profileHeaderRow: {
     flexDirection: 'row',
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -325,22 +325,22 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: '#9ccd6b',
     borderWidth: 2,
-    borderColor: '#1E293B',
+    borderColor: '#111012',
   },
   editImageBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#1E293B',
+    borderColor: '#111012',
   },
   profileInfo: {
     flex: 1,
@@ -353,24 +353,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   profileName: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 22,
     fontWeight: 'bold',
     flexShrink: 1,
   },
   profileEmail: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 14,
     marginBottom: 4,
   },
   profileRole: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 12,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
   uploadingText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
     fontSize: 12,
     marginTop: 4,
   },
@@ -378,12 +378,12 @@ const styles = StyleSheet.create({
   /* ESTILOS DA BIO */
   divider: {
     height: 1,
-    backgroundColor: '#334155',
+    backgroundColor: '#141315',
     marginTop: 16,
     marginBottom: 12,
   },
   bioText: {
-    color: '#CBD5E1',
+    color: '#c9c5bf',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -395,35 +395,35 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: 4,
   },
   statValue: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 24,
     fontWeight: 'bold',
     marginTop: 4,
   },
   statLabel: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontSize: 12,
   },
 
   /* RESTANTES ESTILOS */
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     marginTop: Spacing.two,
   },
   logoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: 'rgba(235,143,132,0.15)',
     borderWidth: 1,
-    borderColor: '#FF6B6B',
+    borderColor: '#eb8f84',
     height: 48,
     borderRadius: 12,
     alignItems: 'center',
@@ -434,16 +434,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   pendingCard: {
-    backgroundColor: '#CF844420',
-    borderColor: '#CF8444',
+    backgroundColor: 'rgba(232,130,63,0.12)',
+    borderColor: '#e8823f',
     alignItems: 'center',
   },
   pendingText: {
-    color: '#CF8444',
+    color: '#e8823f',
     textAlign: 'center',
   },
   pendingSubText: {
-    color: '#CF8444',
+    color: '#e8823f',
     opacity: 0.8,
     textAlign: 'center',
     marginTop: 4,
@@ -453,26 +453,26 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   filterChip: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   filterChipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
   },
   filterText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontWeight: '600',
   },
   filterTextActive: {
-    color: '#0F172A',
+    color: '#1a1005',
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     textAlign: 'center',
     marginTop: Spacing.four,
   },
@@ -480,18 +480,18 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   activityCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 12,
     padding: Spacing.four,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: 4,
   },
   activityTitle: {
-    color: '#CF8444',
+    color: '#e8823f',
     fontSize: 16,
   },
   activitySubText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
   },
 });

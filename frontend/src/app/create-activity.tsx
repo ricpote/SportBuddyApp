@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
@@ -129,7 +129,7 @@ export default function CreateActivityScreen() {
 
   return (
     <ScrollView 
-      style={{ backgroundColor: '#0F172A' }} 
+      style={{ backgroundColor: '#0a0a0b' }} 
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
@@ -139,7 +139,7 @@ export default function CreateActivityScreen() {
         <TextInput
           style={styles.input}
           placeholder="Título da atividade"
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           value={title}
           onChangeText={setTitle}
         />
@@ -147,7 +147,7 @@ export default function CreateActivityScreen() {
         <TextInput
           style={[styles.input, styles.multiline]}
           placeholder="Descrição (ex: Vamos jogar um 5 para 5 amigável. Levem bola se tiverem!)"
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           value={description}
           onChangeText={setDescription}
           multiline
@@ -176,7 +176,7 @@ export default function CreateActivityScreen() {
                         <SportIcon
                           sportName={sport.name}
                           size={16}
-                          color={isActive ? '#0F172A' : '#A0AEC0'}
+                          color={isActive ? '#0a0a0b' : '#c9c5bf'}
                           style={{ marginRight: 6 }}
                         />
                         <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
@@ -227,7 +227,7 @@ export default function CreateActivityScreen() {
         <TextInput
           style={styles.input}
           placeholder="Máximo de participantes"
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           keyboardType="number-pad"
           value={maxParticipants}
           onChangeText={setMaxParticipants}
@@ -236,14 +236,14 @@ export default function CreateActivityScreen() {
         {/* APROVAÇÃO */}
         <View style={styles.switchRow}>
           <View>
-            <ThemedText style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
-            <ThemedText style={{ color: '#A0AEC0', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
+            <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
+            <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
           </View>
           <Switch 
             value={requiresApproval} 
             onValueChange={setRequiresApproval} 
-            trackColor={{ false: '#334155', true: '#CF8444' }}
-            thumbColor={requiresApproval ? '#FFFFFF' : '#A0AEC0'}
+            trackColor={{ false: '#141315', true: '#e8823f' }}
+            thumbColor={requiresApproval ? '#f4f2ef' : '#c9c5bf'}
           />
         </View>
 
@@ -282,13 +282,13 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 52,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   multiline: {
     height: 100,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   sectionLabel: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
     fontSize: 16,
     marginTop: Spacing.two,
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   categoryLabel: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
     marginBottom: 4,
   },
@@ -318,38 +318,38 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   chipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
   },
   chipText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0F172A',
+    color: '#1a1005',
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     marginTop: Spacing.two,
   },
   button: {
     height: 52,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.six,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
   pressed: {
@@ -365,11 +365,11 @@ const styles = StyleSheet.create({
   },
   error: {
     textAlign: 'center',
-    color: '#FF6B6B',
+    color: '#eb8f84',
     marginTop: Spacing.two,
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
   },
 });

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -102,7 +102,7 @@ export default function UserProfileScreen() {
           {displayedBadge && (
             <View style={styles.badgeRow}>
               <BadgeIcon badgeId={displayedBadge.id} icon={displayedBadge.icon} size={28} />
-              <ThemedText type="smallBold" style={{ color: '#CF8444' }}>
+              <ThemedText type="smallBold" style={{ color: '#e8823f' }}>
                 {displayedBadge.name}
               </ThemedText>
             </View>
@@ -132,9 +132,9 @@ export default function UserProfileScreen() {
         {!isMe && friendStatus === 'friends' && (
           <ThemedView
             type="backgroundElement"
-            style={[styles.friendBtn, { borderColor: '#10B981' }]}>
-            <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
-            <ThemedText type="smallBold" style={{ color: '#10B981' }}>
+            style={[styles.friendBtn, { borderColor: '#9ccd6b' }]}>
+            <Ionicons name="checkmark-circle-outline" size={18} color="#9ccd6b" />
+            <ThemedText type="smallBold" style={{ color: '#9ccd6b' }}>
               Amigos
             </ThemedText>
           </ThemedView>
@@ -158,10 +158,10 @@ export default function UserProfileScreen() {
                 type="backgroundElement"
                 style={[
                   styles.friendBtn,
-                  { borderColor: '#CF8444', opacity: pressed || friendStatus === 'sending' ? 0.6 : 1 },
+                  { borderColor: '#e8823f', opacity: pressed || friendStatus === 'sending' ? 0.6 : 1 },
                 ]}>
-                <Ionicons name="person-add-outline" size={18} color="#CF8444" />
-                <ThemedText type="smallBold" style={{ color: '#CF8444' }}>
+                <Ionicons name="person-add-outline" size={18} color="#e8823f" />
+                <ThemedText type="smallBold" style={{ color: '#e8823f' }}>
                   {friendStatus === 'sending' ? 'A enviar...' : 'Adicionar amigo'}
                 </ThemedText>
               </ThemedView>
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   bio: {
     textAlign: 'center',
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   friendError: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     textAlign: 'center',
   },
 });

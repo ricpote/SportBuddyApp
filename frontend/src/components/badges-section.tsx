@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+﻿import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -70,10 +70,10 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   title: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   subtitle: {
-    color: '#64748B',
+    color: '#8f8b85',
   },
   grid: {
     flexDirection: 'row',
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   },
   displayedRing: {
     borderWidth: 2,
-    borderColor: '#CF8444',
+    borderColor: '#e8823f',
     borderRadius: 32,
     padding: 2,
   },
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   badgeName: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     textAlign: 'center',
   },
 });
