@@ -10,6 +10,8 @@ type ChatBadgeContextValue = {
   unreadCount: number;
   unreadIds: string[];
   unreadConversationIds: string[];
+  unreadCounts: Record<string, number>;
+  unreadConversationCounts: Record<string, number>;
   markRead: (activityId: string) => Promise<void>;
   checkUnread: (activityIds: string[], currentUserId?: string) => Promise<void>;
   checkUnreadConversations: (conversationIds: string[], currentUserId?: string) => Promise<void>;
@@ -17,43 +19,40 @@ type ChatBadgeContextValue = {
 
 const ChatBadgeContext = createContext<ChatBadgeContextValue | undefined>(undefined);
 
-// Compara a última mensagem de outros com o momento em que abrimos o chat
-// (guardado localmente), para saber se há algo por ler.
-async function findUnread(
+async function findUnreadCounts(
   ids: string[],
   fetchMessages: (id: string) => Promise<{ senderId: string; createdAt: string }[]>,
   currentUserId?: string
-): Promise<Set<string>> {
+): Promise<Map<string, number>> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   const lastSeenMap: Record<string, number> = raw ? JSON.parse(raw) : {};
 
   const results = await Promise.allSettled(
     ids.map(async (id) => {
       const messages = await fetchMessages(id);
-      // As nossas próprias mensagens não contam como "por ler"
       const fromOthers = currentUserId
         ? messages.filter((m) => m.senderId !== currentUserId)
         : messages;
-      if (fromOthers.length === 0) return { id, unread: false };
-      const lastMsgTime = new Date(fromOthers[fromOthers.length - 1].createdAt).getTime();
+      if (fromOthers.length === 0) return { id, count: 0 };
       const lastSeen = lastSeenMap[id] ?? 0;
-      return { id, unread: lastMsgTime > lastSeen };
+      const count = fromOthers.filter(
+        (m) => new Date(m.createdAt).getTime() > lastSeen
+      ).length;
+      return { id, count };
     })
   );
 
-  const unread = new Set<string>();
+  const counts = new Map<string, number>();
   results.forEach((r) => {
-    if (r.status === 'fulfilled' && r.value.unread) unread.add(r.value.id);
+    if (r.status === 'fulfilled') counts.set(r.value.id, r.value.count);
   });
-  return unread;
+  return counts;
 }
 
 export function ChatBadgeProvider({ children }: { children: ReactNode }) {
-  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
-  const [unreadConversationIds, setUnreadConversationIds] = useState<Set<string>>(new Set());
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [unreadConversationCounts, setUnreadConversationCounts] = useState<Record<string, number>>({});
 
-  // Funciona tanto para chats de atividades como para conversas diretas:
-  // a chave no storage é o id do chat em ambos os casos.
   const markRead = useCallback(async (chatId: string) => {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -61,41 +60,52 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
       map[chatId] = Date.now();
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(map));
     } catch {}
-    setUnreadIds((prev) => {
-      const next = new Set(prev);
-      next.delete(chatId);
+    setUnreadCounts((prev) => {
+      const next = { ...prev };
+      delete next[chatId];
       return next;
     });
-    setUnreadConversationIds((prev) => {
-      const next = new Set(prev);
-      next.delete(chatId);
+    setUnreadConversationCounts((prev) => {
+      const next = { ...prev };
+      delete next[chatId];
       return next;
     });
   }, []);
 
   const checkUnread = useCallback(async (activityIds: string[], currentUserId?: string) => {
-    if (activityIds.length === 0) { setUnreadIds(new Set()); return; }
+    if (activityIds.length === 0) { setUnreadCounts({}); return; }
     try {
-      setUnreadIds(await findUnread(activityIds, getMessages, currentUserId));
+      const counts = await findUnreadCounts(activityIds, getMessages, currentUserId);
+      const obj: Record<string, number> = {};
+      counts.forEach((v, k) => { if (v > 0) obj[k] = v; });
+      setUnreadCounts(obj);
     } catch {}
   }, []);
 
   const checkUnreadConversations = useCallback(
     async (conversationIds: string[], currentUserId?: string) => {
-      if (conversationIds.length === 0) { setUnreadConversationIds(new Set()); return; }
+      if (conversationIds.length === 0) { setUnreadConversationCounts({}); return; }
       try {
-        setUnreadConversationIds(await findUnread(conversationIds, getDirectMessages, currentUserId));
+        const counts = await findUnreadCounts(conversationIds, getDirectMessages, currentUserId);
+        const obj: Record<string, number> = {};
+        counts.forEach((v, k) => { if (v > 0) obj[k] = v; });
+        setUnreadConversationCounts(obj);
       } catch {}
     },
     []
   );
 
+  const unreadIds = Object.keys(unreadCounts);
+  const unreadConversationIds = Object.keys(unreadConversationCounts);
+
   return (
     <ChatBadgeContext.Provider
       value={{
-        unreadCount: unreadIds.size + unreadConversationIds.size,
-        unreadIds: [...unreadIds],
-        unreadConversationIds: [...unreadConversationIds],
+        unreadCount: unreadIds.length + unreadConversationIds.length,
+        unreadIds,
+        unreadConversationIds,
+        unreadCounts,
+        unreadConversationCounts,
         markRead,
         checkUnread,
         checkUnreadConversations,

@@ -39,6 +39,10 @@ export type Activity = {
   mvpWinners: string[];             // vencedor(es) — pode haver empate
   votingClosedAt?: string | null;   // null enquanto aberta; definido quando fecha
 
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastMessageSender?: string;
+
   createdAt: string;
   updatedAt: string;
 };

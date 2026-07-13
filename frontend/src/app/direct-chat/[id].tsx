@@ -1,4 +1,4 @@
-﻿import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -22,18 +22,38 @@ import { DirectMessage } from '@/types/message';
 
 const POLL_INTERVAL_MS = 4000;
 
+type ListItem =
+  | { type: 'message'; data: DirectMessage }
+  | { type: 'date'; id: string; label: string };
+
+function dateLabelFor(d: Date): string {
+  const today = new Date();
+  const yest = new Date(Date.now() - 86400000);
+  const key = (x: Date) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  if (key(d) === key(today)) return 'Hoje';
+  if (key(d) === key(yest)) return 'Ontem';
+  return d.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' });
+}
+
 export default function DirectChatScreen() {
-  const { id, name, avatarUrl } = useLocalSearchParams<{ id: string; name?: string; avatarUrl?: string }>();
+  const { id, name, avatarUrl } = useLocalSearchParams<{
+    id: string;
+    name?: string;
+    avatarUrl?: string;
+  }>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const uid = user?.uid;
 
   const { markRead } = useChatBadge();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const listRef = useRef<FlatList<DirectMessage>>(null);
+  const listRef = useRef<FlatList<ListItem>>(null);
   const latestCountRef = useRef(0);
+  const inputRef = useRef<TextInput>(null);
+  const handleSendRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!id) return;
@@ -50,7 +70,6 @@ export default function DirectChatScreen() {
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            // Estamos com o chat aberto, por isso o que chega fica logo visto
             markRead(id!);
           }
         })
@@ -62,10 +81,25 @@ export default function DirectChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
+  handleSendRef.current = handleSend;
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = (inputRef.current as any)?._node as HTMLTextAreaElement | null;
+    if (!node) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendRef.current();
+      }
+    };
+    node.addEventListener('keydown', handler);
+    return () => node.removeEventListener('keydown', handler);
+  }, []);
+
   async function handleSend() {
     const trimmed = text.trim();
     if (!trimmed || sending || !id) return;
-
     setSending(true);
     setError(null);
     try {
@@ -82,164 +116,187 @@ export default function DirectChatScreen() {
     }
   }
 
-  function renderMessage({ item }: { item: DirectMessage }) {
-    const isOwn = item.senderId === user?.uid;
+  // Build list items with date separators injected between days
+  const items: ListItem[] = [];
+  let lastDateKey = '';
+  for (const m of messages) {
+    const d = new Date(m.createdAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (key !== lastDateKey) {
+      items.push({ type: 'date', id: `date-${key}`, label: dateLabelFor(d) });
+      lastDateKey = key;
+    }
+    items.push({ type: 'message', data: m });
+  }
+
+  function renderItem({ item }: { item: ListItem }) {
+    if (item.type === 'date') {
+      return (
+        <View style={styles.dateSep}>
+          <ThemedText style={styles.dateSepText}>{item.label}</ThemedText>
+        </View>
+      );
+    }
+
+    const msg = item.data;
+    const isOwn = msg.senderId === uid;
 
     return (
       <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
-        <View
-          style={[
-            styles.bubbleInner,
-            isOwn ? styles.bubbleOwn : styles.bubbleOther,
-          ]}>
-          <ThemedText style={{ color: isOwn ? '#f4f2ef' : '#f4f2ef', fontSize: 15 }}>
-            {item.text}
-          </ThemedText>
-          <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#8f8b85' }]}>
-            {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-          </ThemedText>
+        <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+          <ThemedText style={styles.bubbleText}>{msg.text}</ThemedText>
+          <View style={styles.bubbleMeta}>
+            <ThemedText
+              style={[
+                styles.bubbleTime,
+                { color: isOwn ? 'rgba(255,255,255,0.6)' : '#8f8b85' },
+              ]}>
+              {new Date(msg.createdAt).toLocaleTimeString('pt-PT', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </ThemedText>
+            {isOwn && (
+              <Ionicons name="checkmark-done-outline" size={14} color="rgba(255,255,255,0.5)" />
+            )}
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      {/* Nome (e foto) do amigo no topo em vez de "Chat" genérico */}
-      {name ? (
-        <Stack.Screen
-          options={{
-            headerTitle: () => (
-              <View style={styles.headerTitle}>
-                <AvatarCircle name={name} avatarUrl={avatarUrl} size={32} />
-                <ThemedText type="smallBold" style={styles.headerTitleText} numberOfLines={1}>
-                  {name}
+    <>
+      <Stack.Screen
+        options={{
+          headerTitle: () => (
+            <View style={styles.headerTitle}>
+              <AvatarCircle name={name ?? '?'} avatarUrl={avatarUrl} size={36} />
+              <View>
+                <ThemedText style={styles.headerName} numberOfLines={1}>
+                  {name ?? 'Chat'}
                 </ThemedText>
+                <View style={styles.onlineRow}>
+                  <View style={styles.onlineDot} />
+                  <ThemedText style={styles.onlineText}>online</ThemedText>
+                </View>
               </View>
-            ),
-          }}
-        />
-      ) : null}
-      <View style={[styles.flex, styles.centered]}>
-        <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
+            </View>
+          ),
+        }}
+      />
 
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            renderItem={renderMessage}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <ThemedText style={styles.empty}>
-                Sem mensagens ainda. Diz olá! 👋
-              </ThemedText>
-            }
-            onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-          />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <View style={[styles.flex, styles.centered]}>
+          <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
 
-          {error && (
-            <ThemedText style={styles.error}>{error}</ThemedText>
-          )}
-
-          <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Escreve uma mensagem..."
-              placeholderTextColor="#8f8b85"
-              value={text}
-              onChangeText={setText}
-              multiline
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
+            <FlatList
+              ref={listRef}
+              data={items}
+              keyExtractor={(item) => (item.type === 'date' ? item.id : item.data.id)}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
+              }
+              onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             />
-            <Pressable
-              style={({ pressed }) => [
-                styles.sendBtn,
-                { opacity: (!text.trim() || sending) ? 0.4 : pressed ? 0.7 : 1 },
-              ]}
-              onPress={handleSend}
-              disabled={!text.trim() || sending}>
-              <Ionicons name="send" size={20} color="#f4f2ef" style={{ marginLeft: 4 }} />
-            </Pressable>
-          </View>
 
+            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+
+            <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
+              <TextInput
+                ref={inputRef}
+                style={styles.input}
+                placeholder="Mensagem..."
+                placeholderTextColor="#8f8b85"
+                value={text}
+                onChangeText={setText}
+                multiline
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+              />
+              <Pressable
+                style={({ pressed }) => [
+                  styles.sendBtn,
+                  { opacity: !text.trim() || sending ? 0.4 : pressed ? 0.75 : 1 },
+                ]}
+                onPress={handleSend}
+                disabled={!text.trim() || sending}>
+                <Ionicons name="send" size={20} color="#f4f2ef" style={{ marginLeft: 4 }} />
+              </Pressable>
+            </View>
+
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: '#0a0a0b',
-  },
-  centered: {
+  flex: { flex: 1, backgroundColor: '#0a0a0b' },
+  centered: { alignItems: 'center' },
+
+  // Header
+  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerName: { fontSize: 15, fontWeight: '600', color: '#f4f2ef' },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ade80' },
+  onlineText: { fontSize: 12, color: '#4ade80' },
+
+  // List
+  listContent: { padding: Spacing.three, gap: 2, flexGrow: 1 },
+  empty: { textAlign: 'center', color: '#8f8b85', marginTop: 40 },
+
+  // Date separator
+  dateSep: {
     alignItems: 'center',
+    paddingVertical: 14,
   },
-  listContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-    flexGrow: 1,
-  },
-  empty: {
-    textAlign: 'center',
+  dateSepText: {
+    fontSize: 12,
     color: '#8f8b85',
-    marginTop: 40,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  headerTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  headerTitleText: {
-    color: '#f4f2ef',
-    maxWidth: 180,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginVertical: 4,
-  },
-  rowOwn: {
-    justifyContent: 'flex-end',
-  },
-  rowOther: {
-    justifyContent: 'flex-start',
-  },
-  bubbleInner: {
+
+  // Message rows
+  row: { flexDirection: 'row', marginVertical: 2 },
+  rowOwn: { justifyContent: 'flex-end' },
+  rowOther: { justifyContent: 'flex-start' },
+  bubble: {
     maxWidth: '75%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 18,
     gap: 4,
   },
-  bubbleOwn: {
-    backgroundColor: '#e8823f', // Laranja do utilizador
-    borderBottomRightRadius: 4, // Cauda do balão à direita
-  },
+  bubbleOwn: { backgroundColor: '#e8823f', borderBottomRightRadius: 4 },
   bubbleOther: {
-    backgroundColor: '#111012', // Cinzento escuro do remetente
+    backgroundColor: '#111012',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
-    borderBottomLeftRadius: 4, // Cauda do balão à esquerda
+    borderBottomLeftRadius: 4,
   },
-  bubbleTime: {
-    fontSize: 11,
-    alignSelf: 'flex-end',
-    marginTop: 2,
-  },
+  bubbleText: { color: '#f4f2ef', fontSize: 15 },
+  bubbleMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  bubbleTime: { fontSize: 11 },
+
+  // Input
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
-    gap: Spacing.two,
-    backgroundColor: '#0a0a0b', // Garante que a zona do input não é transparente
+    paddingHorizontal: Spacing.two,
+    paddingTop: Spacing.two,
+    gap: 6,
+    backgroundColor: '#0a0a0b',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.07)',
   },
@@ -251,8 +308,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 20,
-    paddingTop: 14, // Alinha verticalmente com o botão de enviar
+    paddingHorizontal: 18,
+    paddingTop: 14,
     paddingBottom: 14,
     fontSize: 16,
     color: '#f4f2ef',
@@ -265,10 +322,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: {
-    color: '#eb8f84',
-    textAlign: 'center',
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.one,
-  },
+  error: { color: '#eb8f84', textAlign: 'center', paddingHorizontal: Spacing.three, paddingBottom: 6 },
 });

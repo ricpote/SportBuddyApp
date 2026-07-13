@@ -48,6 +48,10 @@ export type Activity = {
   // para a query do cron (where votingClosedAt == null) o encontrar.
   votingClosedAt?: Date | null;
 
+  lastMessage?: string;
+  lastMessageAt?: Date;
+  lastMessageSender?: string;
+
   createdAt: Date;
   updatedAt: Date;
 };
