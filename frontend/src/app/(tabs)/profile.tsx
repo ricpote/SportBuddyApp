@@ -277,17 +277,17 @@ export default function ProfileScreen() {
 
             <View style={styles.statsList}>
               {[
-                { label: 'Participadas', value: profile?.stats.activitiesJoined ?? 0, accent: false },
-                { label: 'Organizadas',  value: profile?.stats.activitiesCreated ?? 0, accent: false },
-                { label: 'MVP',          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false },
-                { label: 'Amigos',       value: friendCount,                            accent: false },
-              ].map(({ label, value, accent }) => (
-                <View key={label} style={styles.statRow}>
+                { label: 'Participadas', value: profile?.stats.activitiesJoined ?? 0, accent: false, href: null },
+                { label: 'Organizadas',  value: profile?.stats.activitiesCreated ?? 0, accent: false, href: null },
+                { label: 'MVP',          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false, href: null },
+                { label: 'Amigos',       value: friendCount,                            accent: false, href: '/friends' },
+              ].map(({ label, value, accent, href }) => (
+                <Pressable key={label} style={({ pressed }) => [styles.statRow, pressed && href && styles.pressed]} onPress={() => href && router.push(href as any)}>
                   <ThemedText type="small" style={styles.statLabel}>{label}</ThemedText>
                   <ThemedText type="smallBold" style={[styles.statValue, accent && styles.statAccent]}>
                     {value}
                   </ThemedText>
-                </View>
+                </Pressable>
               ))}
             </View>
 

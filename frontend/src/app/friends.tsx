@@ -1,4 +1,4 @@
-﻿import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,6 @@ function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl?: string })
   if (avatarUrl) {
     return <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />;
   }
-
   return (
     <View style={styles.avatar}>
       <ThemedText style={styles.avatarText}>{initials(name)}</ThemedText>
@@ -36,30 +35,24 @@ export default function FriendsScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Pesquisa de perfis por nome
-  const [query, setQuery] = useState('');
+  const [friendFilter, setFriendFilter] = useState('');
+
+  const [addMode, setAddMode] = useState(false);
+  const [addQuery, setAddQuery] = useState('');
   const [results, setResults] = useState<FriendUser[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sentIds, setSentIds] = useState<string[]>([]);
-  const [searchMode, setSearchMode] = useState(false);
-
-  function exitSearch() {
-    setSearchMode(false);
-    setQuery('');
-    setResults(null);
-    setSearchError(null);
-  }
 
   useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    if (!addMode) return;
+    const trimmed = addQuery.trim();
+    if (trimmed.length < 1) {
       setResults(null);
       setSearching(false);
       setSearchError(null);
       return;
     }
-
     setSearching(true);
     const timer = setTimeout(() => {
       searchUsers(trimmed)
@@ -73,9 +66,8 @@ export default function FriendsScreen() {
         })
         .finally(() => setSearching(false));
     }, SEARCH_DEBOUNCE_MS);
-
     return () => clearTimeout(timer);
-  }, [query, me?.uid]);
+  }, [addQuery, addMode, me?.uid]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +85,13 @@ export default function FriendsScreen() {
     }, [])
   );
 
+  function exitAddMode() {
+    setAddMode(false);
+    setAddQuery('');
+    setResults(null);
+    setSearchError(null);
+  }
+
   async function handleAccept(req: FriendRequest) {
     await acceptFriendRequest(req.requestId);
     setRequests((prev) => prev.filter((r) => r.requestId !== req.requestId));
@@ -109,7 +108,6 @@ export default function FriendsScreen() {
     setFriends((prev) => prev.filter((f) => f.userId !== friendId));
   }
 
-  // Abre (ou cria) a conversa direta com este amigo e vai para o chat
   async function handleOpenChat(friend: Friend) {
     try {
       const { conversationId } = await openConversation(friend.userId);
@@ -135,6 +133,9 @@ export default function FriendsScreen() {
   }
 
   const friendIds = friends.map((f) => f.userId);
+  const filteredFriends = friendFilter.trim()
+    ? friends.filter((f) => f.user.name.toLowerCase().includes(friendFilter.trim().toLowerCase()))
+    : friends;
 
   if (loading) {
     return (
@@ -144,100 +145,90 @@ export default function FriendsScreen() {
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.container}>
-        {searchMode ? (
-          <>
-            <View style={styles.searchHeader}>
-              <Pressable onPress={exitSearch} hitSlop={8}>
-                <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
+  if (addMode) {
+    return (
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.container}>
+          <View style={styles.addHeader}>
+            <Pressable onPress={exitAddMode} hitSlop={8}>
+              <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
+            </Pressable>
+            <ThemedText style={styles.addHeaderTitle}>Adicionar amigo</ThemedText>
+          </View>
+
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={18} color="#8f8b85" />
+            <TextInput
+              style={[styles.searchInput, { outline: 'none' } as any]}
+              placeholder="Procurar pelo nome..."
+              placeholderTextColor="#8f8b85"
+              value={addQuery}
+              onChangeText={setAddQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+            />
+            {addQuery.length > 0 && (
+              <Pressable onPress={() => setAddQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#8f8b85" />
               </Pressable>
-              <ThemedText style={styles.searchHeaderTitle}>Adicionar amigo</ThemedText>
-            </View>
-
-            <View style={styles.searchBox}>
-              <Ionicons name="search-outline" size={18} color="#8f8b85" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Procurar pessoas pelo nome..."
-                placeholderTextColor="#8f8b85"
-                value={query}
-                onChangeText={setQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-              />
-              {query.length > 0 && (
-                <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#8f8b85" />
-                </Pressable>
-              )}
-            </View>
-
-            {searchError && <ThemedText style={styles.searchError}>{searchError}</ThemedText>}
-
-            {results === null ? (
-              <View style={styles.empty}>
-                <Ionicons name="search-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
-                <ThemedText style={styles.emptyText}>Escreve pelo menos 2 letras para procurar.</ThemedText>
-              </View>
-            ) : (
-              <>
-                <ThemedText style={styles.sectionTitle}>
-                  Resultados{searching ? '...' : ` (${results.length})`}
-                </ThemedText>
-                {results.length === 0 && !searching ? (
-                  <View style={styles.empty}>
-                    <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
-                  </View>
-                ) : (
-                  results.map((u) => {
-                    const isFriend = friendIds.includes(u.id);
-                    const isSent = sentIds.includes(u.id);
-                    return (
-                      <Pressable
-                        key={u.id}
-                        style={styles.row}
-                        onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
-                      >
-                        <AvatarCircle name={u.name} avatarUrl={u.avatarUrl} />
-                        <ThemedText style={styles.name}>{u.name}</ThemedText>
-                        <View style={styles.actions}>
-                          {isFriend ? (
-                            <View style={styles.acceptBtn}>
-                              <Ionicons name="checkmark-circle-outline" size={18} color="#9ccd6b" />
-                            </View>
-                          ) : isSent ? (
-                            <View style={styles.chatBtn}>
-                              <Ionicons name="hourglass-outline" size={18} color="#475569" />
-                            </View>
-                          ) : (
-                            <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
-                              <Ionicons name="person-add-outline" size={18} color="#e8823f" />
-                            </Pressable>
-                          )}
-                        </View>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </>
             )}
-          </>
-        ) : (
-          <>
-        <Pressable
-          style={({ pressed }) => [styles.addFriendBtn, pressed && styles.addFriendBtnPressed]}
-          onPress={() => setSearchMode(true)}
-        >
-          <Ionicons name="person-add" size={18} color="#0a0a0b" />
-          <ThemedText style={styles.addFriendBtnText}>Adicionar amigo</ThemedText>
-        </Pressable>
+          </View>
+
+          {searchError && <ThemedText style={styles.searchError}>{searchError}</ThemedText>}
+
+          {results === null ? (
+            <View style={styles.empty}>
+              <ThemedText style={styles.emptyText}>Escreve um nome para procurar.</ThemedText>
+            </View>
+          ) : results.length === 0 && !searching ? (
+            <View style={styles.empty}>
+              <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+            </View>
+          ) : (
+            <>
+              <ThemedText style={styles.sectionTitle}>
+                Resultados{searching ? '...' : ` (${results.length})`}
+              </ThemedText>
+              {results.map((u) => {
+                const isFriend = friendIds.includes(u.id);
+                const isSent = sentIds.includes(u.id);
+                return (
+                  <Pressable
+                    key={u.id}
+                    style={styles.row}
+                    onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
+                  >
+                    <AvatarCircle name={u.name} avatarUrl={u.avatarUrl} />
+                    <ThemedText style={styles.name}>{u.name}</ThemedText>
+                    <View style={styles.actions}>
+                      {isFriend ? (
+                        <View style={styles.acceptBtn}>
+                          <Ionicons name="checkmark-circle-outline" size={18} color="#9ccd6b" />
+                        </View>
+                      ) : isSent ? (
+                        <View style={styles.chatBtn}>
+                          <Ionicons name="hourglass-outline" size={18} color="#475569" />
+                        </View>
+                      ) : (
+                        <Pressable style={styles.addBtn} onPress={() => handleSendRequest(u)} hitSlop={4}>
+                          <Ionicons name="person-add-outline" size={18} color="#e8823f" />
+                        </Pressable>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </>
+          )}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
 
         {requests.length > 0 && (
           <>
@@ -259,14 +250,44 @@ export default function FriendsScreen() {
           </>
         )}
 
-        <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
-        {friends.length === 0 ? (
+        <View style={styles.friendsHeader}>
+          <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
+          <Pressable style={styles.addFriendBtn} onPress={() => setAddMode(true)} hitSlop={8}>
+            <Ionicons name="person-add-outline" size={18} color="#e8823f" />
+          </Pressable>
+        </View>
+
+        {friends.length > 0 && (
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={18} color="#8f8b85" />
+            <TextInput
+              style={[styles.searchInput, { outline: 'none' } as any]}
+              placeholder="Filtrar amigos..."
+              placeholderTextColor="#8f8b85"
+              value={friendFilter}
+              onChangeText={setFriendFilter}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {friendFilter.length > 0 && (
+              <Pressable onPress={() => setFriendFilter('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#8f8b85" />
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {filteredFriends.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
-            <ThemedText style={styles.emptyText}>Ainda não tens amigos. Adiciona a partir do perfil de alguém.</ThemedText>
+            <ThemedText style={styles.emptyText}>
+              {friends.length === 0
+                ? 'Ainda não tens amigos. Usa o + para adicionar.'
+                : 'Nenhum amigo encontrado.'}
+            </ThemedText>
           </View>
         ) : (
-          friends.map((f) => (
+          filteredFriends.map((f) => (
             <View key={f.userId} style={styles.row}>
               <Pressable
                 style={({ pressed }) => [styles.friendInfo, pressed && styles.pressed]}
@@ -284,8 +305,6 @@ export default function FriendsScreen() {
               </View>
             </View>
           ))
-        )}
-          </>
         )}
       </View>
     </ScrollView>
@@ -309,29 +328,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: Spacing.two,
   },
-  addFriendBtn: {
+  friendsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#e8823f',
-    borderRadius: 12,
-    height: 48,
+    justifyContent: 'space-between',
   },
-  addFriendBtnPressed: {
-    opacity: 0.8,
+  addFriendBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(232,130,63,0.12)',
   },
-  addFriendBtnText: {
-    color: '#1a1005',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  searchHeader: {
+  addHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  searchHeaderTitle: {
+  addHeaderTitle: {
     color: '#f4f2ef',
     fontSize: 18,
     fontWeight: 'bold',
@@ -406,9 +418,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  pressed: { opacity: 0.7 },
   acceptBtn: {
     padding: 8,
     borderRadius: 8,
