@@ -29,6 +29,11 @@ export function rejectFriendRequest(requestId: string): Promise<{ message: strin
   return api.patch<{ message: string }>(`/api/friends/${requestId}/reject`);
 }
 
+// Cancelar um pedido de amizade que eu enviei.
+export function cancelFriendRequest(addresseeId: string): Promise<{ message: string }> {
+  return api.delete<{ message: string }>(`/api/friends/request/${addresseeId}`);
+}
+
 // Remover uma amizade existente.
 export function removeFriend(friendId: string): Promise<{ message: string }> {
   return api.delete<{ message: string }>(`/api/friends/${friendId}`);

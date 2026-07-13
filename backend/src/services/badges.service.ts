@@ -40,7 +40,7 @@ export class BadgesService {
     const catalog = await badgesCatalogService.listBadges();
     const catalogById = new Map(catalog.map((badge) => [badge.id, badge]));
 
-    return user.stats.badges
+    return (user.stats.badges ?? [])
       .map((badgeId) => {
         const badge = catalogById.get(badgeId);
         if (!badge) return null;

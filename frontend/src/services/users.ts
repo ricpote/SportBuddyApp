@@ -18,6 +18,10 @@ export function getUserProfile(userId: string): Promise<PublicUser> {
   return api.get<PublicUser>(`/api/users/${userId}`);
 }
 
+export function getMutualFriends(userId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+  return api.get(`/api/users/${userId}/mutual-friends`);
+}
+
 export function updateMyProfile(data: { name?: string; bio?: string }): Promise<UserProfile> {
   return api.patch<UserProfile>('/api/users/me', data);
 }

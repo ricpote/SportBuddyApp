@@ -235,8 +235,12 @@ export default function FriendsScreen() {
             <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
             {requests.map((req) => (
               <View key={req.requestId} style={styles.row}>
-                <AvatarCircle name={req.from.name} avatarUrl={req.from.avatarUrl} />
-                <ThemedText style={styles.name}>{req.from.name}</ThemedText>
+                <Pressable
+                  style={({ pressed }) => [styles.friendInfo, pressed && styles.pressed]}
+                  onPress={() => router.push({ pathname: '/user/[id]', params: { id: req.from.id } })}>
+                  <AvatarCircle name={req.from.name} avatarUrl={req.from.avatarUrl} />
+                  <ThemedText style={styles.name}>{req.from.name}</ThemedText>
+                </Pressable>
                 <View style={styles.actions}>
                   <Pressable style={styles.acceptBtn} onPress={() => handleAccept(req)}>
                     <Ionicons name="checkmark" size={18} color="#9ccd6b" />

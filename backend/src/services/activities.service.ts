@@ -253,6 +253,18 @@ export class ActivitiesService {
     return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
+  async getUserActivities(userId: string, limit = 5): Promise<Activity[]> {
+    const snap = await this.activitiesRef
+      .where("participantsList", "array-contains", userId)
+      .orderBy("date", "asc")
+      .get();
+    return snap.docs
+      .map(doc => normalizeActivity({ id: doc.id, ...doc.data() }))
+      .filter(a => a.status === "completed")
+      .reverse()
+      .slice(0, limit);
+  }
+
   async updateActivity(
     activityId: string,
     requesterId: string,

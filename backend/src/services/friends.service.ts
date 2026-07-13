@@ -60,6 +60,15 @@ export class FriendsService {
     );
   }
 
+  async cancelRequest(requesterId: string, addresseeId: string): Promise<void> {
+    const snap = await this.requestsRef
+      .where("requesterId", "==", requesterId)
+      .where("addresseeId", "==", addresseeId)
+      .get();
+    if (snap.empty) throw new Error("Pedido não encontrado");
+    await snap.docs[0].ref.delete();
+  }
+
   async getPendingRequests(userId: string): Promise<FriendRequestDto[]> {
     const snapshot = await this.requestsRef
       .where("addresseeId", "==", userId)

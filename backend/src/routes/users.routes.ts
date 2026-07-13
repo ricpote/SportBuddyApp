@@ -15,6 +15,7 @@ import {
   setDisplayedBadge,
   getMyBadges,
   getUserBadges,
+  getMutualFriends,
 } from "../controllers/users.controller";
 
 const router = Router();
@@ -33,6 +34,7 @@ router.get("/search", authMiddleware, searchUsers);
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);
 router.get("/:userId/badges", authMiddleware, getUserBadges);
+router.get("/:userId/mutual-friends", authMiddleware, getMutualFriends);
 
 // Admin — user management
 router.get("/", authMiddleware, listUsers);

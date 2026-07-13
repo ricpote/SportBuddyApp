@@ -18,6 +18,10 @@ export function getMyActivities(): Promise<Activity[]> {
   return api.get<Activity[]>('/api/activities/me');
 }
 
+export function getUserActivities(userId: string): Promise<Activity[]> {
+  return api.get<Activity[]>(`/api/activities/user/${userId}`);
+}
+
 export function getFriendsActivities(): Promise<Activity[]> {
   return api.get<Activity[]>('/api/activities/friends');
 }

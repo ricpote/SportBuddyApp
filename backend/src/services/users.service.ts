@@ -108,6 +108,29 @@ export class UsersService {
     return userDoc.data() as User;
   }
 
+  async getMutualFriends(
+    requesterId: string,
+    targetId: string,
+    limit = 5
+  ): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+    const [requesterDoc, targetDoc] = await Promise.all([
+      this.usersRef.doc(requesterId).get(),
+      this.usersRef.doc(targetId).get(),
+    ]);
+    const requesterFriends: string[] = requesterDoc.data()?.friends ?? [];
+    const targetFriends: string[] = targetDoc.data()?.friends ?? [];
+    const targetSet = new Set(targetFriends);
+    const mutualIds = requesterFriends.filter(id => targetSet.has(id)).slice(0, limit);
+    const profiles = await Promise.all(
+      mutualIds.map(async id => {
+        const doc = await this.usersRef.doc(id).get();
+        const data = doc.data();
+        return { id, name: data?.name ?? '', avatarUrl: data?.avatarUrl };
+      })
+    );
+    return profiles;
+  }
+
   async getCurrentUser(firebaseUid: string): Promise<User> {
     const user = await this.getUserByFirebaseUid(firebaseUid);
 

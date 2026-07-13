@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { db } from "../config/firebase";
 import { usersService } from "../services/users.service";
 import { badgesService } from "../services/badges.service";
 import { PublicUser, UpdateUserDto, User, UserRole } from "../models/user.model";
@@ -190,16 +191,44 @@ export async function getUserProfile(
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Não expor dados privados (localização e lista de amigos) de outros
-    // utilizadores; devolver apenas se o requester é amigo deste perfil.
     const { location: _location, friends, ...publicFields } = toPublicProfile(user);
-    const isFriend = req.user
-      ? (friends ?? []).includes(req.user.uid)
-      : false;
+    const isFriend = req.user ? (friends ?? []).includes(req.user.uid) : false;
+    const friendCount = (friends ?? []).length;
 
-    return res.json({ ...publicFields, isFriend });
+    let hasSentRequest = false;
+    let incomingRequestId: string | null = null;
+    if (req.user && !isFriend) {
+      const [sentSnap, receivedSnap] = await Promise.all([
+        db.collection("friendRequests")
+          .where("requesterId", "==", req.user.uid)
+          .where("addresseeId", "==", userId)
+          .get(),
+        db.collection("friendRequests")
+          .where("requesterId", "==", userId)
+          .where("addresseeId", "==", req.user.uid)
+          .get(),
+      ]);
+      hasSentRequest = !sentSnap.empty;
+      if (!receivedSnap.empty) incomingRequestId = receivedSnap.docs[0].id;
+    }
+
+    return res.json({ ...publicFields, isFriend, friendCount, hasSentRequest, incomingRequestId });
   } catch {
     return res.status(500).json({ message: "Error getting user profile" });
+  }
+}
+
+export async function getMutualFriends(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const { userId } = req.params;
+    const mutual = await usersService.getMutualFriends(req.user.uid, userId);
+    return res.json(mutual);
+  } catch {
+    return res.status(500).json({ message: "Error getting mutual friends" });
   }
 }
 

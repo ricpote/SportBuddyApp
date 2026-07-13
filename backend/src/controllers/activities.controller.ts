@@ -37,6 +37,21 @@ export async function getMyActivities(
   }
 }
 
+export async function getUserActivities(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const { userId } = req.params as { userId: string };
+    const activities = await activitiesService.getUserActivities(userId, 5);
+    res.status(200).json(activities);
+  } catch (error) {
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Error getting user activities",
+    });
+  }
+}
+
 export async function getFriendsActivities(
   req: AuthenticatedRequest,
   res: Response
