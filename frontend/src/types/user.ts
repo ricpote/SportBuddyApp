@@ -5,7 +5,6 @@ export type UserStats = {
   activitiesJoined: number;
   activitiesCreated: number;
   mvpVotesReceived: number;
-  fairPlayVotesReceived: number;
   badges: string[];
 };
 

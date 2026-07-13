@@ -250,7 +250,6 @@ export class UsersService {
       | "activitiesJoined"
       | "activitiesCreated"
       | "mvpVotesReceived"
-      | "fairPlayVotesReceived"
     >,
     delta: 1 | -1
   ): Promise<void> {
