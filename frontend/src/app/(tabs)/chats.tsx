@@ -91,7 +91,7 @@ export default function ChatsScreen() {
 
     getConversations().then((data) => {
       setConversations(data);
-      checkUnreadConversations(data.map((c) => c.id), user?.uid);
+      checkUnreadConversations(data, user?.uid);
     }).catch(() => setConversations([]));
   }, [checkUnread, checkUnreadConversations, user?.uid]);
 
@@ -117,7 +117,7 @@ export default function ChatsScreen() {
     try {
       const { conversationId } = await openConversation(friendId);
       setNewChatMode(false);
-      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl } });
+      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl, userId: friendId } });
     } catch (e) {
       setNewChatError(e instanceof Error ? e.message : 'Erro ao abrir conversa');
     } finally {
@@ -170,7 +170,7 @@ export default function ChatsScreen() {
                     </View>
                   )}
                 </View>
-                <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>
+                {!!timeStr && <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>}
               </View>
               <View style={styles.rowBottom}>
                 <ThemedText style={styles.rowSub} numberOfLines={1}>{subtitle}</ThemedText>
@@ -192,7 +192,7 @@ export default function ChatsScreen() {
         key={conversation.id}
         href={{
           pathname: '/direct-chat/[id]',
-          params: { id: conversation.id, name: conversation.otherUser.name, avatarUrl: conversation.otherUser.avatarUrl },
+          params: { id: conversation.id, name: conversation.otherUser.name, avatarUrl: conversation.otherUser.avatarUrl, userId: conversation.otherUser.id },
         }}
         asChild>
         <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
@@ -206,7 +206,7 @@ export default function ChatsScreen() {
             <View style={styles.rowBody}>
               <View style={styles.rowTop}>
                 <ThemedText style={styles.rowTitle} numberOfLines={1}>{conversation.otherUser.name}</ThemedText>
-                <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>
+                {!!timeStr && <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>}
               </View>
               <View style={styles.rowBottom}>
                 {conversation.lastMessage ? (
@@ -538,6 +538,18 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  rowTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  rowTimeDot: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
   },
   rowTime: {
     color: '#8f8b85',

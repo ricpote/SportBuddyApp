@@ -1,10 +1,10 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -36,10 +36,11 @@ function dateLabelFor(d: Date): string {
 }
 
 export default function DirectChatScreen() {
-  const { id, name, avatarUrl } = useLocalSearchParams<{
+  const { id, name, avatarUrl, userId } = useLocalSearchParams<{
     id: string;
     name?: string;
     avatarUrl?: string;
+    userId?: string;
   }>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
@@ -50,7 +51,7 @@ export default function DirectChatScreen() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const listRef = useRef<FlatList<ListItem>>(null);
+  const listRef = useRef<ScrollView>(null);
   const latestCountRef = useRef(0);
   const inputRef = useRef<TextInput>(null);
   const handleSendRef = useRef<() => void>(() => {});
@@ -66,14 +67,20 @@ export default function DirectChatScreen() {
     function fetchMessages() {
       getDirectMessages(id!)
         .then((data) => {
-          setMessages(data);
+          setMessages((prev) => {
+            const temps = prev.filter((m) => m.id.startsWith('temp-'));
+            return [...data, ...temps];
+          });
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            markRead(id!);
+            const lastMsg = data[data.length - 1];
+            markRead(id!, lastMsg ? new Date(lastMsg.createdAt).getTime() : undefined);
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');
+        });
     }
 
     fetchMessages();
@@ -85,8 +92,9 @@ export default function DirectChatScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const node = (inputRef.current as any)?._node as HTMLTextAreaElement | null;
-    if (!node) return;
+    const ref = inputRef.current as any;
+    const node: HTMLTextAreaElement | null = ref?._node ?? ref?._inputRef?.current ?? ref;
+    if (!node?.addEventListener) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -99,17 +107,30 @@ export default function DirectChatScreen() {
 
   async function handleSend() {
     const trimmed = text.trim();
-    if (!trimmed || sending || !id) return;
+    if (!trimmed || sending || !id || !uid) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: DirectMessage = {
+      id: tempId,
+      conversationId: id,
+      senderId: uid,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+    setText('');
+    latestCountRef.current += 1;
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+
     setSending(true);
     setError(null);
     try {
       const msg = await sendDirectMessage(id, trimmed);
-      setMessages((prev) => [...prev, msg]);
-      setText('');
-      latestCountRef.current += 1;
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id).map((m) => m.id === tempId ? msg : m));
       markRead(id);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      latestCountRef.current -= 1;
       setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
     } finally {
       setSending(false);
@@ -170,7 +191,9 @@ export default function DirectChatScreen() {
       <Stack.Screen
         options={{
           headerTitle: () => (
-            <View style={styles.headerTitle}>
+            <Pressable
+              onPress={() => userId && router.push({ pathname: '/user/[id]', params: { id: userId } })}
+              style={({ pressed }) => [styles.headerTitle, userId && pressed && { opacity: 0.7 }]}>
               <AvatarCircle name={name ?? '?'} avatarUrl={avatarUrl} size={36} />
               <View>
                 <ThemedText style={styles.headerName} numberOfLines={1}>
@@ -181,7 +204,7 @@ export default function DirectChatScreen() {
                   <ThemedText style={styles.onlineText}>online</ThemedText>
                 </View>
               </View>
-            </View>
+            </Pressable>
           ),
         }}
       />
@@ -193,17 +216,21 @@ export default function DirectChatScreen() {
         <View style={[styles.flex, styles.centered]}>
           <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
 
-            <FlatList
+            <ScrollView
               ref={listRef}
-              data={items}
-              keyExtractor={(item) => (item.type === 'date' ? item.id : item.data.id)}
-              renderItem={renderItem}
               contentContainerStyle={styles.listContent}
-              ListEmptyComponent={
-                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
-              }
               onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-            />
+            >
+              {items.length === 0 ? (
+                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
+              ) : (
+                items.map((item) => (
+                  <View key={item.type === 'date' ? item.id : item.data.id}>
+                    {renderItem({ item })}
+                  </View>
+                ))
+              )}
+            </ScrollView>
 
             {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 

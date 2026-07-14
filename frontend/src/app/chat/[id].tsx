@@ -76,6 +76,8 @@ export default function ChatScreen() {
   const isCompleted = activity?.status === 'completed';
   const hasVoted = !!(uid && activity?.mvpVotes && uid in activity.mvpVotes);
   const votedForId = uid && activity?.mvpVotes ? activity.mvpVotes[uid] : null;
+  const votingClosed = !!activity?.votingClosedAt ||
+    (isCompleted && !!activity?.updatedAt && Date.now() - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
 
   useEffect(() => {
     if (!id) return;
@@ -109,11 +111,15 @@ export default function ChatScreen() {
     function fetchMessages() {
       getMessages(id!)
         .then((data) => {
-          setMessages(data);
+          setMessages((prev) => {
+            const temps = prev.filter((m) => m.id.startsWith('temp-'));
+            return [...data, ...temps];
+          });
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            markRead(id!);
+            const lastMsg = data[data.length - 1];
+            markRead(id!, lastMsg ? new Date(lastMsg.createdAt).getTime() : undefined);
           }
         })
         .catch(() => {});
@@ -128,8 +134,9 @@ export default function ChatScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const node = (inputRef.current as any)?._node as HTMLTextAreaElement | null;
-    if (!node) return;
+    const ref = inputRef.current as any;
+    const node: HTMLTextAreaElement | null = ref?._node ?? ref?._inputRef?.current ?? ref;
+    if (!node?.addEventListener) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -142,17 +149,30 @@ export default function ChatScreen() {
 
   async function handleSend() {
     const trimmed = text.trim();
-    if (!trimmed || sending || !id) return;
+    if (!trimmed || sending || !id || !uid) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: Message = {
+      id: tempId,
+      activityId: id,
+      senderId: uid,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+    setText('');
+    latestCountRef.current += 1;
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+
     setSending(true);
     setError(null);
     try {
       const msg = await sendMessage(id, trimmed);
-      setMessages((prev) => [...prev, msg]);
-      setText('');
-      latestCountRef.current += 1;
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id).map((m) => m.id === tempId ? msg : m));
       markRead(id);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      latestCountRef.current -= 1;
       setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
     } finally {
       setSending(false);
@@ -269,7 +289,9 @@ export default function ChatScreen() {
         options={{
           headerTitle: () =>
             activity ? (
-              <View style={styles.headerTitle}>
+              <Pressable
+                onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
+                style={({ pressed }) => [styles.headerTitle, pressed && { opacity: 0.7 }]}>
                 <View style={styles.headerIconWrap}>
                   <Ionicons name={iconName as any} size={20} color="#e8823f" />
                 </View>
@@ -281,7 +303,7 @@ export default function ChatScreen() {
                     {count} participante{count !== 1 ? 's' : ''} · {activity.location.name}
                   </ThemedText>
                 </View>
-              </View>
+              </Pressable>
             ) : null,
         }}
       />
@@ -311,20 +333,39 @@ export default function ChatScreen() {
               <View style={[styles.votingSection, { paddingBottom: insets.bottom + 12 }]}>
                 <View style={styles.votingHeader}>
                   <View style={styles.trophyWrap}>
-                    <Ionicons name="trophy-outline" size={20} color="#e8823f" />
+                    <Ionicons
+                      name="trophy-outline"
+                      size={20}
+                      color={hasVoted || votingClosed ? '#8f8b85' : '#e8823f'}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.votingTitle}>
-                      {hasVoted ? 'Voto registado!' : 'Vota no MVP desta atividade'}
+                      {hasVoted
+                        ? 'Voto registado!'
+                        : votingClosed
+                          ? 'Votação encerrada'
+                          : 'Vota no MVP desta atividade'}
                     </ThemedText>
                     <ThemedText style={styles.votingSubtitle}>
                       {hasVoted
                         ? `Votaste em ${profiles.get(votedForId!)?.name ?? 'alguém'}`
-                        : 'A votação está aberta'}
+                        : votingClosed
+                          ? 'O período de votação expirou'
+                          : 'A votação está aberta'}
                     </ThemedText>
                   </View>
                 </View>
-                {!hasVoted && (
+                {hasVoted ? (
+                  <View style={styles.voteBtnDone}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#8f8b85" style={{ marginRight: 6 }} />
+                    <ThemedText style={styles.voteBtnDoneText}>Já votaste</ThemedText>
+                  </View>
+                ) : votingClosed ? (
+                  <View style={styles.voteBtnDone}>
+                    <ThemedText style={styles.voteBtnDoneText}>Voto indisponível</ThemedText>
+                  </View>
+                ) : (
                   <Pressable
                     style={({ pressed }) => [styles.voteBtn, pressed && { opacity: 0.85 }]}
                     onPress={() => setVoteModalVisible(true)}>
@@ -528,6 +569,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   voteBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  voteBtnDone: {
+    backgroundColor: '#1e1e20',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  voteBtnDoneText: { color: '#8f8b85', fontSize: 16, fontWeight: '700' },
   readOnlyRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'center', paddingBottom: 4 },
   readOnlyText: { fontSize: 12, color: '#8f8b85' },
 
