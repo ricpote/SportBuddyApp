@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, usePathname } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
+import { AvatarCircle } from './avatar-circle';
 import { ThemedText } from './themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -13,12 +14,11 @@ const NAV_ITEMS = [
   { href: '/create-activity',  icon: 'add-outline',         label: 'Create'   },
   { href: '/chats',            icon: 'chatbubbles-outline', label: 'Chats'    },
   { href: '/map',              icon: 'map-outline',         label: 'Map'      },
-  { href: '/profile',          icon: 'person-outline',      label: 'Profile'  },
 ] as const;
 
 export function WebSidebar() {
   const pathname = usePathname();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { unreadCount } = useChatBadge();
 
   return (
@@ -89,6 +89,29 @@ export function WebSidebar() {
           </Link>
         )}
       </View>
+
+      {/* Perfil no rodapé: clicar vai para o perfil, o ícone à direita faz logout */}
+      <View style={styles.footer}>
+        <Link href="/profile" asChild>
+          <Pressable style={({ pressed }) => [{ flex: 1 }, pressed && styles.pressed]}>
+            <View style={[styles.footerProfile, pathname.startsWith('/profile') && styles.itemActive]}>
+              <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
+              <View style={styles.footerText}>
+                <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
+                  {profile?.name ?? ''}
+                </ThemedText>
+                <ThemedText style={styles.footerHint}>Ver perfil</ThemedText>
+              </View>
+            </View>
+          </Pressable>
+        </Link>
+        <Pressable
+          onPress={signOut}
+          style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
+          hitSlop={4}>
+          <Ionicons name="log-out-outline" size={20} color="#8f8b85" />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -112,7 +135,7 @@ const styles = StyleSheet.create({
   brandName: { color: '#f4f2ef', fontSize: 18 },
   brandSlogan: { color: '#e8823f', fontSize: 12 },
 
-  nav: { gap: Spacing.two },
+  nav: { gap: Spacing.two, flex: 1 },
   item: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, paddingHorizontal: 16,
@@ -137,4 +160,34 @@ const styles = StyleSheet.create({
     marginLeft: 'auto' as any,
   },
   pressed: { opacity: 0.7 },
+
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: Spacing.three,
+    marginTop: Spacing.three,
+  },
+  footerProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 8,
+    borderRadius: 12,
+  },
+  footerText: { flex: 1, minWidth: 0 },
+  footerName: { color: '#f4f2ef', fontSize: 14 },
+  footerHint: { color: '#8f8b85', fontSize: 12 },
+  logoutBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#141315',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
 });
