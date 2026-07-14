@@ -17,7 +17,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.pedro.p0.frontend",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBS6XgLRfFqP9goYdEHCzBagjeYzhTksWA"
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -40,6 +46,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "525c06be-cb8c-44a3-8727-92437ec80269"
+      }
     }
   }
 }
