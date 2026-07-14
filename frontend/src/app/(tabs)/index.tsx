@@ -575,7 +575,11 @@ const styles = StyleSheet.create({
   },
   // Véu escuro por cima da foto para os chips continuarem legíveis
   cardImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(10,10,11,0.35)',
   },
   sportBadge: {

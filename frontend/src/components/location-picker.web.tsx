@@ -31,9 +31,14 @@ const DEFAULT_CENTER = {
 // O primeiro address_component do Google é normalmente o número da porta
 // (ex: "64"), que não serve de nome. Escolhemos algo com significado:
 // nome do sítio > rua + número > freguesia > cidade.
-function pickLocationName(result?: google.maps.GeocoderResult): string | undefined {
+type GeocoderAddressComponent = { long_name: string; types: string[] };
+
+function pickLocationName(result?: {
+  address_components?: GeocoderAddressComponent[];
+}): string | undefined {
   const comps = result?.address_components ?? [];
-  const byType = (type: string) => comps.find((c) => c.types.includes(type))?.long_name;
+  const byType = (type: string) =>
+    comps.find((c: GeocoderAddressComponent) => c.types.includes(type))?.long_name;
 
   const route = byType('route');
   const number = byType('street_number');
