@@ -100,7 +100,7 @@ export function WebSidebar() {
                 <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
                   {profile?.name ?? ''}
                 </ThemedText>
-                <ThemedText style={styles.footerHint}>Ver perfil</ThemedText>
+                <ThemedText style={styles.footerHint}>View profile</ThemedText>
               </View>
             </View>
           </Pressable>

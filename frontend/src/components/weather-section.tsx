@@ -25,9 +25,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const DEFAULT_COORDS = { latitude: 38.7223, longitude: -9.1393 };
 
 function formatDayLabel(dateStr: string, index: number) {
-  if (index === 0) return 'Hoje';
+  if (index === 0) return 'Today';
 
-  const label = new Date(dateStr).toLocaleDateString('pt-PT', { weekday: 'short' });
+  const label = new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short' });
   return label.charAt(0).toUpperCase() + label.slice(1).replace('.', '');
 }
 
@@ -86,7 +86,7 @@ export function WeatherSection() {
   return (
     <View style={styles.container}>
       <ThemedText type="subtitle" style={styles.title}>
-        Meteorologia{locationName ? ` · ${locationName}` : ''}
+        Weather{locationName ? ` · ${locationName}` : ''}
       </ThemedText>
 
       <View style={styles.row}>
@@ -98,7 +98,7 @@ export function WeatherSection() {
           const isSelected = selectedDate === day.date;
           const isOpen = isSelected || hoveredDate === day.date;
           const windLabel = getWindDirectionLabel(day.windDirection);
-          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? 'Desconhecido';
+          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? 'Unknown';
 
           return (
             <Pressable
@@ -156,7 +156,7 @@ export function WeatherSection() {
                     <ThemedText style={styles.detailText}>
                       {day.uvIndex !== null
                         ? `UV ${Math.round(day.uvIndex)} · ${getUvLabel(day.uvIndex)}`
-                        : 'UV indisponível'}
+                        : 'UV unavailable'}
                     </ThemedText>
                   </View>
 

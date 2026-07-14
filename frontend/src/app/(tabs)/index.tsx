@@ -21,13 +21,13 @@ import { Friend } from '@/types/friend';
 import { SportIcon } from '@/utils/sport-icon';
 
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
-  beginner: 'Iniciante',
-  intermediate: 'Intermédio',
-  advanced: 'Avançado',
-  competitive: 'Competitivo',
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+  competitive: 'Competitive',
 };
 
-const ALL_FILTER = 'Todos';
+const ALL_FILTER = 'All';
 
 function isUpcoming(activity: Activity) {
   return (
@@ -37,11 +37,11 @@ function isUpcoming(activity: Activity) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function HomeScreen() {
@@ -93,9 +93,9 @@ export default function HomeScreen() {
       .filter((name): name is string => !!name);
 
     if (names.length === 0) return '';
-    if (names.length === 1) return `${names[0]} vai participar`;
-    if (names.length === 2) return `${names[0]} e ${names[1]} vão participar`;
-    return `${names[0]} e mais ${names.length - 1} amigos vão participar`;
+    if (names.length === 1) return `${names[0]} is joining`;
+    if (names.length === 2) return `${names[0]} and ${names[1]} are joining`;
+    return `${names[0]} and ${names.length - 1} more friends are joining`;
   }
 
   // Chips de filtro: "Todos" + as modalidades que existem
@@ -127,10 +127,10 @@ export default function HomeScreen() {
             {/* Nome e Mensagem */}
             <View>
               <ThemedText type="subtitle" style={styles.profileName}>
-                {user?.displayName ?? firstName ?? 'Sem Nome'}
+                {user?.displayName ?? firstName ?? 'No Name'}
               </ThemedText>
               <ThemedText style={styles.greetingText}>
-                Pronto para a tua próxima atividade?
+                Ready for your next activity?
               </ThemedText>
             </View>
           </View>
@@ -221,7 +221,7 @@ export default function HomeScreen() {
             <View style={styles.recommendedSection}>
               <View style={styles.activitiesHeader}>
                 <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
-                  Recomendado para ti
+                  Recommended for you
                 </ThemedText>
               </View>
 
@@ -271,13 +271,13 @@ export default function HomeScreen() {
           {/* SECÇÃO DE ATIVIDADES */}
           <View style={styles.activitiesHeader}>
             <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
-              Atividades Próximas
+              Upcoming Activities
             </ThemedText>
 
             <Link href="/explore" asChild>
               <Pressable style={({ pressed }) => pressed && styles.pressed}>
                 <ThemedText style={{ color: '#e8823f', fontWeight: 'bold' }}>
-                  Ver todas {'>'}
+                  See all {'>'}
                 </ThemedText>
               </Pressable>
             </Link>
@@ -312,7 +312,7 @@ export default function HomeScreen() {
                           {activity.requiresApproval && (
                             <View style={styles.approvalBadge}>
                               <Ionicons name="lock-closed" size={12} color="#f4f2ef" />
-                              <ThemedText style={styles.approvalBadgeText}>Entrada por aprovação</ThemedText>
+                              <ThemedText style={styles.approvalBadgeText}>Approval required</ThemedText>
                             </View>
                           )}
                         </ImageBackground>
@@ -337,7 +337,7 @@ export default function HomeScreen() {
                           <View style={styles.cardFooter}>
                             <View style={[
                               styles.difficultyBadge,
-                              difficulty === 'Avançado' ? { backgroundColor: '#eb8f84' } : {}
+                              difficulty === 'Advanced' ? { backgroundColor: '#eb8f84' } : {}
                             ]}>
                               <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
                             </View>
@@ -349,12 +349,12 @@ export default function HomeScreen() {
                               </ThemedText>
                               {activity.status === 'full' && (
                                 <ThemedText style={[styles.spotsText, { color: '#eb8f84' }]}>
-                                  · Completa
+                                  · Full
                                 </ThemedText>
                               )}
                               {activity.waitlist.length > 0 && (
                                 <ThemedText style={[styles.spotsText, { color: '#e8823f' }]}>
-                                  +{activity.waitlist.length} em espera
+                                  +{activity.waitlist.length} waiting
                                 </ThemedText>
                               )}
                             </View>
@@ -367,11 +367,11 @@ export default function HomeScreen() {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="sad-outline" size={48} color="#141315" />
-                <ThemedText style={styles.emptyStateTitle}>Nenhuma atividade encontrada</ThemedText>
+                <ThemedText style={styles.emptyStateTitle}>No activities found</ThemedText>
                 <ThemedText style={styles.emptyStateText}>
                   {activeFilter === ALL_FILTER
-                    ? 'Não existem atividades de momento. Cria a primeira!'
-                    : `Não há atividades de ${activeFilter} de momento.`}
+                    ? 'There are no activities yet. Create the first one!'
+                    : `There are no ${activeFilter} activities right now.`}
                 </ThemedText>
               </View>
             )}
