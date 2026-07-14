@@ -1,12 +1,13 @@
 ﻿import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, ScrollView, View, Image } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, ScrollView, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WeatherSection } from '@/components/weather-section';
+import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
@@ -296,7 +297,12 @@ export default function HomeScreen() {
                     }
                     style={({ pressed }) => pressed && styles.pressed}>
                       <View style={styles.activityCard}>
-                        <View style={styles.cardImagePlaceholder}>
+                        {/* Foto do desporto como fundo; sem foto fica o cinzento de sempre */}
+                        <ImageBackground
+                          source={sportImages[activity.sportId]}
+                          resizeMode="cover"
+                          style={styles.cardImagePlaceholder}>
+                          <View style={styles.cardImageOverlay} />
                           <View style={styles.sportBadge}>
                             <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#f4f2ef" />
                             <ThemedText style={styles.sportBadgeText}>
@@ -309,7 +315,7 @@ export default function HomeScreen() {
                               <ThemedText style={styles.approvalBadgeText}>Entrada por aprovação</ThemedText>
                             </View>
                           )}
-                        </View>
+                        </ImageBackground>
 
                         <View style={styles.cardBody}>
                           <ThemedText type="subtitle" style={styles.activityTitle}>
@@ -565,6 +571,12 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  // Véu escuro por cima da foto para os chips continuarem legíveis
+  cardImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,10,11,0.35)',
   },
   sportBadge: {
     flexDirection: 'row',

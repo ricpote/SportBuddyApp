@@ -28,6 +28,26 @@ const DEFAULT_CENTER = {
   lng: -9.1393,
 };
 
+// O primeiro address_component do Google é normalmente o número da porta
+// (ex: "64"), que não serve de nome. Escolhemos algo com significado:
+// nome do sítio > rua + número > freguesia > cidade.
+function pickLocationName(result?: google.maps.GeocoderResult): string | undefined {
+  const comps = result?.address_components ?? [];
+  const byType = (type: string) => comps.find((c) => c.types.includes(type))?.long_name;
+
+  const route = byType('route');
+  const number = byType('street_number');
+
+  return (
+    byType('establishment') ??
+    byType('point_of_interest') ??
+    byType('premise') ??
+    (route ? (number ? `${route} ${number}` : route) : undefined) ??
+    byType('sublocality') ??
+    byType('locality')
+  );
+}
+
 function LocationPickerMap({ value, onChange }: LocationPickerProps) {
   const map = useMap();
  const geocodingLibrary = useMapsLibrary('geocoding');
@@ -45,7 +65,7 @@ const [query, setQuery] = useState(value.address || '');
     const firstResult = result.results[0];
 
     onChange({
-      name: firstResult?.address_components?.[0]?.long_name || 'Local selecionado',
+      name: pickLocationName(firstResult) || 'Local selecionado',
       address: firstResult?.formatted_address || `${lat}, ${lng}`,
       lat,
       lng,
@@ -72,7 +92,7 @@ const [query, setQuery] = useState(value.address || '');
     map?.setZoom(15);
 
     onChange({
-      name: firstResult.address_components?.[0]?.long_name || query,
+      name: pickLocationName(firstResult) || query,
       address: firstResult.formatted_address,
       lat,
       lng,
