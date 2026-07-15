@@ -1,8 +1,9 @@
-﻿import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link, Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { AvatarCircle } from '@/components/avatar-circle';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -29,12 +30,11 @@ const STATUS_LABELS: Record<Activity['status'], string> = {
   completed: 'Terminada',
 };
 
-// Cores dinâmicas para o estado da atividade
 const STATUS_COLORS: Record<Activity['status'], string> = {
-  open: '#9ccd6b',      // Verde
-  full: '#e8823f',      // Laranja
-  cancelled: '#eb8f84', // Vermelho
-  completed: '#8f8b85', // Cinzento
+  open: '#9ccd6b',
+  full: '#e8823f',
+  cancelled: '#eb8f84',
+  completed: '#8f8b85',
 };
 
 const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
@@ -44,16 +44,19 @@ const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
   competitive: 'Competitivo',
 };
 
+type MiniProfile = { name: string; avatarUrl?: string };
+
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [sport, setSport] = useState<Sport | null>(null);
-  const [participantNames, setParticipantNames] = useState<Map<string, string>>(new Map());
+  const [profiles, setProfiles] = useState<Map<string, MiniProfile>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [confirmingReject, setConfirmingReject] = useState<string | null>(null);
   const [confirmingVote, setConfirmingVote] = useState<string | null>(null);
 
@@ -77,16 +80,19 @@ export default function ActivityDetailScreen() {
 
   useEffect(() => {
     if (!activity) return;
-    const uids = [...new Set([...activity.participantsList, ...activity.waitlist])];
+    const uids = [...new Set([activity.createdBy, ...activity.participantsList, ...activity.waitlist])];
     if (uids.length === 0) return;
-    Promise.allSettled(uids.map((uid) => getUserProfile(uid).then((u) => [uid, u.name] as const)))
-      .then((results) => {
-        const names = new Map<string, string>();
-        for (const r of results) {
-          if (r.status === 'fulfilled') names.set(r.value[0], r.value[1]);
-        }
-        setParticipantNames(names);
-      });
+    Promise.allSettled(
+      uids.map((uid) =>
+        getUserProfile(uid).then((u) => [uid, { name: u.name, avatarUrl: u.avatarUrl }] as const)
+      )
+    ).then((results) => {
+      const map = new Map<string, MiniProfile>();
+      for (const r of results) {
+        if (r.status === 'fulfilled') map.set(r.value[0], r.value[1]);
+      }
+      setProfiles(map);
+    });
   }, [activity]);
 
   if (activity === undefined) {
@@ -112,16 +118,19 @@ export default function ActivityDetailScreen() {
   const isFull = activity.participantsList.length >= activity.maxParticipants;
   const canJoin = activity.status === 'open' || activity.status === 'full';
   const activityDate = new Date(activity.date);
+  const freeSpots = Math.max(0, activity.maxParticipants - activity.participantsList.length);
+  const fillPercent = Math.min(100, (activity.participantsList.length / activity.maxParticipants) * 100);
+  const organizerName = profiles.get(activity.createdBy)?.name ?? shortId(activity.createdBy);
+
+  const dateLabel = activityDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
+  const timeLabel = activityDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
   // --- Votação de MVP (só faz sentido em atividades terminadas) ---
-  // Guardamos defesas com `?? {}`/`?? []` porque atividades antigas, criadas
-  // antes desta funcionalidade, podem não ter estes campos na base de dados.
   const mvpVotes = activity.mvpVotes ?? {};
   const mvpWinners = activity.mvpWinners ?? [];
   const votingClosed = !!activity.votingClosedAt;
   const myVote = user ? mvpVotes[user.uid] : undefined;
   const hasVoted = !!myVote;
-  const canVoteMvp = activity.status === 'completed' && isParticipant && !votingClosed && !hasVoted;
   const otherParticipants = activity.participantsList.filter((pid) => pid !== user?.uid);
 
   async function handleShare() {
@@ -143,6 +152,11 @@ export default function ActivityDetailScreen() {
     }
   }
 
+  function openDirections() {
+    const { lat, lng } = activity!.location;
+    Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+  }
+
   async function runAction(action: () => Promise<Activity>, fallbackMessage: string) {
     setError(null);
     setSubmitting(true);
@@ -161,6 +175,11 @@ export default function ActivityDetailScreen() {
   }
 
   function handleLeave() {
+    if (!confirmingLeave) {
+      setConfirmingLeave(true);
+      return;
+    }
+    setConfirmingLeave(false);
     return runAction(() => leaveActivity(activity!.id), 'Não foi possível sair da atividade');
   }
 
@@ -201,7 +220,6 @@ export default function ActivityDetailScreen() {
   }
 
   async function handleVoteMvp(votedForId: string) {
-    // Primeiro toque só marca; segundo toque confirma e envia o voto.
     if (confirmingVote !== votedForId) {
       setConfirmingVote(votedForId);
       return;
@@ -211,8 +229,6 @@ export default function ActivityDetailScreen() {
     setSubmitting(true);
     try {
       await voteMvp(activity!.id, votedForId);
-      // O endpoint só devolve uma mensagem, por isso recarregamos a atividade
-      // para obter o mvpVotes atualizado (e o vencedor, se a votação fechar).
       const updated = await getActivity(activity!.id);
       setActivity(updated);
     } catch (err) {
@@ -222,292 +238,372 @@ export default function ActivityDetailScreen() {
     }
   }
 
+  function renderParticipantRow(pid: string) {
+    const p = profiles.get(pid);
+    const isOrganizer = pid === activity!.createdBy;
+    return (
+      <View key={pid} style={styles.participantRow}>
+        <Pressable
+          style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
+          onPress={() => goToUserProfile(pid)}>
+          <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
+          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
+          {isOrganizer && <ThemedText style={styles.organizerTag}>· organizador</ThemedText>}
+        </Pressable>
+        {isCreator && !isOrganizer && canJoin && (
+          <Pressable
+            disabled={submitting}
+            style={styles.removeButton}
+            onPress={() => handleRemoveParticipant(pid)}>
+            <ThemedText style={styles.removeButtonText}>Remover</ThemedText>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
   return (
-    <ScrollView 
-      style={{ backgroundColor: '#0a0a0b' }} 
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.container}>
-        
-        {/* CABEÇALHO */}
-        <View style={styles.headerContainer}>
-          <View style={styles.titleRow}>
-            <ThemedText style={styles.title}>{activity.title}</ThemedText>
-            <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[activity.status] }]}>
-              <ThemedText style={styles.statusText}>{STATUS_LABELS[activity.status]}</ThemedText>
+    <>
+      {/* Pill de estado no cabeçalho nativo */}
+      <Stack.Screen
+        options={{
+          title: 'Atividade',
+          headerRight: () => (
+            <View style={[styles.statusPill, { borderColor: STATUS_COLORS[activity.status] }]}>
+              <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[activity.status] }]} />
+              <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS[activity.status] }]}>
+                {STATUS_LABELS[activity.status].toUpperCase()}
+              </ThemedText>
+            </View>
+          ),
+        }}
+      />
+
+      <ScrollView
+        style={{ backgroundColor: '#0a0a0b' }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.container}>
+
+          {/* HERO: ícone do desporto + título + descrição */}
+          <View style={styles.hero}>
+            <View style={styles.heroIcon}>
+              <SportIcon sportName={sport?.name} size={30} color="#1a1005" />
+            </View>
+            <View style={styles.heroText}>
+              <ThemedText style={styles.title}>{activity.title}</ThemedText>
+              {activity.description ? (
+                <ThemedText style={styles.descriptionText}>{activity.description}</ThemedText>
+              ) : null}
             </View>
           </View>
-          {activity.description ? (
-            <ThemedText style={styles.descriptionText}>{activity.description}</ThemedText>
-          ) : null}
-        </View>
 
-        {/* CARTÃO DE DETALHES */}
-        <View style={styles.card}>
-          <Row
-            icon="person-outline"
-            label="Organizador"
-            value={participantNames.get(activity.createdBy) ?? shortId(activity.createdBy)}
-            onPress={() => goToUserProfile(activity.createdBy)}
-          />
-          <Row
-            iconElement={<SportIcon sportName={sport?.name} size={16} color="#8f8b85" />}
-            label="Modalidade"
-            value={sport?.name ?? activity.sportId}
-          />
-          <Row icon="speedometer-outline" label="Dificuldade" value={DIFFICULTY_LABELS[activity.difficultyLevel]} />
-          <Row
-            icon="calendar-outline"
-            label="Data"
-            value={`${activityDate.toLocaleDateString()} às ${activityDate.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}`}
-          />
-          <Row icon="location-outline" label="Local" value={activity.location.name} />
-          {activity.location.address ? <Row icon="map-outline" label="Morada" value={activity.location.address} /> : null}
-          <Row
-            icon="people-outline"
-            label="Vagas"
-            value={`${activity.participantsList.length} de ${activity.maxParticipants} preenchidas`}
-          />
-          {activity.waitlist.length > 0 && (
-            <Row icon="time-outline" label="Em espera" value={`${activity.waitlist.length} pessoa(s)`} highlightValue />
-          )}
-          {activity.requiresApproval && <Row icon="lock-closed-outline" label="Acesso" value="Requer aprovação" />}
-        </View>
-
-        {/* AÇÕES PRINCIPAIS */}
-        {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-
-        {/* VOTAÇÃO DE MVP (só em atividades terminadas, para participantes) */}
-        {activity.status === 'completed' && isParticipant && (
-          <View style={styles.card}>
-            <View style={styles.voteHeader}>
-              <Ionicons name="trophy" size={20} color="#e8823f" />
-              <ThemedText style={styles.sectionTitle}>MVP da atividade</ThemedText>
+          {/* BARRA DE INFO: data · dificuldade · vagas */}
+          <View style={styles.infoBar}>
+            <View style={styles.infoCol}>
+              <Ionicons name="calendar-outline" size={18} color="#e8823f" />
+              <ThemedText style={styles.infoValue}>{dateLabel}</ThemedText>
+              <ThemedText style={styles.infoLabel}>{timeLabel}</ThemedText>
             </View>
-            <View style={styles.divider} />
-
-            {votingClosed ? (
-              mvpWinners.length > 0 ? (
-                <View style={styles.winnerBox}>
-                  <ThemedText style={styles.winnerLabel}>
-                    {mvpWinners.length === 1 ? 'Vencedor' : 'Empate entre'}
-                  </ThemedText>
-                  {mvpWinners.map((wid) => (
-                    <View key={wid} style={styles.winnerRow}>
-                      <Ionicons name="trophy" size={18} color="#e8823f" />
-                      <ThemedText style={styles.winnerName}>
-                        {participantNames.get(wid) ?? shortId(wid)}
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <ThemedText style={styles.emptyListText}>A votação terminou sem votos.</ThemedText>
-              )
-            ) : hasVoted ? (
-              <ThemedText style={styles.emptyListText}>
-                Já votaste em {participantNames.get(myVote!) ?? shortId(myVote!)}. À espera dos restantes participantes.
+            <View style={styles.infoDivider} />
+            <View style={styles.infoCol}>
+              <Ionicons name="speedometer-outline" size={18} color="#e8823f" />
+              <ThemedText style={styles.infoValue}>{DIFFICULTY_LABELS[activity.difficultyLevel]}</ThemedText>
+              <ThemedText style={styles.infoLabel}>Dificuldade</ThemedText>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoCol}>
+              <Ionicons name="people-outline" size={18} color="#e8823f" />
+              <ThemedText style={styles.infoValue}>
+                {activity.participantsList.length} / {activity.maxParticipants}
               </ThemedText>
-            ) : (
-              <>
-                <ThemedText style={styles.voteHint}>Escolhe o melhor jogador da atividade:</ThemedText>
-                {otherParticipants.map((pid) => (
-                  <View key={pid} style={styles.memberRow}>
-                    <Pressable
-                      style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
-                      onPress={() => goToUserProfile(pid)}>
-                      <Ionicons name="person-circle-outline" size={24} color="#8f8b85" />
-                      <ThemedText style={styles.memberName}>
-                        {participantNames.get(pid) ?? shortId(pid)}
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      disabled={submitting}
-                      style={styles.voteButton}
-                      onPress={() => handleVoteMvp(pid)}>
-                      <ThemedText style={styles.voteButtonText}>
-                        {confirmingVote === pid ? 'Confirmar' : 'Votar'}
-                      </ThemedText>
-                    </Pressable>
+              <ThemedText style={styles.infoLabel}>Vagas</ThemedText>
+            </View>
+          </View>
+
+          {/* PROGRESSO DAS VAGAS */}
+          {canJoin && (
+            <View style={styles.progressBlock}>
+              <View style={styles.progressLabels}>
+                <ThemedText style={styles.progressLeft}>
+                  {freeSpots > 0 ? (
+                    <>Ainda há <ThemedText style={styles.progressBold}>{freeSpots} vagas</ThemedText></>
+                  ) : (
+                    'Atividade completa'
+                  )}
+                </ThemedText>
+                <ThemedText style={styles.progressRight}>
+                  {activity.participantsList.length} de {activity.maxParticipants} preenchidas
+                </ThemedText>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${fillPercent}%` }]} />
+              </View>
+            </View>
+          )}
+
+          {/* ORGANIZADOR */}
+          <Pressable
+            onPress={() => goToUserProfile(activity.createdBy)}
+            style={({ pressed }) => [styles.organizerCard, pressed && styles.pressed]}>
+            <AvatarCircle
+              name={organizerName}
+              avatarUrl={profiles.get(activity.createdBy)?.avatarUrl}
+              size={44}
+            />
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.organizerLabel}>ORGANIZADOR</ThemedText>
+              <View style={styles.organizerNameRow}>
+                <ThemedText style={styles.organizerName}>{organizerName}</ThemedText>
+                {isCreator && (
+                  <View style={styles.youChip}>
+                    <ThemedText style={styles.youChipText}>és tu</ThemedText>
                   </View>
-                ))}
-                {otherParticipants.length === 0 && (
-                  <ThemedText style={styles.emptyListText}>Não há outros participantes para votar.</ThemedText>
                 )}
-              </>
+              </View>
+            </View>
+            {!isCreator && <Ionicons name="chevron-forward" size={20} color="#8f8b85" />}
+          </Pressable>
+
+          {/* LOCAL: mini-mapa decorativo + morada + direções */}
+          <View style={styles.locationCard}>
+            <View style={styles.mapPreview}>
+              <View style={styles.mapLine1} />
+              <View style={styles.mapLine2} />
+              <View style={styles.mapPin}>
+                <SportIcon sportName={sport?.name} size={16} color="#1a1005" />
+              </View>
+            </View>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={18} color="#e8823f" />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.locationName}>{activity.location.name}</ThemedText>
+                {activity.location.address ? (
+                  <ThemedText style={styles.locationAddress}>{activity.location.address}</ThemedText>
+                ) : null}
+              </View>
+              {activity.location.lat !== 0 && activity.location.lng !== 0 && (
+                <Pressable
+                  onPress={openDirections}
+                  style={({ pressed }) => [styles.directionsBtn, pressed && styles.pressed]}>
+                  <Ionicons name="navigate-outline" size={14} color="#f4f2ef" />
+                  <ThemedText style={styles.directionsText}>Direções</ThemedText>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* PARTICIPANTES */}
+          <View style={styles.participantsHeader}>
+            <ThemedText style={styles.sectionTitle}>
+              Participantes <ThemedText style={styles.sectionCount}>{activity.participantsList.length}</ThemedText>
+            </ThemedText>
+            {freeSpots > 0 && canJoin && (
+              <ThemedText style={styles.freeSpotsText}>+ {freeSpots} lugares livres</ThemedText>
             )}
           </View>
-        )}
 
-        {isCreator ? (
-          <>
-            <ThemedText style={styles.note}>
-              És o organizador desta atividade.
-            </ThemedText>
+          <View style={styles.participantsList}>
+            {activity.participantsList.map(renderParticipantRow)}
 
-            {/* LISTA DE PARTICIPANTES (CRIADOR) */}
-            {canJoin && (
-              <>
-                <View style={styles.card}>
-                  <ThemedText style={styles.sectionTitle}>Participantes ({activity.participantsList.length})</ThemedText>
-                  <View style={styles.divider} />
-                  
-                  {activity.participantsList
-                    .filter((participantId) => participantId !== activity.createdBy)
-                    .map((participantId) => (
-                      <View key={participantId} style={styles.memberRow}>
+            {freeSpots > 0 && canJoin && (
+              <View style={styles.emptySlotRow}>
+                <View style={styles.emptySlotIcon}>
+                  <Ionicons name="person-add-outline" size={16} color="#6b6862" />
+                </View>
+                <ThemedText style={styles.emptySlotText}>
+                  {freeSpots} {freeSpots === 1 ? 'lugar à espera' : 'lugares à espera'} de jogadores
+                </ThemedText>
+              </View>
+            )}
+          </View>
+
+          {/* LISTA DE ESPERA (organizador) */}
+          {isCreator && canJoin && activity.waitlist.length > 0 && (
+            <>
+              <View style={styles.participantsHeader}>
+                <ThemedText style={styles.sectionTitle}>
+                  Lista de espera <ThemedText style={styles.sectionCount}>{activity.waitlist.length}</ThemedText>
+                </ThemedText>
+              </View>
+              <View style={styles.participantsList}>
+                {activity.waitlist.map((userId) => {
+                  const p = profiles.get(userId);
+                  return (
+                    <View key={userId} style={styles.participantRow}>
+                      <Pressable
+                        style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
+                        onPress={() => goToUserProfile(userId)}>
+                        <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
+                        <ThemedText style={styles.participantName}>{p?.name ?? shortId(userId)}</ThemedText>
+                      </Pressable>
+                      {activity.status === 'open' && (
+                        <View style={styles.waitlistActions}>
+                          <Pressable
+                            disabled={submitting}
+                            style={styles.admitButton}
+                            onPress={() => handleAdmit(userId)}>
+                            <ThemedText style={styles.admitButtonText}>Admitir</ThemedText>
+                          </Pressable>
+                          <Pressable
+                            disabled={submitting}
+                            style={styles.removeButton}
+                            onPress={() => handleReject(userId)}>
+                            <ThemedText style={styles.removeButtonText}>
+                              {confirmingReject === userId ? 'Confirmar' : 'Rejeitar'}
+                            </ThemedText>
+                          </Pressable>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {/* VOTAÇÃO DE MVP (atividades terminadas, para participantes) */}
+          {activity.status === 'completed' && isParticipant && (
+            <View style={styles.mvpCard}>
+              <View style={styles.mvpHeader}>
+                <Ionicons name="trophy" size={20} color="#e8823f" />
+                <ThemedText style={styles.sectionTitle}>MVP da atividade</ThemedText>
+              </View>
+
+              {votingClosed ? (
+                mvpWinners.length > 0 ? (
+                  <View style={styles.winnerBox}>
+                    <ThemedText style={styles.winnerLabel}>
+                      {mvpWinners.length === 1 ? 'Vencedor' : 'Empate entre'}
+                    </ThemedText>
+                    {mvpWinners.map((wid) => (
+                      <View key={wid} style={styles.winnerRow}>
+                        <Ionicons name="trophy" size={18} color="#e8823f" />
+                        <ThemedText style={styles.winnerName}>
+                          {profiles.get(wid)?.name ?? shortId(wid)}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <ThemedText style={styles.emptyListText}>A votação terminou sem votos.</ThemedText>
+                )
+              ) : hasVoted ? (
+                <ThemedText style={styles.emptyListText}>
+                  Já votaste em {profiles.get(myVote!)?.name ?? shortId(myVote!)}. À espera dos restantes participantes.
+                </ThemedText>
+              ) : (
+                <>
+                  <ThemedText style={styles.voteHint}>Escolhe o melhor jogador da atividade:</ThemedText>
+                  {otherParticipants.map((pid) => {
+                    const p = profiles.get(pid);
+                    return (
+                      <View key={pid} style={styles.participantRow}>
                         <Pressable
-                          style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
-                          onPress={() => goToUserProfile(participantId)}>
-                          <Ionicons name="person-circle-outline" size={24} color="#8f8b85" />
-                          <ThemedText style={styles.memberName}>
-                            {participantNames.get(participantId) ?? shortId(participantId)}
-                          </ThemedText>
+                          style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
+                          onPress={() => goToUserProfile(pid)}>
+                          <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
+                          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
                         </Pressable>
                         <Pressable
                           disabled={submitting}
-                          style={styles.removeButton}
-                          onPress={() => handleRemoveParticipant(participantId)}>
-                          <ThemedText style={styles.removeButtonText}>Remover</ThemedText>
-                        </Pressable>
-                      </View>
-                    ))}
-                  
-                  {activity.participantsList.length <= 1 && (
-                    <ThemedText style={styles.emptyListText}>
-                      Ainda só tu. Partilha a atividade!
-                    </ThemedText>
-                  )}
-                </View>
-
-                {/* LISTA DE ESPERA */}
-                {activity.waitlist.length > 0 && (
-                  <View style={styles.card}>
-                    <ThemedText style={styles.sectionTitle}>Lista de Espera ({activity.waitlist.length})</ThemedText>
-                    <View style={styles.divider} />
-
-                    {activity.waitlist.map((userId) => (
-                      <View key={userId} style={styles.memberRow}>
-                        <Pressable
-                          style={({ pressed }) => [styles.memberInfo, pressed && styles.pressed]}
-                          onPress={() => goToUserProfile(userId)}>
-                          <Ionicons name="time-outline" size={24} color="#e8823f" />
-                          <ThemedText style={styles.memberName}>
-                            {participantNames.get(userId) ?? shortId(userId)}
+                          style={styles.voteButton}
+                          onPress={() => handleVoteMvp(pid)}>
+                          <ThemedText style={styles.voteButtonText}>
+                            {confirmingVote === pid ? 'Confirmar' : 'Votar'}
                           </ThemedText>
                         </Pressable>
-                        {activity.status === 'open' ? (
-                          <View style={styles.waitlistActions}>
-                            <Pressable 
-                              disabled={submitting} 
-                              style={styles.admitButton}
-                              onPress={() => handleAdmit(userId)}>
-                              <ThemedText style={styles.admitButtonText}>Admitir</ThemedText>
-                            </Pressable>
-                            <Pressable 
-                              disabled={submitting} 
-                              style={styles.rejectButton}
-                              onPress={() => handleReject(userId)}>
-                              <ThemedText style={styles.rejectButtonText}>
-                                {confirmingReject === userId ? 'Confirmar' : 'Rejeitar'}
-                              </ThemedText>
-                            </Pressable>
-                          </View>
-                        ) : (
-                          <ThemedText style={styles.emptyListText}>Atividade completa</ThemedText>
-                        )}
                       </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* BOTÕES DO CRIADOR */}
-                <Link
-                  href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }}
-                  asChild>
-                  <Pressable style={({ pressed }) => [styles.button, styles.primaryButton, pressed && styles.pressed]}>
-                    <Ionicons name="pencil" size={18} color="#f4f2ef" style={{ marginRight: 8 }} />
-                    <ThemedText style={styles.primaryButtonText} type="smallBold">
-                      Editar atividade
-                    </ThemedText>
-                  </Pressable>
-                </Link>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.button,
-                    styles.dangerButton,
-                    pressed && styles.pressed,
-                  ]}
-                  disabled={submitting}
-                  onPress={handleCancel}>
-                  <Ionicons name="trash-outline" size={18} color="#eb8f84" style={{ marginRight: 8 }} />
-                  <ThemedText style={styles.dangerButtonText} type="smallBold">
-                    {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
-                  </ThemedText>
-                </Pressable>
-              </>
-            )}
-          </>
-        ) : isParticipant || isWaitlisted ? (
-          /* BOTÃO PARA SAIR (PARTICIPANTE) */
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.dangerButton,
-              pressed && styles.pressed,
-            ]}
-            disabled={submitting}
-            onPress={handleLeave}>
-            <ThemedText style={styles.dangerButtonText} type="smallBold">
-              {isWaitlisted ? 'Sair da lista de espera' : 'Sair da atividade'}
-            </ThemedText>
-          </Pressable>
-        ) : canJoin ? (
-          /* BOTÃO PARA ENTRAR */
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.primaryButton,
-              pressed && styles.pressed,
-            ]}
-            disabled={submitting}
-            onPress={handleJoin}>
-            <ThemedText style={styles.primaryButtonText} type="smallBold">
-              {isFull ? 'Entrar na lista de espera' : 'Participar'}
-            </ThemedText>
-          </Pressable>
-        ) : (
-          <ThemedText style={styles.note}>
-            Esta atividade já não aceita participantes.
-          </ThemedText>
-        )}
-
-        {/* BOTÕES UTILITÁRIOS */}
-        <View style={styles.utilityButtonsRow}>
-          {activity.location.lat !== 0 && activity.location.lng !== 0 && (
-            <Pressable
-              style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
-              onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${activity.location.lat},${activity.location.lng}`)}>
-              <Ionicons name="map-outline" size={20} color="#c9c5bf" />
-              <ThemedText style={styles.utilityButtonText}>Ver Mapa</ThemedText>
-            </Pressable>
+                    );
+                  })}
+                  {otherParticipants.length === 0 && (
+                    <ThemedText style={styles.emptyListText}>Não há outros participantes para votar.</ThemedText>
+                  )}
+                </>
+              )}
+            </View>
           )}
 
-          <Pressable
-            style={({ pressed }) => [styles.utilityButton, pressed && styles.pressed]}
-            onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color="#c9c5bf" />
-            <ThemedText style={styles.utilityButtonText}>Partilhar</ThemedText>
-          </Pressable>
-        </View>
+          {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
-      </View>
-    </ScrollView>
+          {/* AÇÕES PRINCIPAIS */}
+          <View style={styles.actionsDivider} />
+
+          {isParticipant || isWaitlisted ? (
+            <>
+              <View style={styles.actionsRow}>
+                {isParticipant && activity.status !== 'cancelled' && (
+                  <Link href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
+                    <Pressable style={({ pressed }) => [styles.chatOutlineButton, pressed && styles.pressed]}>
+                      <Ionicons name="chatbubble-outline" size={18} color="#e8823f" />
+                      <ThemedText style={styles.chatOutlineButtonText}>Abrir chat</ThemedText>
+                    </Pressable>
+                  </Link>
+                )}
+
+                {isCreator && canJoin && (
+                  <Link href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }} asChild>
+                    <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                      <Ionicons name="pencil-outline" size={16} color="#f4f2ef" />
+                      <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
+                    </Pressable>
+                  </Link>
+                )}
+
+                <Pressable
+                  onPress={handleShare}
+                  style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                  <Ionicons name="share-outline" size={16} color="#f4f2ef" />
+                  <ThemedText style={styles.secondaryButtonText}>Partilhar</ThemedText>
+                </Pressable>
+              </View>
+
+              {canJoin && (
+                isCreator ? (
+                  <Pressable disabled={submitting} onPress={handleCancel} hitSlop={8}>
+                    <ThemedText style={styles.dangerLink}>
+                      <Ionicons name="trash-outline" size={14} color="#eb8f84" />{' '}
+                      {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
+                    </ThemedText>
+                  </Pressable>
+                ) : (
+                  <Pressable disabled={submitting} onPress={handleLeave} hitSlop={8}>
+                    <ThemedText style={styles.dangerLink}>
+                      <Ionicons name="exit-outline" size={14} color="#eb8f84" />{' '}
+                      {confirmingLeave
+                        ? 'Tens a certeza? Toca para confirmar'
+                        : isWaitlisted
+                          ? 'Sair da lista de espera'
+                          : 'Sair da atividade'}
+                    </ThemedText>
+                  </Pressable>
+                )
+              )}
+            </>
+          ) : canJoin ? (
+            <View style={styles.actionsRow}>
+              <Pressable
+                disabled={submitting}
+                onPress={handleJoin}
+                style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
+                <Ionicons name="add" size={20} color="#f4f2ef" />
+                <ThemedText style={styles.chatButtonText}>
+                  {isFull ? 'Entrar na lista de espera' : 'Participar'}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={handleShare}
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                <Ionicons name="share-outline" size={16} color="#f4f2ef" />
+                <ThemedText style={styles.secondaryButtonText}>Partilhar</ThemedText>
+              </Pressable>
+            </View>
+          ) : (
+            <ThemedText style={styles.note}>Esta atividade já não aceita participantes.</ThemedText>
+          )}
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
@@ -518,47 +614,6 @@ function shortId(uid: string) {
 
 function goToUserProfile(userId: string) {
   router.push({ pathname: '/user/[id]', params: { id: userId } });
-}
-
-// Componente Row melhorado com ícone
-function Row({
-  icon,
-  iconElement,
-  label,
-  value,
-  highlightValue = false,
-  onPress,
-}: {
-  icon?: keyof typeof Ionicons.glyphMap;
-  iconElement?: ReactNode;
-  label: string;
-  value: string;
-  highlightValue?: boolean;
-  onPress?: () => void;
-}) {
-  const content = (
-    <View style={styles.row}>
-      <View style={styles.rowLabelContainer}>
-        {iconElement ?? (icon ? <Ionicons name={icon} size={16} color="#8f8b85" /> : null)}
-        <ThemedText style={styles.rowLabelText}>{label}</ThemedText>
-      </View>
-      <ThemedText
-        style={[
-          styles.rowValueText,
-          (highlightValue || onPress) && { color: '#e8823f', fontWeight: 'bold' },
-        ]}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-
-  if (!onPress) return content;
-
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      {content}
-    </Pressable>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -578,121 +633,257 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
   },
-  headerContainer: {
-    marginBottom: Spacing.one,
-  },
-  titleRow: {
+
+  statusPill: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: Spacing.two,
+    backgroundColor: '#111012',
   },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusPillText: { fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 },
+
+  hero: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    alignItems: 'flex-start',
+  },
+  heroIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#e8823f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  heroText: { flex: 1, gap: 4 },
   title: {
     color: '#f4f2ef',
     fontSize: 24,
     fontWeight: 'bold',
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#f4f2ef',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+    lineHeight: 30,
   },
   descriptionText: {
     color: '#c9c5bf',
-    fontSize: 15,
-    marginTop: Spacing.two,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  card: {
+
+  infoBar: {
+    flexDirection: 'row',
     backgroundColor: '#111012',
     borderRadius: 16,
-    padding: Spacing.four,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: Spacing.three,
+  },
+  infoCol: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  infoValue: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold' },
+  infoLabel: { color: '#8f8b85', fontSize: 12 },
+
+  progressBlock: { gap: 6 },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressLeft: { color: '#c9c5bf', fontSize: 13 },
+  progressBold: { color: '#f4f2ef', fontSize: 13, fontWeight: 'bold' },
+  progressRight: { color: '#8f8b85', fontSize: 12 },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1c1a1d',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#e8823f',
+  },
+
+  organizerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.three,
-    marginBottom: Spacing.two,
+    backgroundColor: '#111012',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    padding: Spacing.three,
   },
-  row: {
+  organizerLabel: { color: '#8f8b85', fontSize: 11, letterSpacing: 1 },
+  organizerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  organizerName: { color: '#e8823f', fontSize: 16, fontWeight: 'bold' },
+  youChip: {
+    backgroundColor: 'rgba(232,130,63,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  youChipText: { color: '#e8823f', fontSize: 11, fontWeight: 'bold' },
+
+  locationCard: {
+    backgroundColor: '#111012',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  mapPreview: {
+    height: 110,
+    backgroundColor: '#0d120e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  // Linhas decorativas a sugerir um campo/mapa
+  mapLine1: {
+    position: 'absolute',
+    width: 380,
+    height: 200,
+    borderRadius: 190,
+    borderWidth: 1,
+    borderColor: 'rgba(156,205,107,0.12)',
+    top: 40,
+    left: -60,
+  },
+  mapLine2: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    borderWidth: 1,
+    borderColor: 'rgba(156,205,107,0.10)',
+    top: -120,
+    right: -40,
+  },
+  mapPin: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderBottomRightRadius: 4,
+    backgroundColor: '#e8823f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '45deg' }],
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.three,
+  },
+  locationName: { color: '#f4f2ef', fontSize: 14, fontWeight: 'bold' },
+  locationAddress: { color: '#8f8b85', fontSize: 12 },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  directionsText: { color: '#f4f2ef', fontSize: 13, fontWeight: 'bold' },
+
+  participantsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing.one,
   },
-  rowLabelContainer: {
+  sectionTitle: { color: '#f4f2ef', fontSize: 17, fontWeight: 'bold' },
+  sectionCount: { color: '#8f8b85', fontSize: 17, fontWeight: 'bold' },
+  freeSpotsText: { color: '#8f8b85', fontSize: 12 },
+
+  participantsList: { gap: Spacing.two },
+  participantRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#111012',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  participantInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.two,
+    flex: 1,
   },
-  rowLabelText: {
-    color: '#c9c5bf',
-    fontSize: 14,
+  participantName: { color: '#f4f2ef', fontSize: 15, fontWeight: '600' },
+  organizerTag: { color: '#8f8b85', fontSize: 12 },
+
+  emptySlotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.10)',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
   },
-  rowValueText: {
-    color: '#f4f2ef',
-    fontSize: 14,
-    flexShrink: 1,
-    textAlign: 'right',
-    paddingLeft: 16,
-  },
-  sectionTitle: {
-    color: '#f4f2ef',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  divider: {
-    height: 1,
+  emptySlotIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#141315',
-    marginVertical: 4,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.one,
+    justifyContent: 'center',
   },
-  memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  memberName: {
-    color: '#f4f2ef',
-    fontSize: 15,
-  },
+  emptySlotText: { color: '#6b6862', fontSize: 13 },
+
   removeButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(235,143,132,0.15)',
+    backgroundColor: 'rgba(235,143,132,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(235,143,132,0.4)',
   },
-  removeButtonText: {
-    color: '#eb8f84',
-    fontSize: 12,
-    fontWeight: 'bold',
+  removeButtonText: { color: '#eb8f84', fontSize: 12, fontWeight: 'bold' },
+  waitlistActions: { flexDirection: 'row', gap: Spacing.two },
+  admitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(156,205,107,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(156,205,107,0.4)',
   },
-  emptyListText: {
-    color: '#8f8b85',
-    fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 8,
+  admitButtonText: { color: '#9ccd6b', fontSize: 12, fontWeight: 'bold' },
+
+  mvpCard: {
+    backgroundColor: '#111012',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    padding: Spacing.three,
+    gap: Spacing.two,
   },
-  voteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  voteHint: {
-    color: '#c9c5bf',
-    fontSize: 14,
-    marginBottom: 4,
-  },
+  mvpHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  voteHint: { color: '#c9c5bf', fontSize: 14 },
   voteButton: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -701,114 +892,84 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e8823f',
   },
-  voteButtonText: {
-    color: '#e8823f',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  winnerBox: {
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-  },
+  voteButtonText: { color: '#e8823f', fontSize: 12, fontWeight: 'bold' },
+  winnerBox: { alignItems: 'center', gap: 6, paddingVertical: 8 },
   winnerLabel: {
     color: '#c9c5bf',
     fontSize: 13,
     textTransform: 'uppercase',
     fontWeight: 'bold',
   },
-  winnerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  winnerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  winnerName: { color: '#f4f2ef', fontSize: 18, fontWeight: 'bold' },
+  emptyListText: {
+    color: '#8f8b85',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
   },
-  winnerName: {
-    color: '#f4f2ef',
-    fontSize: 18,
-    fontWeight: 'bold',
+
+  actionsDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginTop: Spacing.two,
   },
-  waitlistActions: {
+  actionsRow: {
     flexDirection: 'row',
     gap: Spacing.two,
   },
-  admitButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(156,205,107,0.15)',
-  },
-  admitButtonText: {
-    color: '#9ccd6b',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  rejectButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(235,143,132,0.15)',
-  },
-  rejectButtonText: {
-    color: '#eb8f84',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  button: {
+  chatButton: {
+    flex: 1,
     height: 52,
     flexDirection: 'row',
-    borderRadius: 12,
+    gap: 8,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  primaryButton: {
     backgroundColor: '#e8823f',
   },
-  primaryButtonText: {
-    color: '#f4f2ef',
-    fontSize: 16,
-  },
-  dangerButton: {
-    backgroundColor: 'rgba(235,143,132,0.15)',
-    borderWidth: 1,
-    borderColor: '#eb8f84',
-  },
-  dangerButtonText: {
-    color: '#eb8f84',
-    fontSize: 16,
-  },
-  utilityButtonsRow: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  utilityButton: {
+  chatButtonText: { color: '#f4f2ef', fontSize: 16, fontWeight: 'bold' },
+  chatOutlineButton: {
     flex: 1,
+    height: 52,
     flexDirection: 'row',
-    height: 48,
-    backgroundColor: '#111012',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
+    gap: 8,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    backgroundColor: '#111012',
+    borderWidth: 2,
+    borderColor: '#e8823f',
   },
-  utilityButtonText: {
-    color: '#c9c5bf',
+  chatOutlineButtonText: { color: '#e8823f', fontSize: 16, fontWeight: 'bold' },
+  secondaryButton: {
+    height: 52,
+    flexDirection: 'row',
+    gap: 6,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  secondaryButtonText: { color: '#f4f2ef', fontSize: 14, fontWeight: 'bold' },
+  dangerLink: {
+    color: '#eb8f84',
     fontSize: 14,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: Spacing.one,
   },
-  pressed: {
-    opacity: 0.7,
+  note: {
+    textAlign: 'center',
+    color: '#8f8b85',
   },
   error: {
     textAlign: 'center',
     color: '#eb8f84',
-    marginVertical: 8,
   },
-  note: {
-    textAlign: 'center',
-    color: '#e8823f',
-    marginBottom: Spacing.two,
-  },
+  pressed: { opacity: 0.7 },
 });
