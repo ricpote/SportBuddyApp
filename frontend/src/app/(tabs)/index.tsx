@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WeatherSection } from '@/components/weather-section';
+import { DIFFICULTY_COLORS } from '@/constants/difficulty';
 import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -337,7 +338,7 @@ export default function HomeScreen() {
                           <View style={styles.cardFooter}>
                             <View style={[
                               styles.difficultyBadge,
-                              difficulty === 'Advanced' ? { backgroundColor: '#eb8f84' } : {}
+                              { backgroundColor: DIFFICULTY_COLORS[activity.difficultyLevel] }
                             ]}>
                               <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
                             </View>
