@@ -21,10 +21,10 @@ function toDate(value: unknown): Date {
   return value instanceof Timestamp ? value.toDate() : (value as Date);
 }
 
+// Sem `date`: a data não é editável depois da atividade ser criada.
 export type UpdateActivityDto = {
   title?: string;
   description?: string;
-  date?: Date;
   maxParticipants?: number;
   difficultyLevel?: Activity["difficultyLevel"];
   requiresApproval?: boolean;
@@ -332,11 +332,7 @@ export class ActivitiesService {
       if (description.length > 1000) throw new Error("A descrição é demasiado longa");
       changes.description = description;
     }
-    if (data.date !== undefined) {
-      if (Number.isNaN(data.date.getTime())) throw new Error("Data inválida");
-      if (data.date <= now) throw new Error("A data tem de ser no futuro");
-      changes.date = data.date;
-    }
+    // A data não é editável depois de criada — combinam mudanças no chat.
     if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
     if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
     if (data.maxParticipants !== undefined) {

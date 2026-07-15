@@ -1,11 +1,11 @@
 import { api } from '@/services/api';
 import { Activity, CreateActivityInput, SkillLevel } from '@/types/activity';
 
+// Sem `date`: a data não é editável depois da atividade ser criada.
 export type UpdateActivityInput = {
   title?: string;
   description?: string;
   maxParticipants?: number;
-  date?: string;
   difficultyLevel?: SkillLevel;
   requiresApproval?: boolean;
 };
