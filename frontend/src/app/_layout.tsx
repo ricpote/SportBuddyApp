@@ -25,7 +25,7 @@ const SportBuddyTheme = {
 };
 
 function RootNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, signingUp } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
@@ -33,9 +33,11 @@ function RootNavigator() {
     return null;
   }
 
+  const authedUser = signingUp ? null : user;
+
   return (
     <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
-      {isDesktop && !!user && <WebSidebar />}
+      {isDesktop && !!authedUser && <WebSidebar />}
       <View style={{ flex: 1 }}>
       <Stack
         screenOptions={{
@@ -46,7 +48,7 @@ function RootNavigator() {
         headerShadowVisible: false, // Remove a linha feia por baixo do header
       }}
     >
-      <Stack.Protected guard={!!user}>
+      <Stack.Protected guard={!!authedUser}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="create-activity"
@@ -86,7 +88,7 @@ function RootNavigator() {
           options={{ headerShown: true, title: 'Badges', presentation: 'modal' }}
         />
       </Stack.Protected>
-      <Stack.Protected guard={!user}>
+      <Stack.Protected guard={!authedUser}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>

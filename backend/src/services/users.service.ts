@@ -40,8 +40,6 @@ export class UsersService {
       throw new Error("O email é obrigatório");
     }
 
-    await this.assertNameAndEmailAvailable(name, email);
-
     // We use Firebase UID as the Firestore document ID.
     // This makes it easy to find the logged-in user.
     const user = createUserObject(firebaseUid, firebaseUid, {
@@ -51,40 +49,38 @@ export class UsersService {
     });
 
     const userDoc = JSON.parse(JSON.stringify(user));
+    const docRef = this.usersRef.doc(firebaseUid);
 
-    await this.usersRef.doc(firebaseUid).set(userDoc);
+    await db.runTransaction(async (tx) => {
+      await this.assertNameAndEmailAvailable(tx, user.nameLower, user.emailLower);
+      tx.set(docRef, userDoc);
+    });
 
     return user;
   }
 
-  // Garante que não há dois perfis com o mesmo nome ou email
-  // (comparação sem maiúsculas/minúsculas; ignora contas apagadas).
   private async assertNameAndEmailAvailable(
-    name: string,
-    email?: string,
+    tx: FirebaseFirestore.Transaction,
+    nameLower: string,
+    emailLower?: string,
     excludeUserId?: string
   ): Promise<void> {
-    const snapshot = await this.usersRef.get();
+    const [nameSnap, emailSnap] = await Promise.all([
+      tx.get(this.usersRef.where("nameLower", "==", nameLower)),
+      emailLower
+        ? tx.get(this.usersRef.where("emailLower", "==", emailLower))
+        : Promise.resolve(null),
+    ]);
 
-    const normalizedName = name.toLowerCase();
-    const normalizedEmail = email?.toLowerCase();
+    const isConflict = (doc: FirebaseFirestore.QueryDocumentSnapshot) =>
+      doc.id !== excludeUserId && (doc.data() as User).status !== "deleted";
 
-    for (const doc of snapshot.docs) {
-      if (doc.id === excludeUserId) continue;
+    if (nameSnap.docs.some(isConflict)) {
+      throw new Error("Já existe um utilizador com este nome");
+    }
 
-      const user = doc.data() as User;
-      if (user.status === "deleted") continue;
-
-      if (user.name?.trim().toLowerCase() === normalizedName) {
-        throw new Error("Já existe um utilizador com este nome");
-      }
-
-      if (
-        normalizedEmail &&
-        user.email?.trim().toLowerCase() === normalizedEmail
-      ) {
-        throw new Error("Já existe um utilizador com este email");
-      }
+    if (emailSnap && emailSnap.docs.some(isConflict)) {
+      throw new Error("Já existe um utilizador com este email");
     }
   }
 
@@ -151,6 +147,8 @@ export class UsersService {
       throw new Error("User profile not found");
     }
 
+    let nameLower: string | undefined;
+
     if (data.name !== undefined) {
       const name = data.name.trim();
 
@@ -162,7 +160,7 @@ export class UsersService {
         throw new Error("O nome é demasiado longo");
       }
 
-      await this.assertNameAndEmailAvailable(name, undefined, firebaseUid);
+      nameLower = name.toLowerCase();
       data = { ...data, name };
     }
 
@@ -170,16 +168,28 @@ export class UsersService {
       throw new Error("A bio é demasiado longa");
     }
 
+    const changes: Record<string, unknown> = { ...data, updatedAt: new Date() };
+    if (nameLower !== undefined) {
+      changes.nameLower = nameLower;
+    }
+
     const updatedUser: User = {
       ...user,
       ...data,
-      updatedAt: new Date(),
+      ...(nameLower !== undefined ? { nameLower } : {}),
+      updatedAt: changes.updatedAt as Date,
     };
 
-    await this.usersRef.doc(firebaseUid).update({
-      ...data,
-      updatedAt: updatedUser.updatedAt,
-    });
+    const docRef = this.usersRef.doc(firebaseUid);
+
+    if (nameLower !== undefined) {
+      await db.runTransaction(async (tx) => {
+        await this.assertNameAndEmailAvailable(tx, nameLower!, undefined, firebaseUid);
+        tx.update(docRef, changes);
+      });
+    } else {
+      await docRef.update(changes);
+    }
 
     return updatedUser;
   }
@@ -316,11 +326,15 @@ export class UsersService {
     const q = query.trim().toLowerCase();
     if (!q) return [];
 
-    const snapshot = await this.usersRef.where("status", "==", "active").get();
+    const snapshot = await this.usersRef
+      .where("nameLower", ">=", q)
+      .where("nameLower", "<", q + "")
+      .limit(20)
+      .get();
 
     return snapshot.docs
       .map((doc) => doc.data() as User)
-      .filter((u) => u.id !== requesterId && u.name.toLowerCase().startsWith(q))
+      .filter((u) => u.id !== requesterId && u.status === "active")
       .map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }));
   }
 

@@ -10,7 +10,7 @@ type UserParams = { userId: string };
 
 function toPublicProfile(user: User): PublicUser {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { email: _email, firebaseUid: _uid, ...publicFields } = user;
+  const { email: _email, firebaseUid: _uid, nameLower: _nameLower, emailLower: _emailLower, ...publicFields } = user;
   return publicFields as PublicUser;
 }
 

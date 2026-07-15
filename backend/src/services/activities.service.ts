@@ -9,6 +9,7 @@ import {
 } from "../models/activity.model";
 import { UserRole } from "../models/user.model";
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
+import { tallyMvpWinners } from "../util/mvp.util";
 import { usersService } from "./users.service";
 import { sportsService } from "./sports.service";
 import { notificationsService } from "./notifications.service";
@@ -104,17 +105,46 @@ export class ActivitiesService {
       activity.status !== "cancelled" &&
       new Date(activity.date) < new Date()
     ) {
-      const now = new Date();
-      const participants = activity.participantsList.filter(id => id !== activity.createdBy);
-      await Promise.all([
-        this.activitiesRef.doc(activityId).update({ status: "completed" as ActivityStatus, updatedAt: now }),
-        usersService.incrementStat(activity.createdBy, "activitiesCreated", 1),
-        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
-      ]);
-      return { ...activity, status: "completed", updatedAt: now };
+      return this.completeActivityIfDue(activityId, activity);
     }
 
     return activity;
+  }
+
+  private async completeActivityIfDue(activityId: string, fallback: Activity): Promise<Activity> {
+    const docRef = this.activitiesRef.doc(activityId);
+
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) return null;
+
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
+
+      if (
+        activity.status === "completed" ||
+        activity.status === "cancelled" ||
+        new Date(activity.date) >= new Date()
+      ) {
+        return { activity, didComplete: false };
+      }
+
+      const now = new Date();
+      tx.update(docRef, { status: "completed" as ActivityStatus, updatedAt: now });
+
+      return { activity: { ...activity, status: "completed" as ActivityStatus, updatedAt: now }, didComplete: true };
+    });
+
+    if (!result) return fallback;
+
+    if (result.didComplete) {
+      const participants = result.activity.participantsList.filter(id => id !== result.activity.createdBy);
+      await Promise.all([
+        usersService.incrementStat(result.activity.createdBy, "activitiesCreated", 1),
+        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
+      ]);
+    }
+
+    return result.activity;
   }
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
@@ -666,60 +696,49 @@ export class ActivitiesService {
   }
 
   async voteMvp(activityId: string, voterId: string, votedForId: string): Promise<void> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) throw new Error("Activity not found");
-    if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
-    if (activity.votingClosedAt) throw new Error("MVP voting is closed");
-    if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
-    if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
-    if (voterId === votedForId) throw new Error("You cannot vote for yourself");
-    if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) throw new Error("Activity not found");
 
-    const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
-    const now = new Date();
-    const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    if (allVoted) {
-      await this.closeMvpVoting(activityId, activity, updatedVotes, now);
-    } else {
-      await this.activitiesRef.doc(activityId).update({ mvpVotes: updatedVotes, updatedAt: now });
-    }
-  }
+      if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
+      if (activity.votingClosedAt) throw new Error("MVP voting is closed");
+      if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
+      if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
+      if (voterId === votedForId) throw new Error("You cannot vote for yourself");
+      if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
 
-  private async closeMvpVoting(
-    activityId: string,
-    activity: Activity,
-    votes: Record<string, string>,
-    now: Date
-  ): Promise<void> {
-    const tally: Record<string, number> = {};
-    for (const votedFor of Object.values(votes)) {
-      tally[votedFor] = (tally[votedFor] ?? 0) + 1;
-    }
+      const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
+      const now = new Date();
+      const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
 
-    const maxVotes = Math.max(...Object.values(tally));
-    const winners = Object.keys(tally).filter(id => tally[id] === maxVotes);
+      if (allVoted) {
+        const winners = tallyMvpWinners(updatedVotes);
+        tx.update(docRef, { mvpVotes: updatedVotes, mvpWinners: winners, votingClosedAt: now, updatedAt: now });
+        return { activity, closed: true as const, winners };
+      }
 
-    await this.activitiesRef.doc(activityId).update({
-      mvpVotes: votes,
-      mvpWinners: winners,
-      votingClosedAt: now,
-      updatedAt: now,
+      tx.update(docRef, { mvpVotes: updatedVotes, updatedAt: now });
+      return { activity, closed: false as const };
     });
 
-    for (const winnerId of winners) {
-      await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
-    }
+    if (result.closed) {
+      for (const winnerId of result.winners) {
+        await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
+      }
 
-    await notificationsService.createNotificationForMany(
-      activity.participantsList,
-      "mvp_result",
-      winners.length === 1
-        ? `A votação de MVP da atividade "${activity.title}" terminou!`
-        : `A votação de MVP da atividade "${activity.title}" terminou com empate!`,
-      activityId
-    );
+      await notificationsService.createNotificationForMany(
+        result.activity.participantsList,
+        "mvp_result",
+        result.winners.length === 1
+          ? `A votação de MVP da atividade "${result.activity.title}" terminou!`
+          : `A votação de MVP da atividade "${result.activity.title}" terminou com empate!`,
+        activityId
+      );
+    }
   }
 }
 

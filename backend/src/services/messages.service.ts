@@ -134,25 +134,26 @@ export class MessagesService {
       .where("participants", "array-contains", userId)
       .get();
 
-    const results: ConversationDto[] = [];
+    const results = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const otherUserId = (data.participants as string[]).find((id) => id !== userId)!;
+        const otherUserDoc = await db.collection("users").doc(otherUserId).get();
+        if (!otherUserDoc.exists) return null;
 
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const otherUserId = (data.participants as string[]).find((id) => id !== userId)!;
-      const otherUserDoc = await db.collection("users").doc(otherUserId).get();
-      if (!otherUserDoc.exists) continue;
-
-      const otherUser = otherUserDoc.data()!;
-      results.push({
-        id: doc.id,
-        otherUser: { id: otherUserId, name: otherUser.name, avatarUrl: otherUser.avatarUrl },
-        lastMessage: data.lastMessage,
-        lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate() : data.lastMessageAt,
-        lastMessageSenderId: data.lastMessageSenderId,
-      });
-    }
+        const otherUser = otherUserDoc.data()!;
+        return {
+          id: doc.id,
+          otherUser: { id: otherUserId, name: otherUser.name, avatarUrl: otherUser.avatarUrl },
+          lastMessage: data.lastMessage,
+          lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate() : data.lastMessageAt,
+          lastMessageSenderId: data.lastMessageSenderId,
+        } as ConversationDto;
+      })
+    );
 
     return results
+      .filter((c): c is ConversationDto => c !== null)
       .filter((c) => c.lastMessage !== undefined)
       .sort((a, b) => {
         const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;

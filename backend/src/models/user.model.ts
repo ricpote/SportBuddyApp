@@ -30,6 +30,8 @@ export type User = {
 
   name: string;
   email: string;
+  nameLower: string;
+  emailLower: string;
   bio?: string;
   avatarUrl?: string;
 
@@ -49,7 +51,7 @@ export type User = {
   updatedAt: Date;
 };
 
-export type PublicUser = Omit<User, "email" | "firebaseUid">;
+export type PublicUser = Omit<User, "email" | "firebaseUid" | "nameLower" | "emailLower">;
 
 export type CreateUserDto = {
   name: string;
@@ -84,6 +86,8 @@ export function createUserObject(
 
     name: data.name,
     email: data.email,
+    nameLower: data.name.toLowerCase(),
+    emailLower: data.email.toLowerCase(),
 
     role: "participant",
     status: "active",
