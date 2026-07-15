@@ -1,4 +1,4 @@
-import { Link, Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -533,21 +533,21 @@ export default function ActivityDetailScreen() {
             <>
               <View style={styles.actionsRow}>
                 {isParticipant && activity.status !== 'cancelled' && (
-                  <Link href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
-                    <Pressable style={({ pressed }) => [styles.chatOutlineButton, pressed && styles.pressed]}>
-                      <Ionicons name="chatbubble-outline" size={18} color="#e8823f" />
-                      <ThemedText style={styles.chatOutlineButtonText}>Abrir chat</ThemedText>
-                    </Pressable>
-                  </Link>
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/chat/[id]', params: { id: activity.id } })}
+                    style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
+                    <Ionicons name="chatbubble-outline" size={18} color="#1a1005" />
+                    <ThemedText style={styles.chatButtonText}>Abrir chat</ThemedText>
+                  </Pressable>
                 )}
 
                 {isCreator && canJoin && (
-                  <Link href={{ pathname: '/edit-activity/[id]', params: { id: activity.id } }} asChild>
-                    <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-                      <Ionicons name="pencil-outline" size={16} color="#f4f2ef" />
-                      <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
-                    </Pressable>
-                  </Link>
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/edit-activity/[id]', params: { id: activity.id } })}
+                    style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                    <Ionicons name="pencil-outline" size={16} color="#f4f2ef" />
+                    <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
+                  </Pressable>
                 )}
 
                 <Pressable
@@ -586,7 +586,7 @@ export default function ActivityDetailScreen() {
                 disabled={submitting}
                 onPress={handleJoin}
                 style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
-                <Ionicons name="add" size={20} color="#f4f2ef" />
+                <Ionicons name="add" size={20} color="#1a1005" />
                 <ThemedText style={styles.chatButtonText}>
                   {isFull ? 'Entrar na lista de espera' : 'Participar'}
                 </ThemedText>
@@ -917,10 +917,13 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: Spacing.two,
+    gap: Spacing.three,
   },
   chatButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
+    minWidth: 140,
     height: 52,
     flexDirection: 'row',
     gap: 8,
@@ -929,20 +932,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#e8823f',
   },
-  chatButtonText: { color: '#f4f2ef', fontSize: 16, fontWeight: 'bold' },
-  chatOutlineButton: {
-    flex: 1,
-    height: 52,
-    flexDirection: 'row',
-    gap: 8,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#111012',
-    borderWidth: 2,
-    borderColor: '#e8823f',
-  },
-  chatOutlineButtonText: { color: '#e8823f', fontSize: 16, fontWeight: 'bold' },
+  chatButtonText: { color: '#1a1005', fontSize: 16, fontWeight: 'bold' },
   secondaryButton: {
     height: 52,
     flexDirection: 'row',

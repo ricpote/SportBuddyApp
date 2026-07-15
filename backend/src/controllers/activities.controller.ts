@@ -186,10 +186,9 @@ export async function updateActivity(
 
     const { activityId } = req.params;
 
-    const updateData = {
-      ...req.body,
-      date: req.body.date ? new Date(req.body.date) : undefined,
-    };
+    // A data não é editável: mudanças de horário combinam-se no chat.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { date: _date, ...updateData } = req.body;
 
     const activity = await activitiesService.updateActivity(
       activityId,

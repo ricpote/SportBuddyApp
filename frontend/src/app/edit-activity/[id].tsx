@@ -74,10 +74,6 @@ export default function EditActivityScreen() {
   const currentActivity = activity;
   const minParticipants = Math.max(2, currentActivity.participantsList.length);
 
-  const activityDate = new Date(currentActivity.date);
-  const dateLabel = activityDate.toLocaleDateString('pt-PT');
-  const timeLabel = activityDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-
   function adjustMaxParticipants(delta: number) {
     setMaxParticipants((current) => Math.max(minParticipants, current + delta));
   }
@@ -162,38 +158,25 @@ export default function EditActivityScreen() {
             </View>
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.field, styles.flex1]}>
-              <ThemedText style={styles.label}>DATA E HORA</ThemedText>
-              <View style={styles.readOnlyInput}>
-                <Ionicons name="calendar-outline" size={16} color="#8f8b85" />
-                <ThemedText style={styles.readOnlyText}>
-                  {dateLabel} · {timeLabel}
-                </ThemedText>
-              </View>
-              <ThemedText style={styles.helperText}>Combinem alterações de data no chat</ThemedText>
-            </View>
-
-            <View style={[styles.field, styles.flex1]}>
-              <ThemedText style={styles.label}>MÁX. JOGADORES</ThemedText>
-              <View style={styles.stepper}>
-                <Pressable
-                  disabled={maxParticipants <= minParticipants}
-                  onPress={() => adjustMaxParticipants(-1)}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    maxParticipants <= minParticipants && styles.stepperButtonDisabled,
-                    pressed && styles.pressed,
-                  ]}>
-                  <Ionicons name="remove" size={16} color="#f4f2ef" />
-                </Pressable>
-                <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
-                <Pressable
-                  onPress={() => adjustMaxParticipants(1)}
-                  style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}>
-                  <Ionicons name="add" size={16} color="#f4f2ef" />
-                </Pressable>
-              </View>
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>MÁX. JOGADORES</ThemedText>
+            <View style={styles.stepper}>
+              <Pressable
+                disabled={maxParticipants <= minParticipants}
+                onPress={() => adjustMaxParticipants(-1)}
+                style={({ pressed }) => [
+                  styles.stepperButton,
+                  maxParticipants <= minParticipants && styles.stepperButtonDisabled,
+                  pressed && styles.pressed,
+                ]}>
+                <Ionicons name="remove" size={16} color="#f4f2ef" />
+              </Pressable>
+              <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
+              <Pressable
+                onPress={() => adjustMaxParticipants(1)}
+                style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}>
+                <Ionicons name="add" size={16} color="#f4f2ef" />
+              </Pressable>
             </View>
           </View>
 
@@ -297,32 +280,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#1a1005',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  flex1: {
-    flex: 1,
-  },
-  readOnlyInput: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#0d0d0e',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-  readOnlyText: {
-    color: '#c9c5bf',
-    fontSize: 14,
-  },
-  helperText: {
-    color: '#6b6862',
-    fontSize: 11,
   },
   stepper: {
     height: 52,
