@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 
 export type DateTimeFieldProps = {
-  label: string;
+  label?: string;
   value: Date;
   onChange: (date: Date) => void;
 };
@@ -17,7 +17,7 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
   if (Platform.OS === 'ios') {
     return (
       <View style={styles.iosRow}>
-        <ThemedText style={styles.label}>{label}</ThemedText>
+        {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
         <DateTimePicker
           value={value}
           mode="datetime"
@@ -38,7 +38,7 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 
   return (
     <View style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
       <View style={styles.row}>
         <Pressable style={styles.flex1} onPress={() => setMode('date')}>
           <View style={styles.input}>
@@ -68,7 +68,6 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
-    marginTop: Spacing.two,
   },
   row: {
     flexDirection: 'row',

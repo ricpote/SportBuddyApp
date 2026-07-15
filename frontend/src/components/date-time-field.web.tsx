@@ -15,7 +15,7 @@ function toLocalInputValue(date: Date) {
 export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
   return (
     <View style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
       <input
         type="datetime-local"
         value={toLocalInputValue(value)}
@@ -30,7 +30,7 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
           paddingLeft: 16,
           paddingRight: 16,
           fontSize: 16,
-          fontFamily: 'inherit',
+          fontFamily: 'HankenGrotesk_400Regular',
           color: '#f4f2ef', // Texto branco
           backgroundColor: '#111012', // Fundo escuro do input
           colorScheme: 'dark', // Diz ao Google Chrome/Safari para usar a versão escura do calendário
@@ -44,7 +44,6 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
-    marginTop: Spacing.two,
   },
   label: {
     color: '#f4f2ef',

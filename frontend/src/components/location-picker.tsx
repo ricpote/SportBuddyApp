@@ -17,8 +17,6 @@ type LocationPickerProps = {
 export default function LocationPicker({ value, onChange }: LocationPickerProps) {
   return (
     <View style={styles.wrapper}>
-      <ThemedText style={styles.label}>Localização</ThemedText>
-
       <TextInput
         value={value.address}
         onChangeText={(address) => {
