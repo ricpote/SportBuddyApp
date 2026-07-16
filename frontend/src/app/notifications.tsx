@@ -103,9 +103,12 @@ function HighlightedText({ text, unread }: { text: string; unread: boolean }) {
 function getItemAction(n: Notification): { label: string; onPress: () => void } | null {
   switch (n.type) {
     case 'mvp_voting_open':
-    case 'mvp_result':
       return n.activityId
         ? { label: 'Vote now', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
+        : null;
+    case 'mvp_result':
+      return n.activityId
+        ? { label: 'View result', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
         : null;
     case 'badge_earned':
       return { label: 'View badge', onPress: () => router.push('/profile') };

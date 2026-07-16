@@ -263,7 +263,7 @@ export default function ActivityDetailScreen() {
       <View key={pid} style={styles.participantRow}>
         <Pressable
           style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
-          onPress={() => goToUserProfile(pid)}>
+          onPress={() => goToUserProfile(pid, user?.uid)}>
           <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
           <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
           {isOrganizer && <ThemedText style={styles.organizerTag}>· organizador</ThemedText>}
@@ -381,7 +381,7 @@ export default function ActivityDetailScreen() {
 
           {/* ORGANIZADOR */}
           <Pressable
-            onPress={() => goToUserProfile(activity.createdBy)}
+            onPress={() => goToUserProfile(activity.createdBy, user?.uid)}
             style={({ pressed }) => [styles.organizerCard, pressed && styles.pressed]}>
             <AvatarCircle
               name={organizerName}
@@ -470,7 +470,7 @@ export default function ActivityDetailScreen() {
                     <View key={userId} style={styles.participantRow}>
                       <Pressable
                         style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
-                        onPress={() => goToUserProfile(userId)}>
+                        onPress={() => goToUserProfile(userId, user?.uid)}>
                         <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
                         <ThemedText style={styles.participantName}>{p?.name ?? shortId(userId)}</ThemedText>
                       </Pressable>
@@ -538,7 +538,7 @@ export default function ActivityDetailScreen() {
                       <View key={pid} style={styles.participantRow}>
                         <Pressable
                           style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
-                          onPress={() => goToUserProfile(pid)}>
+                          onPress={() => goToUserProfile(pid, user?.uid)}>
                           <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
                           <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
                         </Pressable>
@@ -686,8 +686,12 @@ function shortId(uid: string) {
   return `Utilizador ${uid.slice(0, 6)}…`;
 }
 
-function goToUserProfile(userId: string) {
-  router.push({ pathname: '/user/[id]', params: { id: userId } });
+function goToUserProfile(userId: string, currentUserId?: string) {
+  if (userId === currentUserId) {
+    router.push('/profile');
+  } else {
+    router.push({ pathname: '/user/[id]', params: { id: userId } });
+  }
 }
 
 const styles = StyleSheet.create({
