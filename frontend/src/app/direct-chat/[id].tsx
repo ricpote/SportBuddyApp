@@ -53,13 +53,9 @@ export default function DirectChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<ScrollView>(null);
   const latestCountRef = useRef(0);
+  const lastMarkedRef = useRef(0);
   const inputRef = useRef<TextInput>(null);
   const handleSendRef = useRef<() => void>(() => {});
-
-  useEffect(() => {
-    if (!id) return;
-    markRead(id);
-  }, [id, markRead]);
 
   useEffect(() => {
     if (!id) return;
@@ -71,11 +67,15 @@ export default function DirectChatScreen() {
             const temps = prev.filter((m) => m.id.startsWith('temp-'));
             return [...data, ...temps];
           });
+          const lastMsg = data[data.length - 1];
+          const lastMsgTime = lastMsg ? new Date(lastMsg.createdAt).getTime() : 0;
+          if (lastMsgTime > lastMarkedRef.current) {
+            lastMarkedRef.current = lastMsgTime;
+            markRead(id!, lastMsgTime);
+          }
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            const lastMsg = data[data.length - 1];
-            markRead(id!, lastMsg ? new Date(lastMsg.createdAt).getTime() : undefined);
           }
         })
         .catch((err) => {

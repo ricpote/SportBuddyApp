@@ -81,7 +81,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { pendingCount, refresh: refreshBadge } = usePendingWaitlist();
+  const { refresh: refreshBadge } = usePendingWaitlist();
   const isWide = width >= 700;
 
   const [activities, setActivities] = useState<Activity[] | null>(null);
@@ -238,22 +238,6 @@ export default function ProfileScreen() {
               <ThemedText type="small" style={styles.uploadingText}>A guardar...</ThemedText>
             ) : null}
 
-            <Pressable
-              style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-              onPress={() => router.push('/edit-profile')}>
-              <ThemedText type="smallBold" style={styles.editBtnText}>Editar perfil</ThemedText>
-            </Pressable>
-
-            {pendingCount > 0 && (
-              <View style={styles.pendingCard}>
-                <ThemedText type="small" style={styles.pendingText}>
-                  {pendingCount === 1
-                    ? '1 atividade com pedidos na lista de espera'
-                    : `${pendingCount} atividades com pedidos`}
-                </ThemedText>
-              </View>
-            )}
-
             {profile?.sports && profile.sports.length > 0 && (
               <View style={styles.sportChips}>
                 {profile.sports.slice(0, 5).map(sid => {
@@ -265,11 +249,6 @@ export default function ProfileScreen() {
                     </View>
                   );
                 })}
-                <Link href="/edit-profile" asChild>
-                  <Pressable style={styles.addSportChip}>
-                    <Ionicons name="add" size={14} color="#8f8b85" />
-                  </Pressable>
-                </Link>
               </View>
             )}
 

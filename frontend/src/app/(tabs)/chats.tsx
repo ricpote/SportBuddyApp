@@ -44,7 +44,7 @@ export default function ChatsScreen() {
   const { user } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const { checkUnread, checkUnreadConversations, unreadIds = [], unreadConversationIds = [] } = useChatBadge();
-  const [tab, setTab] = useState<ChatTab>('friends');
+  const [tab, setTab] = useState<ChatTab>('activities');
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -310,17 +310,17 @@ export default function ChatsScreen() {
         </View>
 
         <View style={styles.tabsRow}>
-          <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
-            <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
-              Amigos{conversations !== null ? ` ${conversations.length}` : ''}
-            </ThemedText>
-            {tab === 'friends' && <View style={styles.tabUnderline} />}
-          </Pressable>
           <Pressable onPress={() => setTab('activities')} style={styles.tabBtn}>
             <ThemedText style={[styles.tabText, tab === 'activities' && styles.tabTextActive]}>
               Atividades{activities !== null ? ` ${allChats.length}` : ''}
             </ThemedText>
             {tab === 'activities' && <View style={styles.tabUnderline} />}
+          </Pressable>
+          <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
+            <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
+              Amigos{conversations !== null ? ` ${conversations.length}` : ''}
+            </ThemedText>
+            {tab === 'friends' && <View style={styles.tabUnderline} />}
           </Pressable>
         </View>
 

@@ -24,10 +24,10 @@ import { Sport } from '@/types/sport';
 import { SportIcon } from '@/utils/sport-icon';
 
 const STATUS_LABELS: Record<Activity['status'], string> = {
-  open: 'Aberta',
-  full: 'Completa',
-  cancelled: 'Cancelada',
-  completed: 'Terminada',
+  open: 'Open',
+  full: 'Full',
+  cancelled: 'Cancelled',
+  completed: 'Ended',
 };
 
 const STATUS_COLORS: Record<Activity['status'], string> = {
@@ -264,20 +264,7 @@ export default function ActivityDetailScreen() {
 
   return (
     <>
-      {/* Pill de estado no cabeçalho nativo */}
-      <Stack.Screen
-        options={{
-          title: 'Atividade',
-          headerRight: () => (
-            <View style={[styles.statusPill, { borderColor: STATUS_COLORS[activity.status] }]}>
-              <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[activity.status] }]} />
-              <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS[activity.status] }]}>
-                {STATUS_LABELS[activity.status].toUpperCase()}
-              </ThemedText>
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: 'Activity' }} />
 
       <ScrollView
         style={{ backgroundColor: '#0a0a0b' }}
@@ -291,7 +278,39 @@ export default function ActivityDetailScreen() {
               <SportIcon sportName={sport?.name} size={30} color="#1a1005" />
             </View>
             <View style={styles.heroText}>
-              <ThemedText style={styles.title}>{activity.title}</ThemedText>
+              <View style={styles.titleRow}>
+                <ThemedText style={styles.title}>{activity.title}</ThemedText>
+                <View style={styles.pillRow}>
+                  {(activity.status === 'open' || activity.status === 'full') ? (
+                    <>
+                      {activity.requiresApproval ? (
+                        <View style={[styles.statusPill, { borderColor: '#8f8b85' }]}>
+                          <Ionicons name="lock-closed" size={10} color="#8f8b85" />
+                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>PRIVATE</ThemedText>
+                        </View>
+                      ) : (
+                        <View style={[styles.statusPill, { borderColor: STATUS_COLORS['open'] }]}>
+                          <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS['open'] }]} />
+                          <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS['open'] }]}>OPEN</ThemedText>
+                        </View>
+                      )}
+                      {activity.status === 'full' && (
+                        <View style={[styles.statusPill, { borderColor: '#8f8b85' }]}>
+                          <View style={[styles.statusDot, { backgroundColor: '#8f8b85' }]} />
+                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>FULL</ThemedText>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <View style={[styles.statusPill, { borderColor: STATUS_COLORS[activity.status] }]}>
+                      <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[activity.status] }]} />
+                      <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS[activity.status] }]}>
+                        {STATUS_LABELS[activity.status].toUpperCase()}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
+              </View>
               {activity.description ? (
                 <ThemedText style={styles.descriptionText}>{activity.description}</ThemedText>
               ) : null}
@@ -560,16 +579,22 @@ export default function ActivityDetailScreen() {
 
               {canJoin && (
                 isCreator ? (
-                  <Pressable disabled={submitting} onPress={handleCancel} hitSlop={8}>
-                    <ThemedText style={styles.dangerLink}>
-                      <Ionicons name="trash-outline" size={14} color="#eb8f84" />{' '}
-                      {confirmingCancel ? 'Tens a certeza? Toca para confirmar' : 'Cancelar atividade'}
+                  <Pressable
+                    disabled={submitting}
+                    onPress={handleCancel}
+                    style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}>
+                    <Ionicons name="trash-outline" size={16} color="#eb8f84" />
+                    <ThemedText style={styles.dangerButtonText}>
+                      {confirmingCancel ? 'Are you sure? Tap to confirm' : 'Cancel activity'}
                     </ThemedText>
                   </Pressable>
                 ) : (
-                  <Pressable disabled={submitting} onPress={handleLeave} hitSlop={8}>
-                    <ThemedText style={styles.dangerLink}>
-                      <Ionicons name="exit-outline" size={14} color="#eb8f84" />{' '}
+                  <Pressable
+                    disabled={submitting}
+                    onPress={handleLeave}
+                    style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}>
+                    <Ionicons name="exit-outline" size={16} color="#eb8f84" />
+                    <ThemedText style={styles.dangerButtonText}>
                       {confirmingLeave
                         ? 'Are you sure? Tap to confirm'
                         : isWaitlisted
@@ -663,6 +688,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   heroText: { flex: 1, gap: 4 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   title: {
     color: '#f4f2ef',
     fontSize: 24,
@@ -946,6 +973,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.10)',
   },
   secondaryButtonText: { color: '#f4f2ef', fontSize: 14, fontWeight: 'bold' },
+  dangerButton: {
+    height: 52,
+    flexDirection: 'row',
+    gap: 8,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    backgroundColor: 'rgba(235,143,132,0.10)',
+    borderWidth: 1,
+    borderColor: '#eb8f84',
+  },
+  dangerButtonText: { color: '#eb8f84', fontSize: 15, fontWeight: 'bold' },
   dangerLink: {
     color: '#eb8f84',
     fontSize: 14,
