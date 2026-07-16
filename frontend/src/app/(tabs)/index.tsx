@@ -1,34 +1,36 @@
-﻿import { Link, router, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ImageBackground, Pressable, StyleSheet, ScrollView, View, Image } from 'react-native';
+import { /* ImageBackground, */ Pressable, StyleSheet, ScrollView, View, Image, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WeatherSection } from '@/components/weather-section';
-import { DIFFICULTY_COLORS } from '@/constants/difficulty';
-import { sportImages } from '@/constants/sport-images';
+// import { DIFFICULTY_COLORS } from '@/constants/difficulty';
+// import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { listActivities, getFriendsActivities } from '@/services/activities';
+import { /* listActivities, */ getFriendsActivities, getFriendsFeed, getMyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { getNotifications } from '@/services/notifications';
 import { getFriends } from '@/services/friends';
-import { Activity } from '@/types/activity';
+import { Activity, FeedItem } from '@/types/activity';
 import { Sport } from '@/types/sport';
 import { Friend } from '@/types/friend';
 import { SportIcon } from '@/utils/sport-icon';
+import { relativeDate } from '@/utils/date';
+import { getWeeklyForecast, DailyForecast } from '@/services/weather';
+import { getWeatherInfo, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
+import * as Location from 'expo-location';
 
-const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-  competitive: 'Competitive',
-};
+// const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
+//   beginner: 'Beginner',
+//   intermediate: 'Intermediate',
+//   advanced: 'Advanced',
+//   competitive: 'Competitive',
+// };
 
-const ALL_FILTER = 'All';
 
 function isUpcoming(activity: Activity) {
   return (
@@ -45,349 +47,422 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
 export default function HomeScreen() {
   const { user, profile } = useAuth();
   const { unreadCount: chatUnread } = useChatBadge();
+  const { width: screenWidth } = useWindowDimensions();
+  const isWide = screenWidth >= 900;
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
 
-  // Filtro selecionado (nome da modalidade, ou 'Todos')
-  const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
-
-  // Dados reais vindos do backend
-  const [activities, setActivities] = useState<Activity[]>([]);
+  // const [activities, setActivities] = useState<Activity[]>([]);
+  const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsActivities, setFriendsActivities] = useState<Activity[]>([]);
+  const [friendFeed, setFriendFeed] = useState<FeedItem[]>([]);
+  const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      listActivities()
-        .then(setActivities)
-        .catch(() => setActivities([]));
-      listSports()
-        .then(setSports)
-        .catch(() => setSports([]));
+      // listActivities().then(setActivities).catch(() => setActivities([]));
+      getMyActivities().then(setMyActivities).catch(() => setMyActivities([]));
+      listSports().then(setSports).catch(() => setSports([]));
       getNotifications()
         .then((list) => setUnreadCount(list.filter((n) => !n.read).length))
         .catch(() => setUnreadCount(0));
-      getFriends()
-        .then(setFriends)
-        .catch(() => setFriends([]));
-      getFriendsActivities()
-        .then(setFriendsActivities)
-        .catch(() => setFriendsActivities([]));
+      getFriends().then(setFriends).catch(() => setFriends([]));
+      getFriendsActivities().then(setFriendsActivities).catch(() => setFriendsActivities([]));
+      getFriendsFeed().then(setFriendFeed).catch(() => setFriendFeed([]));
+      (async () => {
+        const DEFAULT = { latitude: 38.7223, longitude: -9.1393 };
+        let coords = DEFAULT;
+        try {
+          const perm = await Location.requestForegroundPermissionsAsync();
+          if (perm.status === 'granted') {
+            const pos = await Location.getCurrentPositionAsync({});
+            coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          }
+        } catch {}
+        try {
+          const data = await getWeeklyForecast(coords.latitude, coords.longitude);
+          setForecast(data.forecast);
+          setLocationName(data.location);
+        } catch {}
+      })();
     }, [])
   );
 
-  // sportId -> nome da modalidade, para mostrar no cartão e filtrar por nome
   const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
 
-  // friendId -> primeiro nome, para mostrar quem vai em cada atividade recomendada
-  const friendNameById = new Map(
-    friends.map((f) => [f.userId, f.user.name.split(' ')[0]])
-  );
+  const nextActivity = myActivities
+    .filter((a) =>
+      (a.status === 'open' || a.status === 'full') &&
+      new Date(a.date).getTime() > Date.now() &&
+      a.participantsList.includes(user?.uid ?? '')
+    )
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
+
+  function countdown(iso: string): string {
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return 'Now';
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
+  const friendNameById = new Map(friends.map((f) => [f.userId, f.user.name.split(' ')[0]]));
 
   function friendsGoingLabel(activity: Activity) {
     const names = activity.participantsList
       .map((id) => friendNameById.get(id))
       .filter((name): name is string => !!name);
-
     if (names.length === 0) return '';
     if (names.length === 1) return `${names[0]} is joining`;
     if (names.length === 2) return `${names[0]} and ${names[1]} are joining`;
-    return `${names[0]} and ${names.length - 1} more friends are joining`;
+    return `${names[0]} and ${names.length - 1} more are joining`;
   }
 
-  // Chips de filtro: "Todos" + as modalidades que existem
-  const filters = [ALL_FILTER, ...sports.map((s) => s.name)];
 
-  const upcoming = activities
-    .filter(isUpcoming)
-    .filter(
-      (a) => activeFilter === ALL_FILTER || sportNameById.get(a.sportId) === activeFilter
-    )
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // const upcoming = activities
+  //   .filter(isUpcoming)
+  //   .filter((a) => activeFilter === ALL_FILTER || sportNameById.get(a.sportId) === activeFilter)
+  //   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const recommended = friendsActivities.filter(
+    (a) => isUpcoming(a) && !a.participantsList.includes(user?.uid ?? '')
+  );
+
+  const sidebarContent = (
+    <View style={styles.sidebarInner}>
+      {forecast && forecast.length > 0 && (() => {
+        const today = forecast[0];
+        const { icon, category, label } = getWeatherInfo(today.weatherCode);
+        const iconColor = WEATHER_CATEGORY_COLORS[category];
+        const sportHint =
+          category === 'clear' || category === 'partly-cloud' ? ' · ideal para jogar'
+          : category === 'cloud' ? ' · bom para jogar'
+          : category === 'drizzle' || category === 'rain' ? ' · condições difíceis'
+          : category === 'storm' ? ' · não recomendado'
+          : '';
+        return (
+          <View style={styles.compactWeather}>
+            <View style={styles.compactWeatherHeader}>
+              <ThemedText style={styles.compactWeatherTitle}>Weather</ThemedText>
+              {locationName && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <Ionicons name="location-outline" size={11} color="#8f8b85" />
+                  <ThemedText style={styles.compactWeatherLocation}>{locationName}</ThemedText>
+                </View>
+              )}
+            </View>
+
+            {/* Hoje — grande */}
+            <View style={styles.compactToday}>
+              <Ionicons name={icon as any} size={48} color={iconColor} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.compactTodayTemp}>{Math.round(today.tempMax)}°</ThemedText>
+                <ThemedText style={styles.compactTodayLabel}>{label}{sportHint}</ThemedText>
+              </View>
+              <View style={styles.compactPrecip}>
+                <Ionicons name="water-outline" size={13} color="#60A5FA" />
+                <ThemedText style={styles.compactPrecipText}>{Math.round(today.precipitationProbability)}%</ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.compactDivider} />
+
+            {/* Próximos dias — pequeno */}
+            <View style={styles.compactWeatherRow}>
+              {forecast.slice(1, 5).map((day) => {
+                const dayLabel = new Date(day.date).toLocaleDateString('en-GB', { weekday: 'short' }).replace('.', '');
+                return (
+                  <View key={day.date} style={styles.compactDayItem}>
+                    <ThemedText style={styles.compactDayLabel}>{dayLabel}</ThemedText>
+                    <ThemedText style={styles.compactDayTemp}>{Math.round(day.tempMax)}°</ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })()}
+
+      {friendFeed.length > 0 && (
+        <View style={styles.sidebarSection}>
+          <ThemedText type="subtitle" style={styles.sidebarTitle}>Friends Activity</ThemedText>
+          {friendFeed.slice(0, 6).map((item, i) => (
+            <Pressable
+              key={`feed-${i}`}
+              onPress={() => router.push({ pathname: '/activity/[id]', params: { id: item.activityId } })}
+              style={({ pressed }) => [styles.feedSidebarItem, pressed && styles.pressed]}
+            >
+              <View style={styles.feedAvatar}>
+                <ThemedText style={styles.feedAvatarText}>{getInitials(item.userName)}</ThemedText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.feedSidebarText} numberOfLines={2}>
+                  <ThemedText style={styles.feedSidebarName}>{item.userName} </ThemedText>
+                  {item.type === 'joined' && 'joined '}
+                  {item.type === 'created' && 'organised '}
+                  {item.type === 'mvp' && 'won MVP in '}
+                  <ThemedText style={styles.feedSidebarActivity}>{item.activityTitle}</ThemedText>
+                </ThemedText>
+                <ThemedText style={styles.feedTime}>{relativeDate(item.timestamp)}</ThemedText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: '#0a0a0b' }]}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, isWide && styles.safeAreaWide]}>
+        <View style={[styles.mainLayout, isWide && styles.mainLayoutWide]}>
 
-        {/* CABEÇALHO */}
-        <View style={[styles.header, styles.headerRow]}>
-          <View style={styles.profileHeader}>
-            {/* Foto de Perfil */}
-            {profile?.avatarUrl || user?.photoURL ? (
-              <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
-            ) : (
-              <View style={styles.profilePicPlaceholder}>
-                <Ionicons name="person" size={24} color="#8f8b85" />
-              </View>
-            )}
-            
-            {/* Nome e Mensagem */}
-            <View>
-              <ThemedText type="subtitle" style={styles.profileName}>
-                {user?.displayName ?? firstName ?? 'No Name'}
-              </ThemedText>
-              <ThemedText style={styles.greetingText}>
-                Ready for your next activity?
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* AÇÕES RÁPIDAS: notificações, chats, amigos */}
-          <View style={styles.headerIcons}>
-            <Link href="/notifications" asChild>
-              <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="notifications-outline" size={24} color="#f4f2ef" />
-                {unreadCount > 0 && (
-                  <View style={styles.iconBadge}>
-                    <ThemedText style={styles.iconBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</ThemedText>
+          {/* COLUNA PRINCIPAL */}
+          <View style={styles.mainColumn}>
+            {/* CABEÇALHO */}
+            <View style={[styles.header, styles.headerRow]}>
+              <View style={styles.profileHeader}>
+                {profile?.avatarUrl || user?.photoURL ? (
+                  <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
+                ) : (
+                  <View style={styles.profilePicPlaceholder}>
+                    <Ionicons name="person" size={24} color="#8f8b85" />
                   </View>
                 )}
-              </Pressable>
-            </Link>
-
-            <Link href="/chats" asChild>
-              <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#f4f2ef" />
-                {chatUnread > 0 && (
-                  <View style={styles.iconBadge}>
-                    <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
-                  </View>
-                )}
-              </Pressable>
-            </Link>
-
-            <Link href="/friends" asChild>
-              <Pressable style={styles.iconBtn} hitSlop={8}>
-                <Ionicons name="people-outline" size={24} color="#f4f2ef" />
-              </Pressable>
-            </Link>
-          </View>
-        </View>
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-          {/* SECÇÃO DE METEOROLOGIA */}
-          <WeatherSection />
-
-          {/* SECÇÃO DE FILTROS */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator
-            style={styles.filtersScroll}
-            contentContainerStyle={styles.filtersContainer}
-          >
-            {filters.map((filter) => {
-              const isActive = activeFilter === filter;
-              return (
-                <Pressable
-                  key={filter}
-                  onPress={() => setActiveFilter(filter)}
-                  style={[
-                    styles.filterChip,
-                    isActive && styles.filterChipActive
-                  ]}
-                >
-                  {filter === ALL_FILTER ? (
-                    <Ionicons
-                      name="medal-outline"
-                      size={16}
-                      color={isActive ? "#0a0a0b" : "#c9c5bf"}
-                      style={{ marginRight: 5 }}
-                    />
-                  ) : (
-                    <SportIcon
-                      sportName={filter}
-                      size={16}
-                      color={isActive ? "#0a0a0b" : "#c9c5bf"}
-                      style={{ marginRight: 5 }}
-                    />
-                  )}
-                  <ThemedText style={[
-                    styles.filterText,
-                    isActive && styles.filterTextActive
-                  ]}>
-                    {filter}
+                <View>
+                  <ThemedText type="subtitle" style={styles.profileName}>
+                    Hey, {firstName} 👋
                   </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* SECÇÃO "RECOMENDADO PARA TI" — atividades futuras onde amigos já estão inscritos */}
-          {friendsActivities.length > 0 && (
-            <View style={styles.recommendedSection}>
-              <View style={styles.activitiesHeader}>
-                <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
-                  Recommended for you
-                </ThemedText>
+                  <ThemedText style={styles.greetingText}>
+                    Ready for your next activity?
+                  </ThemedText>
+                </View>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recommendedList}
-              >
-                {friendsActivities.map((activity) => (
-                  <Pressable
-                    key={activity.id}
-                    onPress={() =>
-                      router.push({ pathname: '/activity/[id]', params: { id: activity.id } })
-                    }
-                    style={({ pressed }) => [styles.recommendedCard, pressed && styles.pressed]}
-                  >
-                    <View style={styles.sportBadge}>
-                      <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#f4f2ef" />
-                      <ThemedText style={styles.sportBadgeText}>
-                        {sportNameById.get(activity.sportId) ?? activity.sportId}
-                      </ThemedText>
-                    </View>
-
-                    <ThemedText type="subtitle" style={styles.activityTitle} numberOfLines={1}>
-                      {activity.title}
-                    </ThemedText>
-
-                    <View style={styles.infoRow}>
-                      <Ionicons name="calendar-outline" size={14} color="#c9c5bf" />
-                      <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
-                      <Ionicons name="time-outline" size={14} color="#c9c5bf" style={{ marginLeft: 10 }} />
-                      <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
-                    </View>
-
-                    <View style={styles.friendsGoingRow}>
-                      <Ionicons name="people-outline" size={14} color="#e8823f" style={{ marginTop: 2 }} />
-                      <ThemedText style={styles.friendsGoingText} numberOfLines={2}>
-                        {friendsGoingLabel(activity)}
-                      </ThemedText>
-                    </View>
+              <View style={styles.headerIcons}>
+                <Link href="/notifications" asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="notifications-outline" size={24} color="#f4f2ef" />
+                    {unreadCount > 0 && (
+                      <View style={styles.iconBadge}>
+                        <ThemedText style={styles.iconBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</ThemedText>
+                      </View>
+                    )}
                   </Pressable>
-                ))}
-              </ScrollView>
+                </Link>
+                <Link href="/chats" asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#f4f2ef" />
+                    {chatUnread > 0 && (
+                      <View style={styles.iconBadge}>
+                        <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
+                      </View>
+                    )}
+                  </Pressable>
+                </Link>
+                <Link href="/friends" asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="people-outline" size={24} color="#f4f2ef" />
+                  </Pressable>
+                </Link>
+              </View>
             </View>
-          )}
 
-          {/* SECÇÃO DE ATIVIDADES */}
-          <View style={styles.activitiesHeader}>
-            <ThemedText type="subtitle" style={{ color: '#f4f2ef', fontSize: 20 }}>
-              Upcoming Activities
-            </ThemedText>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-            <Link href="/explore" asChild>
-              <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedText style={{ color: '#e8823f', fontWeight: 'bold' }}>
-                  See all {'>'}
-                </ThemedText>
-              </Pressable>
-            </Link>
+              {/* PRÓXIMA ATIVIDADE */}
+              {nextActivity && (
+                <View style={styles.nextSection}>
+                  <ThemedText style={styles.nextSectionLabel}>YOUR NEXT ACTIVITY</ThemedText>
+                    <View style={styles.nextCard}>
+                      <View style={styles.nextCardLeft}>
+                        <View style={styles.nextSportCircle}>
+                          <SportIcon sportName={sportNameById.get(nextActivity.sportId)} size={28} color="#e8823f" />
+                        </View>
+                        <ThemedText style={styles.nextComecaLabel}>STARTS IN</ThemedText>
+                        <ThemedText style={styles.nextCountdown}>{countdown(nextActivity.date)}</ThemedText>
+                      </View>
 
-          </View>
-
-          <View style={styles.activitiesList}>
-            {upcoming.length > 0 ? (
-              // Cartões com os dados reais vindos do backend
-              upcoming.map((activity) => {
-                const difficulty = DIFFICULTY_LABELS[activity.difficultyLevel];
-                return (
-                  <Pressable
-                    key={activity.id}
-                    onPress={() =>
-                      router.push({ pathname: '/activity/[id]', params: { id: activity.id } })
-                    }
-                    style={({ pressed }) => pressed && styles.pressed}>
-                      <View style={styles.activityCard}>
-                        {/* Foto do desporto como fundo; sem foto fica o cinzento de sempre */}
-                        <ImageBackground
-                          source={sportImages[activity.sportId]}
-                          resizeMode="cover"
-                          style={styles.cardImagePlaceholder}>
-                          <View style={styles.cardImageOverlay} />
-                          <View style={styles.sportBadge}>
-                            <SportIcon sportName={sportNameById.get(activity.sportId)} size={14} color="#f4f2ef" />
-                            <ThemedText style={styles.sportBadgeText}>
-                              {sportNameById.get(activity.sportId) ?? activity.sportId}
-                            </ThemedText>
-                          </View>
-                          {activity.requiresApproval && (
-                            <View style={styles.approvalBadge}>
-                              <Ionicons name="lock-closed" size={12} color="#f4f2ef" />
-                              <ThemedText style={styles.approvalBadgeText}>Approval required</ThemedText>
+                      <View style={styles.nextCardRight}>
+                        <View style={styles.nextTitleRow}>
+                          <ThemedText style={styles.nextCardTitle} numberOfLines={1}>
+                            {sportNameById.get(nextActivity.sportId) ? `${sportNameById.get(nextActivity.sportId)} · ` : ''}{nextActivity.title}
+                          </ThemedText>
+                          {nextActivity.status === 'full' ? (
+                            <View style={styles.confirmedBadge}>
+                              <ThemedText style={styles.confirmedText}>Confirmed</ThemedText>
+                            </View>
+                          ) : (
+                            <View style={[styles.confirmedBadge, { backgroundColor: 'rgba(232,130,63,0.12)', borderColor: 'rgba(232,130,63,0.3)' }]}>
+                              <ThemedText style={[styles.confirmedText, { color: '#e8823f' }]}>
+                                {nextActivity.maxParticipants - nextActivity.participantsList.length} spots left
+                              </ThemedText>
                             </View>
                           )}
-                        </ImageBackground>
+                        </View>
 
-                        <View style={styles.cardBody}>
-                          <ThemedText type="subtitle" style={styles.activityTitle}>
-                            {activity.title}
+                        <View style={styles.nextInfoRow}>
+                          <Ionicons name="calendar-outline" size={13} color="#c9c5bf" />
+                          <ThemedText style={styles.nextInfoText}>
+                            {(() => {
+                              const d = new Date(nextActivity.date);
+                              const isToday = d.toDateString() === new Date().toDateString();
+                              return `${isToday ? 'Today' : formatDate(nextActivity.date)} · ${formatTime(nextActivity.date)}`;
+                            })()}
                           </ThemedText>
+                          <Ionicons name="location-outline" size={13} color="#c9c5bf" style={{ marginLeft: 6 }} />
+                          <ThemedText style={styles.nextInfoText} numberOfLines={1}>{nextActivity.location.name}</ThemedText>
+                          <Ionicons name="people-outline" size={13} color="#c9c5bf" style={{ marginLeft: 6 }} />
+                          <ThemedText style={styles.nextInfoText}>
+                            {nextActivity.participantsList.length}/{nextActivity.maxParticipants}
+                          </ThemedText>
+                        </View>
 
-                          <View style={styles.infoRow}>
-                            <Ionicons name="calendar-outline" size={14} color="#c9c5bf" />
-                            <ThemedText style={styles.infoText}>{formatDate(activity.date)}</ThemedText>
-                            <Ionicons name="time-outline" size={14} color="#c9c5bf" style={{ marginLeft: 10 }} />
-                            <ThemedText style={styles.infoText}>{formatTime(activity.date)}</ThemedText>
-                          </View>
-
-                          <View style={styles.infoRow}>
-                            <Ionicons name="location-outline" size={14} color="#c9c5bf" />
-                            <ThemedText style={styles.infoText}>{activity.location.name}</ThemedText>
-                          </View>
-
-                          <View style={styles.cardFooter}>
-                            <View style={[
-                              styles.difficultyBadge,
-                              { backgroundColor: DIFFICULTY_COLORS[activity.difficultyLevel] }
-                            ]}>
-                              <ThemedText style={styles.difficultyText}>{difficulty}</ThemedText>
-                            </View>
-
-                            <View style={styles.spotsContainer}>
-                              <Ionicons name="people-outline" size={14} color="#c9c5bf" />
-                              <ThemedText style={styles.spotsText}>
-                                {activity.participantsList.length}/{activity.maxParticipants}
-                              </ThemedText>
-                              {activity.status === 'full' && (
-                                <ThemedText style={[styles.spotsText, { color: '#eb8f84' }]}>
-                                  · Full
-                                </ThemedText>
-                              )}
-                              {activity.waitlist.length > 0 && (
-                                <ThemedText style={[styles.spotsText, { color: '#e8823f' }]}>
-                                  +{activity.waitlist.length} waiting
-                                </ThemedText>
-                              )}
-                            </View>
-                          </View>
+                        <View style={styles.nextCardActions}>
+                          <Pressable
+                            onPress={() => router.push({ pathname: '/activity/[id]', params: { id: nextActivity.id } })}
+                            style={styles.nextBtn}
+                          >
+                            <Text style={styles.nextBtnText}>View activity</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => router.push({ pathname: '/chat/[id]', params: { id: nextActivity.id } })}
+                            style={styles.nextBtnGhost}
+                          >
+                            <Ionicons name="chatbubble-outline" size={14} color="#8f8b85" />
+                            <ThemedText style={styles.nextBtnGhostText}>Chat</ThemedText>
+                          </Pressable>
                         </View>
                       </View>
-                  </Pressable>
-                );
-              })
-            ) : (
-              <View style={styles.emptyState}>
-                <Ionicons name="sad-outline" size={48} color="#141315" />
-                <ThemedText style={styles.emptyStateTitle}>No activities found</ThemedText>
-                <ThemedText style={styles.emptyStateText}>
-                  {activeFilter === ALL_FILTER
-                    ? 'There are no activities yet. Create the first one!'
-                    : `There are no ${activeFilter} activities right now.`}
-                </ThemedText>
+                    </View>
+                </View>
+              )}
+
+
+              {/* RECOMENDADO PARA TI */}
+              <View style={styles.sectionBlock}>
+                <View style={styles.sectionHeader}>
+                  <ThemedText type="subtitle" style={styles.sectionTitle}>Recommended for you</ThemedText>
+                  {recommended.length > 0 && (
+                    <Link href="/explore" asChild>
+                      <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                        <ThemedText style={styles.seeAll}>See all</ThemedText>
+                      </Pressable>
+                    </Link>
+                  )}
+                </View>
+
+                {recommended.length === 0 ? (
+                  <View style={styles.recEmpty}>
+                    <ThemedText style={styles.recEmptyTitle}>No recommendations yet</ThemedText>
+                    <ThemedText style={styles.recEmptyText}>
+                      Join activities and add your sports to your profile to get better suggestions.
+                    </ThemedText>
+                    <Link href="/explore" asChild>
+                      <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                        <View style={styles.recEmptyBtn}>
+                          <Text style={styles.recEmptyBtnText}>Explore activities  →</Text>
+                        </View>
+                      </Pressable>
+                    </Link>
+                  </View>
+                ) : (
+                  <View style={[styles.recGrid, isWide && styles.recGridWide]}>
+                    {recommended.map((activity) => {
+                      const spotsLeft = activity.maxParticipants - activity.participantsList.length;
+                      const isAlmostFull = spotsLeft <= 3 && spotsLeft > 0 && activity.status === 'open';
+                      const statusLabel = isAlmostFull ? 'Almost full' : activity.status === 'full' ? 'Full' : 'Open';
+                      const statusColor = isAlmostFull ? '#e8823f' : activity.status === 'full' ? '#8f8b85' : '#4ade80';
+                      const goingLabel = friendsGoingLabel(activity);
+
+                      return (
+                        <Pressable
+                          key={activity.id}
+                          onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
+                          style={({ pressed }) => [styles.recCard, isWide && styles.recCardWide, pressed && styles.pressed]}
+                        >
+                          <View style={styles.recCardTop}>
+                            <View style={styles.recSportChip}>
+                              <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#c9c5bf" />
+                              <ThemedText style={styles.recSportText}>
+                                {sportNameById.get(activity.sportId) ?? activity.sportId}
+                              </ThemedText>
+                            </View>
+                            <View style={[styles.recStatusChip, { borderColor: statusColor + '55' }]}>
+                              <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
+                            </View>
+                          </View>
+
+                          <ThemedText style={styles.recTitle} numberOfLines={1}>{activity.title}</ThemedText>
+
+                          <View style={styles.recInfoRow}>
+                            <Ionicons name="calendar-outline" size={12} color="#8f8b85" />
+                            <ThemedText style={styles.recInfoText}>
+                              {formatDate(activity.date)} · {formatTime(activity.date)}
+                            </ThemedText>
+                          </View>
+
+                          {goingLabel !== '' && (
+                            <View style={styles.recFriendsRow}>
+                              <Ionicons name="people-outline" size={12} color="#e8823f" />
+                              <ThemedText style={styles.recFriendsText} numberOfLines={1}>{goingLabel}</ThemedText>
+                            </View>
+                          )}
+
+                          <View style={styles.recCardBottom}>
+                            <View style={styles.recInfoRow}>
+                              <Ionicons name="location-outline" size={12} color="#8f8b85" />
+                              <ThemedText style={styles.recInfoText} numberOfLines={1}>{activity.location.name}</ThemedText>
+                            </View>
+                            <ThemedText style={styles.recParticipants}>
+                              {activity.participantsList.length} / {activity.maxParticipants}
+                            </ThemedText>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
-            )}
+
+              {/* Sidebar inline em mobile */}
+              {!isWide && sidebarContent}
+
+            </ScrollView>
           </View>
 
-        </ScrollView>
+          {/* SIDEBAR (só wide) */}
+          {isWide && (
+            <ScrollView
+              style={styles.sidebarScroll}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: BottomTabInset + Spacing.four }}
+            >
+              {sidebarContent}
+            </ScrollView>
+          )}
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   safeArea: {
     flex: 1,
     width: '100%',
@@ -395,272 +470,255 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingTop: TopTabInset + Spacing.two,
   },
-  header: {
-    paddingHorizontal: Spacing.four,
-    marginBottom: Spacing.four,
+  safeAreaWide: {
+    maxWidth: 9999,
+    alignSelf: 'stretch',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  mainLayout: { flex: 1 },
+  mainLayoutWide: { flexDirection: 'row' },
+  mainColumn: { flex: 3, overflow: 'hidden' },
+
+  // Header
+  header: { paddingHorizontal: Spacing.four, marginBottom: Spacing.four },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  profilePic: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#111012' },
+  profilePicPlaceholder: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: '#111012',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.06)',
   },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  iconBtn: {
-    padding: 6,
-  },
+  profileName: { color: '#f4f2ef', fontSize: 20 },
+  greetingText: { color: '#c9c5bf', fontSize: 14, marginTop: 2 },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  iconBtn: { padding: 6 },
   iconBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#eb8f84',
+    position: 'absolute', top: 0, right: 0, minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#eb8f84', alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4, borderWidth: 2, borderColor: '#0a0a0b',
+  },
+  iconBadgeText: { color: '#f4f2ef', fontSize: 10, fontWeight: 'bold' },
+
+  scrollContent: { paddingBottom: BottomTabInset + Spacing.four },
+
+  // Next activity
+  nextSection: { paddingHorizontal: Spacing.four, marginBottom: Spacing.five },
+  nextSectionLabel: {
+    color: '#8f8b85', fontSize: 11, fontWeight: '600',
+    letterSpacing: 0.8, marginBottom: Spacing.two,
+  },
+  nextCard: {
+    backgroundColor: '#111012', borderRadius: 16, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', overflow: 'hidden',
+  },
+  nextCardLeft: {
+    width: 110, backgroundColor: '#0f0e12', padding: Spacing.three,
+    alignItems: 'center', justifyContent: 'center', gap: Spacing.one,
+    borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.06)',
+  },
+  nextSportCircle: {
+    width: 54, height: 54, borderRadius: 27,
+    backgroundColor: 'rgba(232,130,63,0.15)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  },
+  nextComecaLabel: { color: '#8f8b85', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
+  nextCountdown: { color: '#f4f2ef', fontSize: 22, fontWeight: 'bold' },
+  nextCardRight: { flex: 1, padding: Spacing.three, gap: Spacing.two },
+  nextTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  nextCardTitle: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold', flex: 1 },
+  confirmedBadge: {
+    backgroundColor: 'rgba(74,222,128,0.12)', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)',
+  },
+  confirmedText: { color: '#4ade80', fontSize: 11, fontWeight: 'bold' },
+  nextInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  nextInfoText: { color: '#c9c5bf', fontSize: 13, flexShrink: 1 },
+  nextCardActions: { flexDirection: 'row', gap: Spacing.two, marginTop: 4 },
+  nextBtn: {
+    height: 38, backgroundColor: '#e8823f',
+    borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 20, alignSelf: 'flex-start',
+  },
+  nextBtnText: { color: '#0a0a0b', fontWeight: 'bold', fontSize: 14 },
+  nextBtnGhost: {
+    height: 38, paddingHorizontal: 16, borderRadius: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  nextBtnGhostText: { color: '#8f8b85', fontSize: 14 },
+
+
+  recEmpty: {
+    marginHorizontal: Spacing.four,
+    backgroundColor: '#111012',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    padding: Spacing.four,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  recEmptyTitle: { color: '#f4f2ef', fontSize: 17, fontWeight: 'bold', textAlign: 'center', fontFamily: 'Archivo_700Bold' },
+  recEmptyText: { color: '#8f8b85', fontSize: 14, textAlign: 'center', lineHeight: 20, fontFamily: 'HankenGrotesk_400Regular' },
+  recEmptyBtn: {
+    marginTop: 4,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: '#0a0a0b',
   },
-  iconBadgeText: {
-    color: '#f4f2ef',
-    fontSize: 10,
-    fontWeight: 'bold',
+  recEmptyBtnText: { color: '#0a0a0b', fontWeight: 'bold', fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' },
+
+  // Recommended grid
+  sectionBlock: { marginBottom: Spacing.five },
+  sectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.four, marginBottom: Spacing.three,
   },
-  profileHeader: {
+  sectionTitle: { color: '#f4f2ef', fontSize: 20 },
+  seeAll: { color: '#e8823f', fontWeight: 'bold', fontSize: 14 },
+  recGrid: { paddingHorizontal: Spacing.four, gap: Spacing.three },
+  recGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
+  recCard: {
+    backgroundColor: '#111012', borderRadius: 14, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)', padding: Spacing.three, gap: 6,
+  },
+  recCardWide: { flex: 1, minWidth: 200 },
+  recCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  recSportChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  recSportText: { color: '#c9c5bf', fontSize: 11, fontWeight: '600' },
+  recStatusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  recStatusText: { fontSize: 11, fontWeight: '600' },
+  recTitle: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold' },
+  recInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  recInfoText: { color: '#8f8b85', fontSize: 12, flexShrink: 1 },
+  recFriendsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  recFriendsText: { color: '#e8823f', fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  recCardBottom: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 4, paddingTop: 6,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  recParticipants: { color: '#8f8b85', fontSize: 12 },
+
+  // Upcoming activities (comentado — pode ser reativado)
+  // activitiesList: { paddingHorizontal: Spacing.four, gap: Spacing.four },
+  // activityCard: {
+  //   backgroundColor: '#111012', borderRadius: 16, overflow: 'hidden',
+  //   borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  // },
+  // cardImagePlaceholder: {
+  //   height: 120, backgroundColor: '#141315', padding: Spacing.three,
+  //   flexDirection: 'row', justifyContent: 'space-between', overflow: 'hidden',
+  // },
+  // cardImageOverlay: {
+  //   position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+  //   backgroundColor: 'rgba(10,10,11,0.35)',
+  // },
+  // sportBadge: {
+  //   flexDirection: 'row', alignItems: 'center', backgroundColor: '#9ccd6b',
+  //   paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+  //   alignSelf: 'flex-start', gap: 4,
+  // },
+  // sportBadgeText: { color: '#f4f2ef', fontSize: 12, fontWeight: 'bold' },
+  // approvalBadge: {
+  //   flexDirection: 'row', alignItems: 'center', backgroundColor: '#7C3AED',
+  //   paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+  //   alignSelf: 'flex-start', gap: 4,
+  // },
+  // approvalBadgeText: { color: '#f4f2ef', fontSize: 11, fontWeight: 'bold' },
+  // cardBody: { padding: Spacing.three, gap: Spacing.two },
+  // activityTitle: { color: '#e8823f', fontSize: 18, marginBottom: 4 },
+  // infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // infoText: { color: '#c9c5bf', fontSize: 14 },
+  // cardFooter: {
+  //   flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  //   marginTop: Spacing.two, paddingTop: Spacing.two,
+  //   borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)',
+  // },
+  // difficultyBadge: { backgroundColor: '#9ccd6b', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  // difficultyText: { color: '#f4f2ef', fontSize: 12, fontWeight: 'bold' },
+  // spotsContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // spotsText: { color: '#c9c5bf', fontSize: 14 },
+  // emptyState: {
+  //   alignItems: 'center', justifyContent: 'center', paddingVertical: 40, gap: 10,
+  //   backgroundColor: '#111012', borderRadius: 16, borderWidth: 1,
+  //   borderColor: 'rgba(255,255,255,0.06)', borderStyle: 'dashed',
+  // },
+  // emptyStateTitle: { color: '#c9c5bf', fontSize: 16, fontWeight: 'bold' },
+  // emptyStateText: { color: '#8f8b85', fontSize: 14, textAlign: 'center', paddingHorizontal: 20 },
+
+  // Sidebar
+  sidebarScroll: {
+    flex: 1,
+    maxWidth: 340,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.06)',
+  },
+  sidebarInner: { padding: Spacing.four, gap: Spacing.five },
+  sidebarSection: { gap: Spacing.three },
+  sidebarTitle: { color: '#f4f2ef', fontSize: 18, marginBottom: 4 },
+  feedSidebarItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  feedAvatar: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: '#1e1d22',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  feedAvatarText: { color: '#c9c5bf', fontSize: 11, fontWeight: 'bold' },
+  feedSidebarText: { color: '#c9c5bf', fontSize: 12, lineHeight: 16 },
+  feedSidebarName: { color: '#f4f2ef', fontWeight: 'bold' },
+  feedSidebarActivity: { color: '#e8823f', fontWeight: '600' },
+  feedTime: { color: '#8f8b85', fontSize: 10, marginTop: 1 },
+
+  compactWeather: {
+    backgroundColor: '#111012',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  compactWeatherHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  compactWeatherTitle: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold' },
+  compactWeatherLocation: { color: '#8f8b85', fontSize: 12 },
+  compactToday: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  profilePic: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: '#111012',
-  },
-  profilePicPlaceholder: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#111012',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  profileName: {
-    color: '#f4f2ef',
-    fontSize: 20,
-  },
-  greetingText: {
-    color: '#c9c5bf',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  scrollContent: {
-    paddingBottom: BottomTabInset + Spacing.four,
-  },
-  filtersScroll: {
-    marginBottom: Spacing.five,
-  },
-  filtersContainer: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
-    paddingBottom: Spacing.two,
-    minHeight: 40,
-  },
-  filterChip: {
+  compactTodayTemp: { color: '#f4f2ef', fontSize: 36, fontWeight: 'bold', lineHeight: 40 },
+  compactTodayLabel: { color: '#8f8b85', fontSize: 13, marginTop: 2 },
+  compactPrecip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111012',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  filterChipActive: {
-    backgroundColor: '#e8823f',
-    borderColor: '#e8823f',
-  },
-  filterText: {
-    color: '#c9c5bf',
-    fontWeight: '600',
-  },
-  filterTextActive: {
-    color: '#1a1005',
-  },
-  recommendedSection: {
-    marginBottom: Spacing.five,
-  },
-  recommendedList: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.three,
-  },
-  recommendedCard: {
-    width: 260,
-    backgroundColor: '#111012',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
-  friendsGoingRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    marginTop: Spacing.two,
-    paddingTop: Spacing.two,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
-  },
-  friendsGoingText: {
-    color: '#e8823f',
-    fontSize: 13,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-  activitiesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    marginBottom: Spacing.three,
-  },
-  activitiesList: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    gap: 10,
-    backgroundColor: '#111012',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderStyle: 'dashed',
-  },
-  emptyStateTitle: {
-    color: '#c9c5bf',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  emptyStateText: {
-    color: '#8f8b85',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  activityCard: {
-    backgroundColor: '#111012',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  cardImagePlaceholder: {
-    height: 120,
-    backgroundColor: '#141315',
-    padding: Spacing.three,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-  },
-  // Véu escuro por cima da foto para os chips continuarem legíveis
-  cardImageOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(10,10,11,0.35)',
-  },
-  sportBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#9ccd6b',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    gap: 3,
     alignSelf: 'flex-start',
-    gap: 4,
   },
-  sportBadgeText: {
-    color: '#f4f2ef',
-    fontSize: 12,
-    fontWeight: 'bold',
+  compactPrecipText: { color: '#60A5FA', fontSize: 14, fontWeight: '600' },
+  compactDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  approvalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    gap: 4,
-  },
-  approvalBadgeText: {
-    color: '#f4f2ef',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  cardBody: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
-  activityTitle: {
-    color: '#e8823f',
-    fontSize: 18,
-    marginBottom: 4,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoText: {
-    color: '#c9c5bf',
-    fontSize: 14,
-  },
-  cardFooter: {
+  compactWeatherRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.two,
-    paddingTop: Spacing.two,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
   },
-  difficultyBadge: {
-    backgroundColor: '#9ccd6b',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  difficultyText: {
-    color: '#f4f2ef',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  spotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  spotsText: {
-    color: '#c9c5bf',
-    fontSize: 14,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  compactDayItem: { alignItems: 'center', gap: 4, flex: 1 },
+  compactDayLabel: { color: '#8f8b85', fontSize: 11 },
+  compactDayTemp: { color: '#f4f2ef', fontSize: 13, fontWeight: 'bold' },
+
+  pressed: { opacity: 0.7 },
 });

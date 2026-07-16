@@ -54,6 +54,15 @@ export type Activity = {
   updatedAt: string;
 };
 
+export type FeedItem = {
+  type: 'joined' | 'created' | 'mvp';
+  userId: string;
+  userName: string;
+  activityId: string;
+  activityTitle: string;
+  timestamp: string;
+};
+
 export type CreateActivityInput = {
   title: string;
   description: string;

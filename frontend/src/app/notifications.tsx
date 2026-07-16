@@ -1,10 +1,10 @@
-﻿import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import {
   getNotifications,
   markAllNotificationsAsRead,
@@ -13,213 +13,371 @@ import {
 import { Notification, NotificationType } from '@/types/notification';
 import { relativeDate } from '@/utils/date';
 
-// Ícone (e cor) por tipo de notificação.
-const TYPE_ICON: Record<NotificationType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  activity_joined: { icon: 'person-add-outline', color: '#9ccd6b' },
-  activity_join_request: { icon: 'hand-left-outline', color: '#e8823f' },
-  activity_left: { icon: 'exit-outline', color: '#c9c5bf' },
-  activity_full: { icon: 'people-outline', color: '#e8823f' },
-  waitlist_admitted: { icon: 'checkmark-circle-outline', color: '#9ccd6b' },
-  participant_removed: { icon: 'person-remove-outline', color: '#eb8f84' },
-  activity_cancelled: { icon: 'close-circle-outline', color: '#eb8f84' },
-  activity_reminder: { icon: 'alarm-outline', color: '#e8823f' },
-  activity_auto_cancelled: { icon: 'close-circle-outline', color: '#eb8f84' },
-  new_message: { icon: 'chatbubble-ellipses-outline', color: '#60A5FA' },
-  mvp_result: { icon: 'trophy-outline', color: '#e8823f' },
-  friend_request: { icon: 'person-add-outline', color: '#60A5FA' },
-  friend_request_accepted: { icon: 'people-outline', color: '#9ccd6b' },
+type FilterTab = 'all' | 'requests' | 'activities' | 'social';
+
+type DisplayItem =
+  | { kind: 'single'; notification: Notification }
+  | { kind: 'group'; notifications: Notification[]; activityId: string; activityTitle: string };
+
+const FILTER_TYPES: Record<Exclude<FilterTab, 'all'>, NotificationType[]> = {
+  requests:   ['activity_join_request', 'friend_request'],
+  activities: ['activity_joined', 'activity_left', 'activity_full', 'waitlist_admitted',
+               'participant_removed', 'activity_cancelled', 'activity_reminder',
+               'activity_auto_cancelled', 'mvp_voting_open', 'mvp_result'],
+  social:     ['new_message', 'friend_request_accepted', 'badge_earned'],
 };
+
+const TYPE_META: Record<NotificationType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  activity_joined:         { icon: 'person-add-outline',          color: '#c9c5bf' },
+  activity_join_request:   { icon: 'hand-left-outline',           color: '#e8823f' },
+  activity_left:           { icon: 'exit-outline',                color: '#c9c5bf' },
+  activity_full:           { icon: 'people-outline',              color: '#e8823f' },
+  waitlist_admitted:       { icon: 'checkmark-circle-outline',    color: '#e8823f' },
+  participant_removed:     { icon: 'person-remove-outline',       color: '#eb8f84' },
+  activity_cancelled:      { icon: 'close-circle-outline',        color: '#eb8f84' },
+  activity_reminder:       { icon: 'alarm-outline',               color: '#e8823f' },
+  activity_auto_cancelled: { icon: 'close-circle-outline',        color: '#eb8f84' },
+  new_message:             { icon: 'chatbubble-ellipses-outline', color: '#c9c5bf' },
+  mvp_voting_open:         { icon: 'trophy-outline',              color: '#e8823f' },
+  mvp_result:              { icon: 'trophy-outline',              color: '#e8823f' },
+  friend_request:          { icon: 'person-add-outline',          color: '#e8823f' },
+  friend_request_accepted: { icon: 'people-outline',              color: '#c9c5bf' },
+  badge_earned:            { icon: 'ribbon-outline',              color: '#e8823f' },
+};
+
+function getTimeGroup(iso: string): 'today' | 'yesterday' | 'older' {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dDay  = new Date(d.getFullYear(),   d.getMonth(),   d.getDate()).getTime();
+  if (dDay === today)               return 'today';
+  if (dDay === today - 86400000)    return 'yesterday';
+  return 'older';
+}
+
+function buildDisplayItems(notifications: Notification[]): DisplayItem[] {
+  const requestMap = new Map<string, Notification[]>();
+  const rest: Notification[] = [];
+
+  for (const n of notifications) {
+    if (n.type === 'activity_join_request' && n.activityId) {
+      const arr = requestMap.get(n.activityId) ?? [];
+      arr.push(n);
+      requestMap.set(n.activityId, arr);
+    } else {
+      rest.push(n);
+    }
+  }
+
+  const items: DisplayItem[] = [];
+  for (const [activityId, group] of requestMap) {
+    const title = /"([^"]+)"/.exec(group[0].message)?.[1] ?? '';
+    items.push(
+      group.length === 1
+        ? { kind: 'single', notification: group[0] }
+        : { kind: 'group', notifications: group, activityId, activityTitle: title }
+    );
+  }
+  for (const n of rest) items.push({ kind: 'single', notification: n });
+
+  return items.sort((a, b) => {
+    const ta = a.kind === 'single' ? a.notification.createdAt : a.notifications[0].createdAt;
+    const tb = b.kind === 'single' ? b.notification.createdAt : b.notifications[0].createdAt;
+    return new Date(tb).getTime() - new Date(ta).getTime();
+  });
+}
+
+function HighlightedText({ text, unread }: { text: string; unread: boolean }) {
+  const parts = text.split(/"([^"]+)"/g);
+  return (
+    <Text style={[styles.notifText, unread && styles.notifTextUnread]}>
+      {parts.map((part, i) =>
+        i % 2 === 1
+          ? <Text key={i} style={styles.notifHighlight}>{part}</Text>
+          : part
+      )}
+    </Text>
+  );
+}
+
+function getItemAction(n: Notification): { label: string; onPress: () => void } | null {
+  switch (n.type) {
+    case 'mvp_voting_open':
+    case 'mvp_result':
+      return n.activityId
+        ? { label: 'Vote now', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
+        : null;
+    case 'badge_earned':
+      return { label: 'View badge', onPress: () => router.push('/profile') };
+    case 'friend_request':
+      return { label: 'View request', onPress: () => router.push('/friends') };
+    default:
+      return null;
+  }
+}
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [submitting, setSubmitting] = useState(false);
+  const [showOlder, setShowOlder] = useState(false);
 
-  const load = useCallback(() => {
-    getNotifications()
-      .then(setNotifications)
-      .catch(() => setNotifications([]));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getNotifications().then(setNotifications).catch(() => setNotifications([]));
+    }, [])
+  );
 
-  useFocusEffect(load);
-
-  const unreadCount = (notifications ?? []).filter((n) => !n.read).length;
+  function markRead(ids: string[]) {
+    setNotifications(prev =>
+      prev ? prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n) : prev
+    );
+    ids.forEach(id => markNotificationAsRead(id).catch(() => {}));
+  }
 
   async function handleMarkAll() {
-    if (submitting || unreadCount === 0) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       await markAllNotificationsAsRead();
-      setNotifications((prev) => (prev ? prev.map((n) => ({ ...n, read: true })) : prev));
-    } catch {
-      // silencioso: se falhar, o utilizador pode tentar de novo
+      setNotifications(prev => prev ? prev.map(n => ({ ...n, read: true })) : prev);
     } finally {
       setSubmitting(false);
     }
   }
 
-  function handleOpen(notification: Notification) {
-    // Marca como lida localmente e no backend (otimista) e abre a atividade.
-    if (!notification.read) {
-      setNotifications((prev) =>
-        prev ? prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)) : prev
-      );
-      markNotificationAsRead(notification.id).catch(() => {});
+  function handleOpenItem(item: DisplayItem) {
+    const ids = item.kind === 'single'
+      ? [item.notification.id]
+      : item.notifications.map(n => n.id);
+    markRead(ids);
+
+    if (item.kind === 'group') {
+      router.push({ pathname: '/activity/[id]', params: { id: item.activityId } });
+      return;
     }
-    if (notification.type === 'friend_request' || notification.type === 'friend_request_accepted') {
+
+    const n = item.notification;
+    if (n.type === 'friend_request' || n.type === 'friend_request_accepted') {
       router.push('/friends');
-    } else if (notification.activityId) {
-      router.push({ pathname: '/activity/[id]', params: { id: notification.activityId } });
+    } else if (n.type === 'badge_earned') {
+      router.push('/profile');
+    } else if (n.activityId) {
+      router.push({ pathname: '/activity/[id]', params: { id: n.activityId } });
     }
   }
 
   if (notifications === null) {
     return (
       <View style={styles.centered}>
-        <ThemedText style={styles.muted}>A carregar...</ThemedText>
+        <ThemedText style={styles.muted}>Loading...</ThemedText>
       </View>
     );
   }
 
+  const filtered = activeFilter === 'all'
+    ? notifications
+    : notifications.filter(n => FILTER_TYPES[activeFilter].includes(n.type));
+
+  const displayItems = buildDisplayItems(filtered);
+  const unreadTotal = notifications.filter(n => !n.read).length;
+
+  const sections = [
+    { key: 'today',     label: 'TODAY' },
+    { key: 'yesterday', label: 'YESTERDAY' },
+    { key: 'older',     label: 'OLDER' },
+  ].map(s => ({
+    ...s,
+    items: displayItems.filter(item => {
+      const t = item.kind === 'single' ? item.notification.createdAt : item.notifications[0].createdAt;
+      return getTimeGroup(t) === s.key;
+    }),
+  })).filter(s => s.items.length > 0);
+
   return (
     <ScrollView
-      style={styles.scrollView}
+      style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        {unreadCount > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.markAllButton, pressed && styles.pressed]}
-            disabled={submitting}
-            onPress={handleMarkAll}
-          >
-            <Ionicons name="checkmark-done-outline" size={18} color="#e8823f" style={{ marginRight: 6 }} />
-            <ThemedText style={styles.markAllText}>Marcar todas como lidas</ThemedText>
-          </Pressable>
-        )}
 
-        {notifications.length === 0 && (
-          <View style={styles.centered}>
-            <Ionicons name="notifications-off-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
-            <ThemedText style={styles.muted}>Ainda não tens notificações.</ThemedText>
+        {/* Filter row */}
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
+            {(['all', 'requests', 'activities', 'social'] as FilterTab[]).map(tab => {
+              const active = activeFilter === tab;
+              const label = tab === 'all' ? 'All' : tab === 'requests' ? 'Requests' : tab === 'activities' ? 'Activities' : 'Social';
+              return (
+                <Pressable
+                  key={tab}
+                  onPress={() => setActiveFilter(tab)}
+                  style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {unreadTotal > 0 && (
+            <Pressable onPress={handleMarkAll} disabled={submitting} style={({ pressed }) => [styles.markAllBtn, pressed && styles.pressed]}>
+              <Text style={styles.markAllText}>Mark read</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Empty state */}
+        {displayItems.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="notifications-off-outline" size={40} color="#1e1d22" />
+            <ThemedText style={styles.muted}>No notifications.</ThemedText>
           </View>
         )}
 
-        {notifications.map((n) => {
-          const meta = TYPE_ICON[n.type] ?? { icon: 'notifications-outline', color: '#c9c5bf' };
-          return (
-            <Pressable
-              key={n.id}
-              onPress={() => handleOpen(n)}
-              style={({ pressed }) => [
-                styles.notificationRow,
-                !n.read && styles.notificationUnread,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: meta.color + '20' }]}>
-                <Ionicons name={meta.icon} size={20} color={meta.color} />
-              </View>
-              <View style={styles.notificationBody}>
-                <ThemedText style={[styles.notificationText, !n.read && styles.notificationTextUnread]}>
-                  {n.message}
-                </ThemedText>
-                <ThemedText style={styles.notificationDate}>{relativeDate(n.createdAt)}</ThemedText>
-              </View>
-              {!n.read && <View style={styles.unreadDot} />}
-            </Pressable>
-          );
-        })}
+        {/* Sections */}
+        {sections.map(section => (
+          <View key={section.key} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionLabel}>{section.label}</ThemedText>
+              {section.key === 'older' && section.items.length > 0 && (
+                <Pressable onPress={() => setShowOlder(v => !v)} style={({ pressed }) => pressed && styles.pressed}>
+                  <Text style={styles.viewAllText}>{showOlder ? 'Hide' : `View all (${section.items.length})`}</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {(section.key !== 'older' || showOlder) && section.items.map(item => {
+              if (item.kind === 'group') {
+                const isUnread = item.notifications.some(n => !n.read);
+                return (
+                  <Pressable
+                    key={`group-${item.activityId}`}
+                    onPress={() => handleOpenItem(item)}
+                    style={({ pressed }) => [styles.row, isUnread && styles.rowUnread, pressed && styles.pressed]}
+                  >
+                    <View style={[styles.iconCircle, { backgroundColor: 'rgba(232,130,63,0.15)' }]}>
+                      <Ionicons name="hand-left-outline" size={20} color="#e8823f" />
+                    </View>
+                    <View style={styles.rowBody}>
+                      <Text style={[styles.notifText, isUnread && styles.notifTextUnread]}>
+                        {'Join requests for '}
+                        <Text style={styles.notifHighlight}>{item.activityTitle}</Text>
+                      </Text>
+                      <ThemedText style={styles.notifTime}>{relativeDate(item.notifications[0].createdAt)}</ThemedText>
+                      <Pressable
+                        onPress={() => { markRead(item.notifications.map(n => n.id)); router.push({ pathname: '/activity/[id]', params: { id: item.activityId } }); }}
+                        style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+                      >
+                        <Text style={styles.actionBtnText}>Review requests</Text>
+                      </Pressable>
+                    </View>
+                    {isUnread && <View style={styles.unreadDot} />}
+                  </Pressable>
+                );
+              }
+
+              const n = item.notification;
+              const meta = TYPE_META[n.type] ?? { icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, color: '#c9c5bf' };
+              const action = getItemAction(n);
+
+              return (
+                <Pressable
+                  key={n.id}
+                  onPress={() => handleOpenItem(item)}
+                  style={({ pressed }) => [styles.row, !n.read && styles.rowUnread, pressed && styles.pressed]}
+                >
+                  <View style={[styles.iconCircle, { backgroundColor: meta.color + '18' }]}>
+                    <Ionicons name={meta.icon} size={20} color={meta.color} />
+                  </View>
+                  <View style={styles.rowBody}>
+                    <HighlightedText text={n.message} unread={!n.read} />
+                    <ThemedText style={styles.notifTime}>{relativeDate(n.createdAt)}</ThemedText>
+                    {action && (
+                      <Pressable
+                        onPress={() => { markRead([n.id]); action.onPress(); }}
+                        style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+                      >
+                        <Text style={styles.actionBtnText}>{action.label}</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                  {!n.read && <View style={styles.unreadDot} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    backgroundColor: '#0a0a0b',
+  scroll: { backgroundColor: '#0a0a0b', flex: 1 },
+  scrollContent: { flexGrow: 1, paddingBottom: Spacing.six },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.six },
+  emptyState: { alignItems: 'center', gap: 8, paddingTop: 60 },
+  muted: { color: '#8f8b85' },
+
+  container: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingTop: Spacing.three },
+
+  // Filter row
+  filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.four, paddingRight: Spacing.four },
+  filterScrollContent: { paddingHorizontal: Spacing.four, gap: Spacing.two },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#111012',
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingVertical: Spacing.four,
+  chipActive: { backgroundColor: 'rgba(232,130,63,0.12)', borderColor: 'rgba(232,130,63,0.4)' },
+  chipText: { color: '#8f8b85', fontSize: 14, fontWeight: '600' },
+  chipTextActive: { color: '#e8823f' },
+  chipBadge: {
+    backgroundColor: '#e8823f', borderRadius: 10,
+    minWidth: 18, height: 18, paddingHorizontal: 4,
+    alignItems: 'center', justifyContent: 'center',
   },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.six,
-    backgroundColor: '#0a0a0b',
+  chipBadgeText: { color: '#0a0a0b', fontSize: 11, fontWeight: 'bold' },
+  markAllBtn: { paddingHorizontal: 10, paddingVertical: 6, marginLeft: 4 },
+  markAllText: { color: '#8f8b85', fontSize: 13 },
+
+  // Sections
+  section: { marginBottom: Spacing.four },
+  sectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.four, marginBottom: Spacing.one,
   },
-  muted: {
-    color: '#8f8b85',
+  sectionLabel: {
+    color: '#8f8b85', fontSize: 11, fontWeight: '600', letterSpacing: 0.8,
   },
-  container: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
-  },
-  markAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(232,130,63,0.12)',
-    marginBottom: Spacing.one,
-  },
-  markAllText: {
-    color: '#e8823f',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  notificationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  viewAllText: { color: '#e8823f', fontSize: 13, fontWeight: '600' },
+
+  // Notification row
+  row: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    paddingHorizontal: Spacing.four, paddingVertical: 14,
     backgroundColor: '#111012',
-    borderRadius: 12,
-    padding: Spacing.three,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  notificationUnread: {
-    borderColor: '#e8823f',
-    backgroundColor: '#111012',
+  rowUnread: { backgroundColor: '#13111a' },
+  iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  rowBody: { flex: 1, gap: 2 },
+
+  notifText: { color: '#8f8b85', fontSize: 14, lineHeight: 20 },
+  notifTextUnread: { color: '#f4f2ef' },
+  notifHighlight: { color: '#e8823f', fontWeight: '600' },
+  notifTime: { color: '#8f8b85', fontSize: 12, marginTop: 2 },
+
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e8823f', marginTop: 6, flexShrink: 0 },
+
+  actionBtn: {
+    marginTop: 10, alignSelf: 'flex-start',
+    paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: '#e8823f', borderRadius: 10,
   },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationBody: {
-    flex: 1,
-    gap: 2,
-  },
-  notificationText: {
-    color: '#c9c5bf',
-    fontSize: 14,
-    lineHeight: 19,
-  },
-  notificationTextUnread: {
-    color: '#f4f2ef',
-  },
-  notificationDate: {
-    color: '#8f8b85',
-    fontSize: 12,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#e8823f',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  actionBtnText: { color: '#0a0a0b', fontSize: 13, fontWeight: 'bold' },
+
+  pressed: { opacity: 0.7 },
 });

@@ -44,6 +44,8 @@ export type Activity = {
 
   status: ActivityStatus;
 
+  joinedAt: Record<string, string>;
+
   mvpVotes: Record<string, string>;
   mvpWinners: string[];
   // null enquanto a votação está aberta — tem de existir no documento
@@ -119,6 +121,8 @@ export function createActivityObject(
 
     status: participantsList.length >= data.maxParticipants ? "full" : "open",
 
+    joinedAt: { [createdBy]: now.toISOString() },
+
     mvpVotes: {},
     mvpWinners: [],
     votingClosedAt: null,
@@ -131,3 +135,15 @@ export function createActivityObject(
     updatedAt: now,
   };
 }
+
+
+export type FeedItemType = 'joined' | 'created' | 'mvp';
+
+export type FeedItem = {
+  type: FeedItemType;
+  userId: string;
+  userName: string;
+  activityId: string;
+  activityTitle: string;
+  timestamp: string;
+};

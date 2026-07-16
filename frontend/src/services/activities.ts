@@ -1,5 +1,5 @@
 import { api } from '@/services/api';
-import { Activity, CreateActivityInput, SkillLevel } from '@/types/activity';
+import { Activity, CreateActivityInput, FeedItem, SkillLevel } from '@/types/activity';
 
 // Sem `date`: a data não é editável depois da atividade ser criada.
 export type UpdateActivityInput = {
@@ -35,6 +35,10 @@ export function getMyActivities(): Promise<Activity[]> {
 
 export function getUserActivities(userId: string): Promise<Activity[]> {
   return api.get<Activity[]>(`/api/activities/user/${userId}`);
+}
+
+export function getFriendsFeed(): Promise<FeedItem[]> {
+  return api.get<FeedItem[]>('/api/activities/friends/feed');
 }
 
 export function getFriendsActivities(): Promise<Activity[]> {

@@ -75,6 +75,27 @@ export async function getFriendsActivities(
   }
 }
 
+export async function getFriendsFeed(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
+    const friends = await friendsService.getFriends(req.user.uid);
+    const friendIds = friends.map((f) => f.userId);
+    const friendNames = new Map(
+      await Promise.all(friends.map(async (f) => {
+        const u = await usersService.getUserById(f.userId);
+        return [f.userId, u?.name ?? ''] as [string, string];
+      }))
+    );
+    const feed = await activitiesService.getFriendsFeed(friendIds, friendNames);
+    res.status(200).json(feed);
+  } catch (error) {
+    res.status(500).json({ message: error instanceof Error ? error.message : "Error getting feed" });
+  }
+}
+
 export async function listActivities(
   req: Request,
   res: Response

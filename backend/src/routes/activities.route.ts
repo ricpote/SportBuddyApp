@@ -6,6 +6,7 @@ import {
   getMyActivities,
   getUserActivities,
   getFriendsActivities,
+  getFriendsFeed,
   createActivity,
   getActivityById,
   updateActivity,
@@ -27,6 +28,7 @@ router.get("/admin/all", authMiddleware, listAdminActivities);
 
 router.get("/me", authMiddleware, getMyActivities);
 router.get("/friends", authMiddleware, getFriendsActivities);
+router.get("/friends/feed", authMiddleware, getFriendsFeed);
 router.get("/user/:userId", authMiddleware, getUserActivities);
 
 router.post("/", authMiddleware, createActivity);

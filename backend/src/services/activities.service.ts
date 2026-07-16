@@ -4,6 +4,7 @@ import {
   Activity,
   ActivityStatus,
   CreateActivityDto,
+  FeedItem,
   createActivityObject,
   SkillLevel,
 } from "../models/activity.model";
@@ -243,6 +244,64 @@ export class ActivitiesService {
     }
 
     return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
+  async getFriendsFeed(friendIds: string[], friendNames: Map<string, string>): Promise<FeedItem[]> {
+    if (friendIds.length === 0) return [];
+
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // últimos 30 dias
+    const chunks: string[][] = [];
+    for (let i = 0; i < friendIds.length; i += 10) chunks.push(friendIds.slice(i, i + 10));
+
+    const [participantSnaps, createdSnaps] = await Promise.all([
+      Promise.all(chunks.map((ids) =>
+        this.activitiesRef.where("participantsList", "array-contains-any", ids).get()
+      )),
+      Promise.all(chunks.map((ids) =>
+        this.activitiesRef.where("createdBy", "in", ids).get()
+      )),
+    ]);
+
+    const seen = new Set<string>();
+    const items: FeedItem[] = [];
+
+    const process = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const a = normalizeActivity({ id: doc.id, ...doc.data() });
+      const createdAt = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt as Date;
+      if (createdAt < since) return;
+
+      // 'created' event
+      if (friendIds.includes(a.createdBy)) {
+        items.push({ type: 'created', userId: a.createdBy, userName: friendNames.get(a.createdBy) ?? '', activityId: a.id, activityTitle: a.title, timestamp: createdAt.toISOString() });
+      }
+
+      // 'joined' events for participants who didn't create
+      for (const uid of a.participantsList) {
+        if (uid !== a.createdBy && friendIds.includes(uid)) {
+          const joinedTimestamp = a.joinedAt?.[uid] ?? createdAt.toISOString();
+          items.push({ type: 'joined', userId: uid, userName: friendNames.get(uid) ?? '', activityId: a.id, activityTitle: a.title, timestamp: joinedTimestamp });
+        }
+      }
+
+      // 'mvp' events
+      if (a.status === 'completed' && a.mvpWinners?.length) {
+        for (const uid of a.mvpWinners) {
+          if (friendIds.includes(uid)) {
+            items.push({ type: 'mvp', userId: uid, userName: friendNames.get(uid) ?? '', activityId: a.id, activityTitle: a.title, timestamp: typeof a.votingClosedAt === 'string' ? a.votingClosedAt : createdAt.toISOString() });
+          }
+        }
+      }
+    };
+
+    for (const snapshot of [...participantSnaps, ...createdSnaps]) {
+      for (const doc of snapshot.docs) process(doc);
+    }
+
+    return items
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 30);
   }
 
   async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
@@ -526,7 +585,7 @@ export class ActivitiesService {
       const updatedParticipants = [...activity.participantsList, userId];
       const isFull = updatedParticipants.length >= activity.maxParticipants;
       const newStatus: ActivityStatus = isFull ? "full" : "open";
-      tx.update(docRef, { participantsList: updatedParticipants, status: newStatus, updatedAt: now });
+      tx.update(docRef, { participantsList: updatedParticipants, status: newStatus, updatedAt: now, [`joinedAt.${userId}`]: now.toISOString() });
       return { activity, updatedParticipants, newStatus, now, joined: true };
     });
 
@@ -604,7 +663,8 @@ export class ActivitiesService {
 
       const isFull = updatedParticipants.length >= activity.maxParticipants;
       const newStatus: ActivityStatus = isFull ? "full" : "open";
-      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+      const { [userId]: _removed, ...remainingJoinedAt } = activity.joinedAt ?? {};
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now, joinedAt: remainingJoinedAt });
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now, leftParticipants: true, promoted };
     });
 
@@ -650,7 +710,7 @@ export class ActivitiesService {
       const newStatus: ActivityStatus = isFull ? "full" : "open";
       const now = new Date();
 
-      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now, [`joinedAt.${userId}`]: now.toISOString() });
 
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now };
     });
