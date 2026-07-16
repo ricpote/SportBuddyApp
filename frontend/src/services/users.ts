@@ -50,6 +50,11 @@ export function reactivateUser(userId: string): Promise<AdminUser> {
   return api.patch<AdminUser>(`/api/users/${userId}/reactivate`);
 }
 
+// Suspensão temporária: a conta reativa-se sozinha ao fim de `days` dias.
+export function suspendUser(userId: string, days: number): Promise<AdminUser> {
+  return api.patch<AdminUser>(`/api/users/${userId}/suspend`, { days });
+}
+
 export function deleteUser(userId: string): Promise<{ message: string }> {
   return api.delete<{ message: string }>(`/api/users/${userId}`);
 }

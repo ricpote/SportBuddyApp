@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'activity_manager' | 'partner' | 'admin';
+export type UserRole = 'participant' | 'partner' | 'admin';
 export type UserStatus = 'active' | 'banned' | 'deleted';
 
 export type UserStats = {
@@ -19,6 +19,8 @@ export type UserProfile = {
   email?: string;
   role: UserRole;
   status: UserStatus;
+  // Só definido durante uma suspensão temporária (ver admin.tsx).
+  bannedUntil?: string | null;
   bio?: string;
   avatarUrl?: string;
   website?: string;

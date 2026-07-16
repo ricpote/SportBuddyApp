@@ -1,4 +1,4 @@
-export type UserRole = "participant" | "activity_manager" | "partner" | "admin";
+export type UserRole = "participant" | "partner" | "admin";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced" | "competitive";
 
@@ -48,6 +48,9 @@ export type User = {
 
   role: UserRole;
   status: UserStatus;
+  // Só usado quando status é "banned" por uma suspensão temporária; a conta
+  // reativa-se sozinha (ver auth.middleware.ts) quando este prazo passa.
+  bannedUntil?: Date | null;
 
   sports: UserSportProfile[];
 

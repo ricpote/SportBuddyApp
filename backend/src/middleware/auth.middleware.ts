@@ -50,9 +50,28 @@ export async function authMiddleware(
       userTypeClaim === "admin";
 
     const userDoc = await db.collection("users").doc(decodedToken.uid).get();
-    const userData = userDoc.exists
-      ? (userDoc.data() as { role?: UserRole; status?: UserStatus })
+    let userData = userDoc.exists
+      ? (userDoc.data() as {
+          role?: UserRole;
+          status?: UserStatus;
+          bannedUntil?: FirebaseFirestore.Timestamp | Date | null;
+        })
       : undefined;
+
+    // Suspensões temporárias expiram sozinhas: se o prazo já passou,
+    // reativa a conta em vez de continuar a bloquear o acesso.
+    if (userData?.status === "banned" && userData.bannedUntil) {
+      const raw = userData.bannedUntil as any;
+      const bannedUntil = raw?.toDate ? raw.toDate() : (raw as Date);
+      if (bannedUntil <= new Date()) {
+        await userDoc.ref.update({
+          status: "active",
+          bannedUntil: null,
+          updatedAt: new Date(),
+        });
+        userData = { ...userData, status: "active" };
+      }
+    }
 
     if (userData?.status === "banned" || userData?.status === "deleted") {
       return res.status(403).json({

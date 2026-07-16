@@ -10,6 +10,7 @@ import {
   listUsers,
   updateUserRole,
   banUser,
+  suspendUser,
   reactivateUser,
   deleteUser,
   setDisplayedBadge,
@@ -44,6 +45,7 @@ router.delete("/:userId/follow", authMiddleware, unfollowOrganization);
 router.get("/", authMiddleware, listUsers);
 router.patch("/:userId/role", authMiddleware, updateUserRole);
 router.patch("/:userId/ban", authMiddleware, banUser);
+router.patch("/:userId/suspend", authMiddleware, suspendUser);
 router.patch("/:userId/reactivate", authMiddleware, reactivateUser);
 router.delete("/:userId", authMiddleware, deleteUser);
 

@@ -397,6 +397,33 @@ export async function banUser(
   }
 }
 
+export async function suspendUser(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    const isAdmin = requireAdmin(req, res);
+    if (!isAdmin) return;
+
+    const { userId } = req.params;
+    if (req.user?.uid === userId) {
+      return res.status(400).json({ message: "Admins cannot suspend themselves" });
+    }
+
+    const days = Number((req.body as { days?: number }).days);
+    if (!Number.isFinite(days) || days <= 0 || days > 365) {
+      return res.status(400).json({ message: "days must be a number between 1 and 365" });
+    }
+
+    const updated = await usersService.suspendUser(userId, days);
+    return res.json(updated);
+  } catch (error) {
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : "Error suspending user",
+    });
+  }
+}
+
 export async function reactivateUser(
   req: AuthenticatedRequest<UserParams>,
   res: Response
