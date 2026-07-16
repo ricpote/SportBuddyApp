@@ -12,6 +12,25 @@ import {
 
 const USERS_COLLECTION = "users";
 
+// O Firestore devolve Timestamps para campos de data, não Date normais —
+// sem isto, res.json() envia-os como {_seconds, _nanoseconds} e o frontend
+// lê "Invalid Date".
+function toDateIfTimestamp(value: unknown): any {
+  if (value && typeof value === "object" && "toDate" in value) {
+    return (value as FirebaseFirestore.Timestamp).toDate();
+  }
+  return value;
+}
+
+function normalizeUser(data: FirebaseFirestore.DocumentData): User {
+  return {
+    ...data,
+    createdAt: toDateIfTimestamp(data.createdAt),
+    updatedAt: toDateIfTimestamp(data.updatedAt),
+    bannedUntil: data.bannedUntil != null ? toDateIfTimestamp(data.bannedUntil) : data.bannedUntil,
+  } as User;
+}
+
 export class UsersService {
   private usersRef = db.collection(USERS_COLLECTION);
 
@@ -91,7 +110,7 @@ export class UsersService {
       return null;
     }
 
-    return userDoc.data() as User;
+    return normalizeUser(userDoc.data()!);
   }
 
   async getUserById(userId: string): Promise<User | null> {
@@ -101,7 +120,7 @@ export class UsersService {
       return null;
     }
 
-    return userDoc.data() as User;
+    return normalizeUser(userDoc.data()!);
   }
 
   async getMutualFriends(
@@ -201,6 +220,11 @@ export class UsersService {
       throw new Error("User not found");
     }
 
+    // Nenhum admin pode mudar o role de outro admin (nem do próprio).
+    if (user.role === "admin") {
+      throw new Error("Não podes alterar o role de um administrador");
+    }
+
     const updatedUser: User = {
       ...user,
       role,
@@ -215,7 +239,11 @@ export class UsersService {
     return updatedUser;
   }
 
-  async updateUserStatus(userId: string, status: UserStatus): Promise<User> {
+  async updateUserStatus(
+    userId: string,
+    status: UserStatus,
+    bannedUntil: Date | null = null
+  ): Promise<User> {
     const user = await this.getUserById(userId);
 
     if (!user) {
@@ -225,27 +253,37 @@ export class UsersService {
     const updatedUser: User = {
       ...user,
       status,
+      bannedUntil: bannedUntil ?? undefined,
       updatedAt: new Date(),
     };
 
     await this.usersRef.doc(userId).update({
       status,
+      bannedUntil,
       updatedAt: updatedUser.updatedAt,
     });
 
     return updatedUser;
   }
 
+  // Ban permanente: sem prazo, só um admin reativa manualmente.
   async banUser(userId: string): Promise<User> {
-    return this.updateUserStatus(userId, "banned");
+    return this.updateUserStatus(userId, "banned", null);
+  }
+
+  // Suspensão temporária: a conta reativa-se sozinha ao fim de `days` dias
+  // (ver auth.middleware.ts, que verifica bannedUntil em cada pedido).
+  async suspendUser(userId: string, days: number): Promise<User> {
+    const bannedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    return this.updateUserStatus(userId, "banned", bannedUntil);
   }
 
   async reactivateUser(userId: string): Promise<User> {
-    return this.updateUserStatus(userId, "active");
+    return this.updateUserStatus(userId, "active", null);
   }
 
   async softDeleteUser(userId: string): Promise<User> {
-    return this.updateUserStatus(userId, "deleted");
+    return this.updateUserStatus(userId, "deleted", null);
   }
 
   async userExists(firebaseUid: string): Promise<boolean> {
@@ -350,7 +388,28 @@ export class UsersService {
     }
 
     const snapshot = await query.orderBy("createdAt", "desc").get();
-    return snapshot.docs.map((doc) => doc.data() as User);
+    const users = snapshot.docs.map((doc) => normalizeUser(doc.data()));
+
+    // Reflete no painel de admin as suspensões cujo prazo já passou, mesmo
+    // que a pessoa ainda não tenha voltado a entrar (o que só corrigiria o
+    // registo dela via auth.middleware.ts).
+    const now = new Date();
+    const expired = users.filter(
+      (u) => u.status === "banned" && u.bannedUntil && new Date(u.bannedUntil) <= now
+    );
+    if (expired.length > 0) {
+      await Promise.all(
+        expired.map((u) =>
+          this.usersRef.doc(u.id).update({ status: "active", bannedUntil: null, updatedAt: now })
+        )
+      );
+      expired.forEach((u) => {
+        u.status = "active";
+        u.bannedUntil = null;
+      });
+    }
+
+    return users;
   }
 }
 
