@@ -80,6 +80,7 @@ export default function AdminScreen() {
   const [usersShown, setUsersShown] = useState(PAGE_SIZE);
   const [activitiesShown, setActivitiesShown] = useState(PAGE_SIZE);
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+  const [roleEditFor, setRoleEditFor] = useState<string | null>(null);
   const [confirmUserDeleteId, setConfirmUserDeleteId] = useState<string | null>(null);
   const [confirmActivityDeleteId, setConfirmActivityDeleteId] = useState<string | null>(null);
 
@@ -403,8 +404,8 @@ export default function AdminScreen() {
               const isSuspended = isBanned && !!user.bannedUntil;
               // Um admin não pode mudar o role de outro admin (nem do próprio).
               const canEditRole = user.role !== 'admin';
-              const roleMenuOpen = openMenuFor === `role:${user.id}`;
               const actionsMenuOpen = openMenuFor === `actions:${user.id}`;
+              const roleEditOpen = actionsMenuOpen && roleEditFor === user.id;
               const roleColor = ROLE_COLORS[user.role] ?? ROLE_COLORS.participant;
 
               return (
@@ -456,55 +457,33 @@ export default function AdminScreen() {
 
                     <View style={[styles.colActions, styles.actionsCell]}>
                       <Pressable
-                        disabled={isBusy || !canEditRole}
-                        style={({ pressed }) => [
-                          styles.editRoleBtn,
-                          pressed && canEditRole && styles.pressed,
-                          (isBusy || !canEditRole) && styles.disabled,
-                        ]}
-                        onPress={() => setOpenMenuFor(roleMenuOpen ? null : `role:${user.id}`)}>
-                        {!canEditRole && <Ionicons name="lock-closed" size={11} color="#8f8b85" />}
-                        <ThemedText style={styles.editRoleBtnText}>Editar role</ThemedText>
+                        style={({ pressed }) => [styles.editRoleBtn, pressed && styles.pressed]}
+                        onPress={() => router.push({ pathname: '/user/[id]', params: { id: user.id } })}>
+                        <ThemedText style={styles.editRoleBtnText}>Ver</ThemedText>
                       </Pressable>
 
                       <Pressable
                         disabled={isBusy}
                         style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed, isBusy && styles.disabled]}
-                        onPress={() => setOpenMenuFor(actionsMenuOpen ? null : `actions:${user.id}`)}>
+                        onPress={() => {
+                          const next = actionsMenuOpen ? null : `actions:${user.id}`;
+                          setOpenMenuFor(next);
+                          if (!next) setRoleEditFor(null);
+                        }}>
                         <Ionicons name="ellipsis-horizontal" size={16} color="#c9c5bf" />
                       </Pressable>
                     </View>
                   </View>
 
-                  {roleMenuOpen && (
-                    <View style={styles.expandPanel}>
-                      <ThemedText style={styles.expandLabel}>Escolher role</ThemedText>
-                      <View style={styles.chipRow}>
-                        {ROLE_OPTIONS.map((role) => {
-                          const isActive = user.role === role;
-                          return (
-                            <Pressable
-                              key={role}
-                              disabled={isBusy}
-                              style={({ pressed }) => [
-                                styles.roleChip,
-                                isActive && styles.roleChipActive,
-                                pressed && !isBusy && styles.pressed,
-                              ]}
-                              onPress={() => void handleRoleChange(user.id, role)}>
-                              <ThemedText style={[styles.roleChipText, isActive && styles.roleChipTextActive]}>
-                                {ROLE_LABELS[role]}
-                              </ThemedText>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  )}
-
                   {actionsMenuOpen && (
                     <View style={styles.expandPanel}>
                       <View style={styles.actionsRow}>
+                        <ActionButton
+                          label="Editar role"
+                          tone="neutral"
+                          disabled={isBusy || !canEditRole}
+                          onPress={() => setRoleEditFor(roleEditOpen ? null : user.id)}
+                        />
                         {!isBanned ? (
                           <>
                             <ActionButton
@@ -535,6 +514,30 @@ export default function AdminScreen() {
                           onPress={() => void handleDeleteUser(user.id)}
                         />
                       </View>
+
+                      {roleEditOpen && (
+                        <View style={styles.chipRow}>
+                          {ROLE_OPTIONS.map((role) => {
+                            const isActive = user.role === role;
+                            return (
+                              <Pressable
+                                key={role}
+                                disabled={isBusy}
+                                style={({ pressed }) => [
+                                  styles.roleChip,
+                                  isActive && styles.roleChipActive,
+                                  pressed && !isBusy && styles.pressed,
+                                ]}
+                                onPress={() => void handleRoleChange(user.id, role)}>
+                                <ThemedText style={[styles.roleChipText, isActive && styles.roleChipTextActive]}>
+                                  {ROLE_LABELS[role]}
+                                </ThemedText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      )}
+
                       {isCurrentAdmin && (
                         <ThemedText style={styles.helperText}>
                           A tua própria conta não pode ser suspensa, banida nem apagada daqui.
