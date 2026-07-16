@@ -135,7 +135,9 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
     const firstResult = result.results[0];
 
     onChange({
-      name: pickLocationName(firstResult) || 'Local selecionado',
+      // Sem nome de referência (comum fora de Portugal, onde o Google tem
+      // menos detalhe), mostra a morada em vez de um texto genérico.
+      name: pickLocationName(firstResult) || firstResult?.formatted_address || 'Local selecionado',
       address: firstResult?.formatted_address || `${lat}, ${lng}`,
       lat,
       lng,
