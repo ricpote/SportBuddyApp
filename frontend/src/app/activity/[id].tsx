@@ -571,10 +571,10 @@ export default function ActivityDetailScreen() {
                     <ThemedText style={styles.dangerLink}>
                       <Ionicons name="exit-outline" size={14} color="#eb8f84" />{' '}
                       {confirmingLeave
-                        ? 'Tens a certeza? Toca para confirmar'
+                        ? 'Are you sure? Tap to confirm'
                         : isWaitlisted
-                          ? 'Sair da lista de espera'
-                          : 'Sair da atividade'}
+                          ? (activity.requiresApproval ? 'Cancel request' : 'Leave waitlist')
+                          : 'Leave activity'}
                     </ThemedText>
                   </Pressable>
                 )
@@ -588,7 +588,7 @@ export default function ActivityDetailScreen() {
                 style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
                 <Ionicons name="add" size={20} color="#1a1005" />
                 <ThemedText style={styles.chatButtonText}>
-                  {isFull ? 'Entrar na lista de espera' : 'Participar'}
+                  {activity.requiresApproval ? 'Request to Join' : isFull ? 'Join Waitlist' : 'Join'}
                 </ThemedText>
               </Pressable>
               <Pressable

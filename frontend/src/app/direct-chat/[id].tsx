@@ -199,10 +199,6 @@ export default function DirectChatScreen() {
                 <ThemedText style={styles.headerName} numberOfLines={1}>
                   {name ?? 'Chat'}
                 </ThemedText>
-                <View style={styles.onlineRow}>
-                  <View style={styles.onlineDot} />
-                  <ThemedText style={styles.onlineText}>online</ThemedText>
-                </View>
               </View>
             </Pressable>
           ),

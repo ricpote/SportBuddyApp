@@ -7,14 +7,14 @@ export function relativeDate(dateStr: string): string {
 
   if (diffDays === 0) {
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-    if (diffHours > 0) return `em ${diffHours}h`;
-    if (diffHours < 0) return `há ${Math.abs(diffHours)}h`;
-    return 'agora';
+    if (diffHours > 0) return `in ${diffHours}h`;
+    if (diffHours < 0) return `${Math.abs(diffHours)}h ago`;
+    return 'now';
   }
-  if (diffDays === 1) return 'amanhã';
-  if (diffDays === -1) return 'ontem';
-  if (diffDays > 1 && diffDays <= 7) return `em ${diffDays} dias`;
-  if (diffDays < -1 && diffDays >= -7) return `há ${Math.abs(diffDays)} dias`;
+  if (diffDays === 1) return 'tomorrow';
+  if (diffDays === -1) return 'yesterday';
+  if (diffDays > 1 && diffDays <= 7) return `in ${diffDays} days`;
+  if (diffDays < -1 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
 
-  return date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: diffDays > 365 || diffDays < -365 ? 'numeric' : undefined });
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: diffDays > 365 || diffDays < -365 ? 'numeric' : undefined });
 }
