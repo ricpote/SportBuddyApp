@@ -1,5 +1,5 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { Badge, UserBadge } from '@/types/badge';
 import { Activity } from '@/types/activity';
 import { UserStats } from '@/types/user';
 import { relativeDate } from '@/utils/date';
+import { compressImageDataUrl } from '@/utils/image';
 
 const STATUS_COLOR: Record<Activity['status'], string> = {
   open: '#9ccd6b',
@@ -54,28 +55,6 @@ function badgeProgress(b: Badge, stats: UserStats): number {
   return 0;
 }
 
-async function compressImageDataUrl(dataUrl: string): Promise<string> {
-  if (Platform.OS !== 'web') return dataUrl;
-  return new Promise((resolve, reject) => {
-    const image = new (window as any).Image();
-    image.onload = () => {
-      const maxSize = 192;
-      const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
-      const w = Math.max(1, Math.round(image.width * scale));
-      const h = Math.max(1, Math.round(image.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('canvas error')); return; }
-      ctx.drawImage(image, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
-    };
-    image.onerror = () => reject(new Error('load error'));
-    image.src = dataUrl;
-  });
-}
-
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const router = useRouter();
@@ -104,6 +83,12 @@ export default function ProfileScreen() {
   }, [refreshBadge]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    if (profile?.role === 'partner') {
+      router.replace({ pathname: '/user/[id]', params: { id: profile.id } });
+    }
+  }, [profile?.role, profile?.id, router]);
 
   const sportMap = (sports ?? []).reduce<Record<string, string>>(
     (m, s) => { m[s.id] = s.name; return m; }, {}

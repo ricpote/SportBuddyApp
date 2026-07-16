@@ -17,6 +17,7 @@ import {
   rejectFromWaitlist,
   deleteActivityAsAdmin,
   voteMvp,
+  rateActivity,
 } from "../controllers/activities.controller";
 
 const router = Router();
@@ -51,5 +52,6 @@ router.patch("/:activityId/reject-from-waitlist",authMiddleware,
   rejectFromWaitlist);
 
 router.post("/:activityId/vote-mvp", authMiddleware, voteMvp);
+router.post("/:activityId/rate", authMiddleware, rateActivity);
 
 export default router;

@@ -22,8 +22,16 @@ export function getMutualFriends(userId: string): Promise<{ id: string; name: st
   return api.get(`/api/users/${userId}/mutual-friends`);
 }
 
-export function updateMyProfile(data: { name?: string; bio?: string }): Promise<UserProfile> {
+export function updateMyProfile(data: { name?: string; bio?: string; website?: string }): Promise<UserProfile> {
   return api.patch<UserProfile>('/api/users/me', data);
+}
+
+export function followUser(userId: string): Promise<{ message: string }> {
+  return api.post<{ message: string }>(`/api/users/${userId}/follow`);
+}
+
+export function unfollowUser(userId: string): Promise<{ message: string }> {
+  return api.delete<{ message: string }>(`/api/users/${userId}/follow`);
 }
 
 export function uploadMyAvatar(imageData: string): Promise<UserProfile> {

@@ -35,6 +35,7 @@ export type ListActivitiesFilters = {
   sportId?: string;
   difficultyLevel?: SkillLevel;
   createdBy?: string;
+  verifiedOnly?: boolean;
   lat?: number;
   lng?: number;
   radiusKm?: number;
@@ -84,7 +85,7 @@ export class ActivitiesService {
     }
 
     const docRef = this.activitiesRef.doc();
-    const activity = createActivityObject(docRef.id, createdBy, data);
+    const activity = createActivityObject(docRef.id, createdBy, data, creator.name, creator.role === "partner");
 
     await docRef.set(activity);
 
@@ -164,6 +165,10 @@ export class ActivitiesService {
 
     if (filters.createdBy) {
       query = query.where("createdBy", "==", filters.createdBy);
+    }
+
+    if (filters.verifiedOnly) {
+      query = query.where("createdByVerified", "==", true);
     }
 
     const snapshot = await query.get();
@@ -735,6 +740,47 @@ export class ActivitiesService {
         activityId
       );
     }
+  }
+
+  async rateActivity(activityId: string, raterId: string, rating: number): Promise<void> {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new Error("A avaliação tem de ser um número inteiro entre 1 e 5");
+    }
+
+    const docRef = this.activitiesRef.doc(activityId);
+
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) throw new Error("Activity not found");
+
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
+
+      if (activity.status !== "completed") {
+        throw new Error("Só é possível avaliar atividades terminadas");
+      }
+      if (!activity.participantsList.includes(raterId)) {
+        throw new Error("Só participantes podem avaliar a atividade");
+      }
+      if (activity.ratings?.[raterId] !== undefined) {
+        throw new Error("Já avaliaste esta atividade");
+      }
+
+      const updatedRatings = { ...(activity.ratings ?? {}), [raterId]: rating };
+      const values = Object.values(updatedRatings);
+      const ratingAverage = values.reduce((sum, r) => sum + r, 0) / values.length;
+      const now = new Date();
+
+      tx.update(docRef, {
+        ratings: updatedRatings,
+        ratingAverage,
+        ratingCount: values.length,
+        updatedAt: now,
+      });
+
+      return { activity };
+    });
+
+    await usersService.addRatingToUser(result.activity.createdBy, rating);
   }
 }
 

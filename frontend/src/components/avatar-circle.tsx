@@ -7,11 +7,12 @@ type Props = {
   avatarUrl?: string;
   size?: number;
   backgroundColor?: string;
+  square?: boolean;
 };
 
-export function AvatarCircle({ name, avatarUrl, size = 44, backgroundColor = '#141315' }: Props) {
+export function AvatarCircle({ name, avatarUrl, size = 44, backgroundColor = '#141315', square = false }: Props) {
   const initial = name.trim().charAt(0).toUpperCase();
-  const circleStyle = { width: size, height: size, borderRadius: size / 2 };
+  const circleStyle = { width: size, height: size, borderRadius: square ? 16 : size / 2 };
 
   if (avatarUrl) {
     return <Image source={{ uri: avatarUrl }} style={circleStyle} />;

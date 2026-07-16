@@ -16,6 +16,8 @@ import {
   getMyBadges,
   getUserBadges,
   getMutualFriends,
+  followOrganization,
+  unfollowOrganization,
 } from "../controllers/users.controller";
 
 const router = Router();
@@ -35,6 +37,8 @@ router.get("/search", authMiddleware, searchUsers);
 router.get("/:userId", authMiddleware, getUserProfile);
 router.get("/:userId/badges", authMiddleware, getUserBadges);
 router.get("/:userId/mutual-friends", authMiddleware, getMutualFriends);
+router.post("/:userId/follow", authMiddleware, followOrganization);
+router.delete("/:userId/follow", authMiddleware, unfollowOrganization);
 
 // Admin — user management
 router.get("/", authMiddleware, listUsers);

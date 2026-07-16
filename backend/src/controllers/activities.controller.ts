@@ -104,6 +104,11 @@ export async function listActivities(
         ? Number(req.query.radiusKm)
         : undefined;
 
+    const createdBy =
+      typeof req.query.createdBy === "string" ? req.query.createdBy : undefined;
+
+    const verifiedOnly = req.query.verifiedOnly === "true";
+
     const activities = await activitiesService.listActivities({
       sportId,
       difficultyLevel,
@@ -111,6 +116,8 @@ export async function listActivities(
       lat,
       lng,
       radiusKm,
+      createdBy,
+      verifiedOnly,
     });
 
     res.status(200).json(activities);
@@ -486,6 +493,39 @@ export async function voteMvp(
   } catch (error) {
     res.status(400).json({
       message: error instanceof Error ? error.message : "Error voting for MVP",
+    });
+  }
+}
+
+export async function rateActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const { activityId } = req.params;
+    const { rating } = req.body as { rating?: number };
+
+    if (typeof rating !== "number") {
+      res.status(400).json({ message: "rating is required" });
+      return;
+    }
+
+    const user = await usersService.getUserByFirebaseUid(req.user.uid);
+    if (!user) {
+      res.status(404).json({ message: "User profile not found" });
+      return;
+    }
+
+    await activitiesService.rateActivity(activityId, user.id, rating);
+    res.status(200).json({ message: "Rating registered successfully" });
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : "Error rating activity",
     });
   }
 }

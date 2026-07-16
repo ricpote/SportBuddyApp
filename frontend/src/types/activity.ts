@@ -18,6 +18,8 @@ export type Activity = {
   sportId: string;
 
   createdBy: string;
+  createdByName: string;
+  createdByVerified: boolean;
 
   participantsList: string[];
   waitlist: string[];
@@ -38,6 +40,11 @@ export type Activity = {
   mvpVotes: Record<string, string>; // { quemVota: emQuemVotou }
   mvpWinners: string[];             // vencedor(es) — pode haver empate
   votingClosedAt?: string | null;   // null enquanto aberta; definido quando fecha
+
+  // Avaliação (1-5) que cada participante deu à atividade, só depois de "completed"
+  ratings: Record<string, number>;
+  ratingAverage: number;
+  ratingCount: number;
 
   lastMessage?: string;
   lastMessageAt?: string;

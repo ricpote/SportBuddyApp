@@ -13,6 +13,7 @@ import {
   getActivity,
   joinActivity,
   leaveActivity,
+  rateActivity,
   rejectFromWaitlist,
   removeParticipant,
   voteMvp,
@@ -133,6 +134,9 @@ export default function ActivityDetailScreen() {
   const hasVoted = !!myVote;
   const otherParticipants = activity.participantsList.filter((pid) => pid !== user?.uid);
 
+  // --- Avaliação da atividade (só faz sentido em atividades terminadas) ---
+  const myRating = user ? activity.ratings?.[user.uid] : undefined;
+
   async function handleShare() {
     const url =
       Platform.OS === 'web'
@@ -233,6 +237,20 @@ export default function ActivityDetailScreen() {
       setActivity(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível registar o voto');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRateActivity(rating: number) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await rateActivity(activity!.id, rating);
+      const updated = await getActivity(activity!.id);
+      setActivity(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível registar a avaliação');
     } finally {
       setSubmitting(false);
     }
@@ -538,6 +556,37 @@ export default function ActivityDetailScreen() {
                   {otherParticipants.length === 0 && (
                     <ThemedText style={styles.emptyListText}>Não há outros participantes para votar.</ThemedText>
                   )}
+                </>
+              )}
+            </View>
+          )}
+
+          {/* AVALIAÇÃO DA ATIVIDADE (atividades terminadas, para participantes) */}
+          {activity.status === 'completed' && isParticipant && (
+            <View style={styles.mvpCard}>
+              <View style={styles.mvpHeader}>
+                <Ionicons name="star" size={20} color="#e8823f" />
+                <ThemedText style={styles.sectionTitle}>Avaliar a atividade</ThemedText>
+              </View>
+
+              {myRating ? (
+                <ThemedText style={styles.emptyListText}>
+                  Já avaliaste esta atividade com {myRating} {myRating === 1 ? 'estrela' : 'estrelas'}. Obrigado!
+                </ThemedText>
+              ) : (
+                <>
+                  <ThemedText style={styles.voteHint}>Como avalias esta atividade?</ThemedText>
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Pressable
+                        key={n}
+                        disabled={submitting}
+                        style={({ pressed }) => [pressed && styles.pressed]}
+                        onPress={() => handleRateActivity(n)}>
+                        <Ionicons name="star-outline" size={32} color="#e8823f" />
+                      </Pressable>
+                    ))}
+                  </View>
                 </>
               )}
             </View>
@@ -910,6 +959,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   mvpHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  starsRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', paddingVertical: 4 },
   voteHint: { color: '#c9c5bf', fontSize: 14 },
   voteButton: {
     paddingHorizontal: 14,

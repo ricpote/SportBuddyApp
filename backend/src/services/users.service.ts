@@ -40,6 +40,22 @@ export class UsersService {
       throw new Error("O email é obrigatório");
     }
 
+    let nif: string | undefined;
+    if (data.accountType === "organization") {
+      nif = data.nif?.trim();
+      const responsibleName = data.responsibleName?.trim();
+
+      if (!nif || !/^\d{9}$/.test(nif)) {
+        throw new Error("O NIF deve ter 9 dígitos");
+      }
+
+      if (!responsibleName) {
+        throw new Error("O responsável é obrigatório");
+      }
+
+      data = { ...data, nif, responsibleName };
+    }
+
     // We use Firebase UID as the Firestore document ID.
     // This makes it easy to find the logged-in user.
     const user = createUserObject(firebaseUid, firebaseUid, {
@@ -52,7 +68,7 @@ export class UsersService {
     const docRef = this.usersRef.doc(firebaseUid);
 
     await db.runTransaction(async (tx) => {
-      await this.assertNameAndEmailAvailable(tx, user.nameLower, user.emailLower);
+      await this.assertNameAndEmailAvailable(tx, user.nameLower, user.emailLower, undefined, user.nifLower);
       tx.set(docRef, userDoc);
     });
 
@@ -63,12 +79,16 @@ export class UsersService {
     tx: FirebaseFirestore.Transaction,
     nameLower: string,
     emailLower?: string,
-    excludeUserId?: string
+    excludeUserId?: string,
+    nifLower?: string
   ): Promise<void> {
-    const [nameSnap, emailSnap] = await Promise.all([
+    const [nameSnap, emailSnap, nifSnap] = await Promise.all([
       tx.get(this.usersRef.where("nameLower", "==", nameLower)),
       emailLower
         ? tx.get(this.usersRef.where("emailLower", "==", emailLower))
+        : Promise.resolve(null),
+      nifLower
+        ? tx.get(this.usersRef.where("nifLower", "==", nifLower))
         : Promise.resolve(null),
     ]);
 
@@ -81,6 +101,10 @@ export class UsersService {
 
     if (emailSnap && emailSnap.docs.some(isConflict)) {
       throw new Error("Já existe um utilizador com este email");
+    }
+
+    if (nifSnap && nifSnap.docs.some(isConflict)) {
+      throw new Error("Já existe uma conta registada com este NIF");
     }
   }
 
@@ -336,6 +360,62 @@ export class UsersService {
       .map((doc) => doc.data() as User)
       .filter((u) => u.id !== requesterId && u.status === "active")
       .map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }));
+  }
+
+  async addRatingToUser(userId: string, rating: number): Promise<void> {
+    const docRef = this.usersRef.doc(userId);
+
+    await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) return;
+
+      const user = doc.data() as User;
+      const currentCount = user.rating?.count ?? 0;
+      const currentAverage = user.rating?.average ?? 0;
+      const newCount = currentCount + 1;
+      const newAverage = (currentAverage * currentCount + rating) / newCount;
+
+      tx.update(docRef, { rating: { average: newAverage, count: newCount } });
+    });
+  }
+
+  async followUser(followerId: string, targetId: string): Promise<void> {
+    if (followerId === targetId) {
+      throw new Error("Não podes seguir-te a ti próprio");
+    }
+
+    const [follower, target] = await Promise.all([
+      this.getUserById(followerId),
+      this.getUserById(targetId),
+    ]);
+
+    if (!follower) {
+      throw new Error("User profile not found");
+    }
+
+    if (!target || target.status !== "active") {
+      throw new Error("Conta não encontrada");
+    }
+
+    if (target.role !== "partner") {
+      throw new Error("Só é possível seguir contas de empresa");
+    }
+
+    if ((follower.following ?? []).includes(targetId)) {
+      return;
+    }
+
+    const batch = db.batch();
+    batch.update(this.usersRef.doc(followerId), { following: FieldValue.arrayUnion(targetId) });
+    batch.update(this.usersRef.doc(targetId), { followers: FieldValue.arrayUnion(followerId) });
+    await batch.commit();
+  }
+
+  async unfollowUser(followerId: string, targetId: string): Promise<void> {
+    const batch = db.batch();
+    batch.update(this.usersRef.doc(followerId), { following: FieldValue.arrayRemove(targetId) });
+    batch.update(this.usersRef.doc(targetId), { followers: FieldValue.arrayRemove(followerId) });
+    await batch.commit();
   }
 
   async listUsers(filters: ListUsersFilters = {}): Promise<User[]> {

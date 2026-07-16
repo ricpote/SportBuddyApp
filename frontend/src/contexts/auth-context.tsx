@@ -23,6 +23,13 @@ type AuthContextValue = {
   signingUp: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUpOrganization: (
+    orgName: string,
+    nif: string,
+    responsibleName: string,
+    email: string,
+    password: string
+  ) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -104,6 +111,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function signUpOrganization(
+    orgName: string,
+    nif: string,
+    responsibleName: string,
+    email: string,
+    password: string
+  ) {
+    setSigningUp(true);
+    try {
+      let credential;
+      try {
+        credential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        throw translateAuthError(err);
+      }
+
+      await updateProfile(credential.user, { displayName: orgName });
+
+      try {
+        await api.post('/api/users/profile', {
+          name: orgName,
+          email,
+          accountType: 'organization',
+          nif,
+          responsibleName,
+        });
+        await loadProfile(credential.user);
+      } catch (err) {
+        await credential.user.delete();
+        throw err;
+      }
+    } finally {
+      setSigningUp(false);
+    }
+  }
+
   async function signInWithGoogle() {
     const provider = new GoogleAuthProvider();
     const credential = await signInWithPopup(auth, provider);
@@ -150,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signingUp,
         signIn,
         signUp,
+        signUpOrganization,
         signInWithGoogle,
         signOut,
         refreshProfile,

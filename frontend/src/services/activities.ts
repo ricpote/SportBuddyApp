@@ -10,8 +10,23 @@ export type UpdateActivityInput = {
   requiresApproval?: boolean;
 };
 
-export function listActivities(): Promise<Activity[]> {
-  return api.get<Activity[]>('/api/activities');
+export type ListActivitiesFilters = {
+  createdBy?: string;
+  verifiedOnly?: boolean;
+  status?: Activity['status'];
+};
+
+export function listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
+  const params = new URLSearchParams();
+  if (filters.createdBy) params.set('createdBy', filters.createdBy);
+  if (filters.verifiedOnly) params.set('verifiedOnly', 'true');
+  if (filters.status) params.set('status', filters.status);
+  const query = params.toString();
+  return api.get<Activity[]>(`/api/activities${query ? `?${query}` : ''}`);
+}
+
+export function rateActivity(activityId: string, rating: number): Promise<{ message: string }> {
+  return api.post<{ message: string }>(`/api/activities/${activityId}/rate`, { rating });
 }
 
 export function getMyActivities(): Promise<Activity[]> {
@@ -83,6 +98,7 @@ export function voteMvp(activityId: string, votedForId: string): Promise<{ messa
     radiusKm: number;
     sportId?: string;
     difficultyLevel?: string;
+    verifiedOnly?: boolean;
   };
 
   export function listNearbyActivities(
@@ -100,6 +116,10 @@ export function voteMvp(activityId: string, votedForId: string): Promise<{ messa
 
     if (filters.difficultyLevel) {
       params.set('difficultyLevel', filters.difficultyLevel);
+    }
+
+    if (filters.verifiedOnly) {
+      params.set('verifiedOnly', 'true');
     }
 
     return api.get<Activity[]>(`/api/activities?${params.toString()}`);

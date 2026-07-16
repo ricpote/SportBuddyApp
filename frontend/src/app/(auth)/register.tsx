@@ -14,18 +14,57 @@ const TEXT = '#f4f2ef';
 const TEXT_SEC = '#c9c5bf';
 const ERROR = '#eb8f84';
 
+type AccountType = 'personal' | 'organization';
+
 export default function RegisterScreen() {
-  const { signUp } = useAuth();
+  const { signUp, signUpOrganization } = useAuth();
+
+  const [accountType, setAccountType] = useState<AccountType>('personal');
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const [orgName, setOrgName] = useState('');
+  const [nif, setNif] = useState('');
+  const [responsibleName, setResponsibleName] = useState('');
+  const [orgEmail, setOrgEmail] = useState('');
+  const [orgPassword, setOrgPassword] = useState('');
+  const [showOrgPassword, setShowOrgPassword] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
     setError(null);
+
+    if (accountType === 'organization') {
+      if (!orgName.trim() || !nif.trim() || !responsibleName.trim() || !orgEmail.trim() || !orgPassword) {
+        setError('Preenche todos os campos');
+        return;
+      }
+
+      if (!/^\d{9}$/.test(nif.trim())) {
+        setError('O NIF deve ter 9 dígitos');
+        return;
+      }
+
+      if (orgPassword.length < 6) {
+        setError('A palavra-passe tem de ter pelo menos 6 caracteres');
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        await signUpOrganization(orgName.trim(), nif.trim(), responsibleName.trim(), orgEmail.trim(), orgPassword);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Não foi possível criar a conta empresa');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (!name.trim() || !email.trim() || !password) {
       setError('Preenche todos os campos');
@@ -85,49 +124,140 @@ export default function RegisterScreen() {
             <ThemedText type="title" style={styles.title}>SportBuddy</ThemedText>
             <ThemedText style={styles.subtitle}>Cria a tua conta</ThemedText>
 
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={[styles.toggleBtn, accountType === 'personal' && styles.toggleBtnActive]}
+                onPress={() => setAccountType('personal')}>
+                <ThemedText style={[styles.toggleText, accountType === 'personal' && styles.toggleTextActive]}>
+                  Pessoal
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                style={[styles.toggleBtn, accountType === 'organization' && styles.toggleBtnActive]}
+                onPress={() => setAccountType('organization')}>
+                <ThemedText style={[styles.toggleText, accountType === 'organization' && styles.toggleTextActive]}>
+                  Empresa
+                </ThemedText>
+              </Pressable>
+            </View>
+
             <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { outline: 'none' } as any]}
-                  placeholder="Nome"
-                  placeholderTextColor={TEXT_SEC}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
+              {accountType === 'personal' ? (
+                <>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="person-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Nome"
+                      placeholderTextColor={TEXT_SEC}
+                      autoCapitalize="words"
+                      autoComplete="name"
+                      value={name}
+                      onChangeText={setName}
+                    />
+                  </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { outline: 'none' } as any]}
-                  placeholder="Email"
-                  placeholderTextColor={TEXT_SEC}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Email"
+                      placeholderTextColor={TEXT_SEC}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoComplete="email"
+                      value={email}
+                      onChangeText={setEmail}
+                    />
+                  </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { outline: 'none' } as any]}
-                  placeholder="Palavra-passe"
-                  placeholderTextColor={TEXT_SEC}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password-new"
-                  value={password}
-                  onChangeText={setPassword}
-                />
-                <Pressable onPress={() => setShowPassword(v => !v)}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={TEXT_SEC} />
-                </Pressable>
-              </View>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Palavra-passe"
+                      placeholderTextColor={TEXT_SEC}
+                      secureTextEntry={!showPassword}
+                      autoComplete="password-new"
+                      value={password}
+                      onChangeText={setPassword}
+                    />
+                    <Pressable onPress={() => setShowPassword(v => !v)}>
+                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={TEXT_SEC} />
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="business-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Nome da organização"
+                      placeholderTextColor={TEXT_SEC}
+                      autoCapitalize="words"
+                      value={orgName}
+                      onChangeText={setOrgName}
+                    />
+                  </View>
+
+                  <View style={styles.halfRow}>
+                    <View style={[styles.inputContainer, styles.halfInput]}>
+                      <Ionicons name="card-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                      <TextInput
+                        style={[styles.input, { outline: 'none' } as any]}
+                        placeholder="NIF"
+                        placeholderTextColor={TEXT_SEC}
+                        keyboardType="number-pad"
+                        maxLength={9}
+                        value={nif}
+                        onChangeText={setNif}
+                      />
+                    </View>
+                    <View style={[styles.inputContainer, styles.halfInput]}>
+                      <Ionicons name="person-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                      <TextInput
+                        style={[styles.input, { outline: 'none' } as any]}
+                        placeholder="Responsável"
+                        placeholderTextColor={TEXT_SEC}
+                        autoCapitalize="words"
+                        value={responsibleName}
+                        onChangeText={setResponsibleName}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Email da empresa"
+                      placeholderTextColor={TEXT_SEC}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoComplete="email"
+                      value={orgEmail}
+                      onChangeText={setOrgEmail}
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.input, { outline: 'none' } as any]}
+                      placeholder="Palavra-passe"
+                      placeholderTextColor={TEXT_SEC}
+                      secureTextEntry={!showOrgPassword}
+                      autoComplete="password-new"
+                      value={orgPassword}
+                      onChangeText={setOrgPassword}
+                    />
+                    <Pressable onPress={() => setShowOrgPassword(v => !v)}>
+                      <Ionicons name={showOrgPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={TEXT_SEC} />
+                    </Pressable>
+                  </View>
+                </>
+              )}
 
               {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
@@ -136,7 +266,11 @@ export default function RegisterScreen() {
                 disabled={submitting}
                 onPress={handleSubmit}>
                 <ThemedText style={styles.buttonText} type="smallBold">
-                  {submitting ? 'A criar conta...' : 'Criar conta'}
+                  {submitting
+                    ? 'A criar conta...'
+                    : accountType === 'organization'
+                      ? 'Criar conta empresa'
+                      : 'Criar conta'}
                 </ThemedText>
               </Pressable>
 
@@ -261,9 +395,41 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
     marginBottom: Spacing.three,
   },
+  toggleRow: {
+    flexDirection: 'row',
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: Spacing.three,
+  },
+  toggleBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleBtnActive: {
+    backgroundColor: ORANGE,
+  },
+  toggleText: {
+    color: TEXT_SEC,
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    color: BG,
+  },
   form: {
     gap: Spacing.three,
     width: '100%',
+  },
+  halfRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  halfInput: {
+    flex: 1,
   },
   inputContainer: {
     flexDirection: 'row',

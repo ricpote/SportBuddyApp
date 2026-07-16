@@ -11,6 +11,7 @@ export default function EditProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,6 +21,7 @@ export default function EditProfileScreen() {
         setProfile(data);
         setName(data.name);
         setBio(data.bio ?? '');
+        setWebsite(data.website ?? '');
       })
       .catch(() => setProfile(null));
   }, []);
@@ -48,7 +50,11 @@ export default function EditProfileScreen() {
     }
     setSubmitting(true);
     try {
-      await updateMyProfile({ name: name.trim(), bio: bio.trim() || undefined });
+      await updateMyProfile({
+        name: name.trim(),
+        bio: bio.trim() || undefined,
+        website: profile?.role === 'partner' ? website.trim() || undefined : undefined,
+      });
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao guardar. Tenta novamente.');
@@ -85,6 +91,21 @@ export default function EditProfileScreen() {
           multiline
           numberOfLines={4}
         />
+
+        {profile.role === 'partner' && (
+          <>
+            <ThemedText style={styles.sectionLabel}>Website (Opcional)</ThemedText>
+            <TextInput
+              style={styles.input}
+              placeholder="www.aorganizacao.pt"
+              placeholderTextColor="#8f8b85"
+              autoCapitalize="none"
+              keyboardType="url"
+              value={website}
+              onChangeText={setWebsite}
+            />
+          </>
+        )}
 
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 

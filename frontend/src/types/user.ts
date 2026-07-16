@@ -8,6 +8,11 @@ export type UserStats = {
   badges: string[];
 };
 
+export type UserRating = {
+  average: number;
+  count: number;
+};
+
 export type UserProfile = {
   id: string;
   name: string;
@@ -16,13 +21,26 @@ export type UserProfile = {
   status: UserStatus;
   bio?: string;
   avatarUrl?: string;
+  website?: string;
+  nif?: string;
+  responsibleName?: string;
   sports?: string[];
   location?: string | { name?: string };
   createdAt?: string;
   stats: UserStats;
+  following: string[];
+  followers: string[];
+  rating: UserRating;
 };
 
-// Perfil público de outro utilizador. Não inclui email, localização nem a
-// lista de amigos; o backend devolve apenas isFriend (se EU sou amigo dele).
-export type PublicUser = Omit<UserProfile, 'email'> & { isFriend?: boolean; friendCount?: number; hasSentRequest?: boolean; incomingRequestId?: string | null };
+// Perfil público de outro utilizador. Não inclui email, NIF, responsável nem a
+// lista de amigos; o backend devolve apenas isFriend/isFollowing (se EU sigo/sou amigo dele).
+export type PublicUser = Omit<UserProfile, 'email' | 'nif' | 'responsibleName'> & {
+  isFriend?: boolean;
+  friendCount?: number;
+  hasSentRequest?: boolean;
+  incomingRequestId?: string | null;
+  isFollowing?: boolean;
+  followersCount?: number;
+};
 export type AdminUser = UserProfile & { firebaseUid?: string };
