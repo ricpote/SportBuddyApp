@@ -8,7 +8,7 @@ import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
 
-const NAV_ITEMS = [
+const USER_NAV_ITEMS = [
   { href: '/',                 icon: 'home-outline',        label: 'Home'     },
   { href: '/explore',          icon: 'search-outline',      label: 'Discover' },
   { href: '/create-activity',  icon: 'add-outline',         label: 'Create'   },
@@ -16,14 +16,26 @@ const NAV_ITEMS = [
   { href: '/map',              icon: 'map-outline',         label: 'Map'      },
 ] as const;
 
+const PARTNER_NAV_ITEMS = [
+  { href: '/dashboard',        icon: 'grid-outline',           label: 'Dashboard'       },
+  { href: '/my-events',        icon: 'calendar-outline',       label: 'Os meus eventos' },
+  { href: '/create-activity',  icon: 'add-circle-outline',     label: 'Criar evento'    },
+  { href: '/statistics',       icon: 'bar-chart-outline',      label: 'Estatísticas'    },
+  { href: '/chats',            icon: 'chatbubbles-outline',    label: 'Mensagens'       },
+  { href: '/profile',          icon: 'business-outline',       label: 'Página da marca' },
+] as const;
+
 export function WebSidebar() {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const { unreadCount } = useChatBadge();
 
+  const isPartner = profile?.role === 'partner';
+  const navItems = isPartner ? PARTNER_NAV_ITEMS : USER_NAV_ITEMS;
+
   return (
     <View style={styles.sidebar}>
-      <Link href="/" style={styles.brandLink}>
+      <Link href={isPartner ? '/dashboard' : '/'} style={styles.brandLink}>
         <View style={styles.brand}>
           <Image
             source={require('../../assets/images/sportbuddyIcon.png')}
@@ -38,8 +50,10 @@ export function WebSidebar() {
       </Link>
 
       <View style={styles.nav}>
-        {NAV_ITEMS.map(item => {
-          const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+        {navItems.map(item => {
+          const active = item.href === '/' ? pathname === '/'
+            : item.href === '/dashboard' ? pathname === '/dashboard' || pathname === '/'
+            : pathname.startsWith(item.href);
           const badge = item.href === '/chats' ? unreadCount : 0;
           return (
             <Link key={item.href} href={item.href as any} asChild>
