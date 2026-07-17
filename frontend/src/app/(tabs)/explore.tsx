@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { listActivities, listNearbyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
@@ -117,6 +118,7 @@ type CatFilter = SportCategory | null;
 type DateFilter = 'upcoming' | 'today' | 'weekend';
 
 export default function ExploreScreen() {
+  const { user } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
@@ -219,6 +221,7 @@ export default function ExploreScreen() {
 
   const visibleActivities = (activities ?? []).filter((a) => {
     if (a.status === 'cancelled') return false;
+    if (user && a.participantsList.includes(user.uid)) return false;
     if (catFilter && categoryBySportId.get(a.sportId) !== catFilter) return false;
     if (searchText.trim() && !a.title.toLowerCase().includes(searchText.toLowerCase())) return false;
 
@@ -255,6 +258,7 @@ export default function ExploreScreen() {
 
   function renderCard(activity: Activity) {
     const status: { label: string; color: string } = STATUS_CONFIG[activity.status] ?? { label: activity.status, color: '#8f8b85' };
+    const isWaitlisted = !!user && activity.waitlist.includes(user.uid);
     const fill = activity.participantsList.length / activity.maxParticipants;
     const dist = userLocation
       ? formatDist(haversineKm(userLocation.lat, userLocation.lng, activity.location.lat, activity.location.lng))
@@ -279,7 +283,11 @@ export default function ExploreScreen() {
             </View>
             <ThemedText style={styles.cardTitle} numberOfLines={1}>{activity.title}</ThemedText>
             <View style={styles.badgeStack}>
-              {isPrivate ? (
+              {isWaitlisted ? (
+                <View style={[styles.statusBadge, styles.waitlistBadge]}>
+                  <ThemedText style={[styles.statusText, styles.waitlistText]}>Waitlist</ThemedText>
+                </View>
+              ) : isPrivate ? (
                 <View style={[styles.statusBadge, styles.privateBadge]}>
                   <Ionicons name="lock-closed" size={10} color="#8f8b85" />
                   <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>Private</ThemedText>
@@ -669,6 +677,8 @@ const styles = StyleSheet.create({
   cardTitle: { flex: 1, color: '#f4f2ef', fontSize: 15, fontWeight: '700' },
   badgeStack: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexShrink: 0 },
+  waitlistBadge: { backgroundColor: '#f4c95d22', borderWidth: 1, borderColor: '#f4c95d' },
+  waitlistText: { color: '#f4c95d' },
   privateBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#8f8b8522' },
   statusText: { fontSize: 11, fontWeight: '700' },
 

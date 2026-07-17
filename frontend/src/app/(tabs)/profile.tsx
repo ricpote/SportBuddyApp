@@ -97,8 +97,9 @@ export default function ProfileScreen() {
   const earnedIds = new Set((earnedBadges ?? []).map(b => b.id));
 
   const filteredActivities = (activities ?? []).filter(a => {
+    if (a.status === 'cancelled') return false;
     if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
-    if (activityFilter === 'past') return a.status === 'completed' || a.status === 'cancelled';
+    if (activityFilter === 'past') return a.status === 'completed';
     return true;
   });
   const visibleActivities = filteredActivities.slice(0, activityLimit);
