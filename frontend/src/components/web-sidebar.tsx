@@ -93,7 +93,7 @@ export function WebSidebar() {
       {/* Perfil no rodapé: clicar vai para o perfil, o ícone à direita faz logout */}
       <View style={styles.footer}>
         <Link href="/profile" asChild>
-          <Pressable style={({ pressed }) => [{ flex: 1 }, pressed && styles.pressed]}>
+          <Pressable style={({ pressed }) => [{ flex: 1, minWidth: 0 }, pressed && styles.pressed]}>
             <View style={[styles.footerProfile, pathname.startsWith('/profile') && styles.itemActive]}>
               <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
               <View style={styles.footerText}>
@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
   },
   footerProfile: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 10,
     paddingLeft: 14,
-    paddingRight: 48,
+    paddingRight: 12,
     borderRadius: 12,
+    overflow: 'hidden',
   },
   footerText: { flex: 1, minWidth: 0 },
   footerName: { color: '#f4f2ef', fontSize: 14 },

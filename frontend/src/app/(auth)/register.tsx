@@ -104,14 +104,6 @@ export default function RegisterScreen() {
             />
             <ThemedText style={styles.navTitle}>SportBuddy</ThemedText>
           </View>
-          <View style={styles.navLinks}>
-            <Pressable style={styles.navLinkPressable}>
-              <ThemedText style={styles.navLink}>Sobre</ThemedText>
-            </Pressable>
-            <Pressable style={styles.navLinkPressable}>
-              <ThemedText style={styles.navLink}>Contacto</ThemedText>
-            </Pressable>
-          </View>
         </View>
 
         <View style={styles.center}>

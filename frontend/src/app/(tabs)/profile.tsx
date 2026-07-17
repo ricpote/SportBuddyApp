@@ -66,6 +66,7 @@ export default function ProfileScreen() {
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
   const [activityLimit, setActivityLimit] = useState(5);
+  const [managedLimit, setManagedLimit] = useState(5);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [friendCount, setFriendCount] = useState(0);
   const [earnedBadges, setEarnedBadges] = useState<UserBadge[] | null>(null);
@@ -95,6 +96,10 @@ export default function ProfileScreen() {
   );
 
   const earnedIds = new Set((earnedBadges ?? []).map(b => b.id));
+
+  const managedActivities = (activities ?? []).filter(
+    a => a.createdBy === user?.uid && (a.status === 'open' || a.status === 'full')
+  );
 
   const filteredActivities = (activities ?? []).filter(a => {
     if (a.status === 'cancelled') return false;
@@ -246,6 +251,7 @@ export default function ProfileScreen() {
                 { label: 'Organizadas',  value: profile?.stats.activitiesCreated ?? 0, accent: false, href: null },
                 { label: 'MVP',          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false, href: null },
                 { label: 'Amigos',       value: friendCount,                            accent: false, href: '/friends' },
+                { label: 'A seguir',     value: profile?.following?.length ?? 0,        accent: false, href: '/following' },
               ].map(({ label, value, accent, href }) => (
                 <Pressable key={label} style={({ pressed }) => [styles.statRow, pressed && href && styles.pressed]} onPress={() => href && router.push(href as any)}>
                   <ThemedText type="small" style={styles.statLabel}>{label}</ThemedText>
@@ -292,6 +298,69 @@ export default function ProfileScreen() {
           {/* ── RIGHT COLUMN ─────────────────────────────── */}
           <View style={[styles.rightCol, isWide && styles.rightColWide]}>
 
+            {managedActivities.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <ThemedText type="subtitle" style={styles.sectionTitle}>A gerir</ThemedText>
+                    <ThemedText type="subtitle" style={styles.sectionCount}> {managedActivities.length}</ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.actList}>
+                  {managedActivities.slice(0, managedLimit).map(activity => {
+                    const sportName = sportMap[activity.sportId];
+                    const pendingCount = activity.requiresApproval ? (activity.waitlist?.length ?? 0) : 0;
+                    const participantCount = activity.participantsList?.length ?? 0;
+                    return (
+                      <Link
+                        key={activity.id}
+                        href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
+                        asChild>
+                        <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                          <View style={styles.actItem}>
+                            <View style={styles.sportCircle}>
+                              <SportIcon sportName={sportName} size={20} color="#f4f2ef" />
+                            </View>
+                            <View style={styles.actInfo}>
+                              <ThemedText type="smallBold" style={styles.actTitle} numberOfLines={1}>
+                                {activity.title}
+                              </ThemedText>
+                              <ThemedText type="small" style={styles.actMeta}>
+                                {pendingCount > 0
+                                  ? `${pendingCount} pedido${pendingCount > 1 ? 's' : ''} pendente${pendingCount > 1 ? 's' : ''}`
+                                  : `${participantCount} / ${activity.maxParticipants} inscritos`}
+                              </ThemedText>
+                            </View>
+                            {pendingCount > 0 ? (
+                              <View style={[styles.statusChip, { backgroundColor: 'rgba(232,130,63,0.15)' }]}>
+                                <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>
+                                  {pendingCount} pedido{pendingCount > 1 ? 's' : ''}
+                                </ThemedText>
+                              </View>
+                            ) : (
+                              <View style={[styles.statusChip, { backgroundColor: 'rgba(156,205,107,0.15)' }]}>
+                                <ThemedText style={[styles.statusText, { color: '#9ccd6b' }]}>Aberta</ThemedText>
+                              </View>
+                            )}
+                            <Ionicons name="settings-outline" size={18} color="#8f8b85" />
+                          </View>
+                        </Pressable>
+                      </Link>
+                    );
+                  })}
+                </View>
+
+                {managedLimit < managedActivities.length && (
+                  <Pressable
+                    style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
+                    onPress={() => setManagedLimit(l => l + 5)}>
+                    <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
+                  </Pressable>
+                )}
+              </>
+            )}
+
             <View style={styles.sectionHeader}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>Badges</ThemedText>
               <Pressable
@@ -320,13 +389,13 @@ export default function ProfileScreen() {
             <View style={styles.historicHeader}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
               <View style={styles.filterRow}>
-                {(['all', 'active', 'past'] as const).map(f => (
-                  <Pressable key={f} onPress={() => { setActivityFilter(f); setActivityLimit(5); }}>
+                {(['active', 'past'] as const).map(f => (
+                  <Pressable key={f} onPress={() => { setActivityFilter(activityFilter === f ? 'all' : f); setActivityLimit(5); }}>
                     <View style={[styles.filterChip, activityFilter === f && styles.filterChipOn]}>
                       <ThemedText
                         type="small"
                         style={[styles.filterText, activityFilter === f && styles.filterTextOn]}>
-                        {f === 'all' ? 'Todas' : f === 'active' ? 'Ativas' : 'Passadas'}
+                        {f === 'active' ? 'Ativas' : 'Passadas'}
                       </ThemedText>
                     </View>
                   </Pressable>
@@ -377,18 +446,11 @@ export default function ProfileScreen() {
               })}
             </View>
 
-            {activityLimit === 5 && filteredActivities.length > 5 && (
+            {activityLimit < filteredActivities.length && (
               <Pressable
                 style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
-                onPress={() => setActivityLimit(10)}>
-                <ThemedText type="small" style={styles.showAllText}>Mostrar mais</ThemedText>
-              </Pressable>
-            )}
-            {activityLimit === 10 && (
-              <Pressable
-                style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
-                onPress={() => setActivityLimit(5)}>
-                <ThemedText type="small" style={styles.showAllText}>Mostrar menos</ThemedText>
+                onPress={() => setActivityLimit(l => l + 5)}>
+                <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
               </Pressable>
             )}
           </View>
@@ -501,7 +563,9 @@ const styles = StyleSheet.create({
   logoutText: { color: '#eb8f84' },
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline' },
   sectionTitle: { color: '#f4f2ef', fontSize: 20, fontFamily: 'HankenGrotesk_700Bold' },
+  sectionCount: { color: '#8f8b85', fontSize: 20, fontFamily: 'HankenGrotesk_700Bold' },
   sectionSub: { color: '#8f8b85' },
   verTodasBtn: { paddingVertical: 2 },
   verTodasText: { color: '#e8823f' },
