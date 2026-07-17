@@ -327,6 +327,7 @@ export default function MapWebScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
+
   async function handleJoin(activity: Activity) {
     if (joining) return;
     setJoining(true);
@@ -427,7 +428,6 @@ export default function MapWebScreen() {
           </View>
         )}
 
-        {/* Admin já vê tudo num raio de 1000km, não há "área" para pesquisar */}
         {!isAdmin && (
           <Pressable
             onPress={() => void loadActivities(center.lat, center.lng, radiusKm)}
