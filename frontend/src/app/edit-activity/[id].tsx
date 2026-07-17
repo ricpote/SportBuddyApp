@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'reac
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { getActivity, updateActivity } from '@/services/activities';
 import { Activity, SkillLevel } from '@/types/activity';
 
@@ -16,16 +17,17 @@ const DIFFICULTY_OPTIONS: SkillLevel[] = [
   'competitive',
 ];
 
-const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
-  beginner: 'Iniciante',
-  intermediate: 'Intermédio',
-  advanced: 'Avançado',
-  competitive: 'Competitivo',
+const DIFFICULTY_KEYS: Record<SkillLevel, string> = {
+  beginner: 'activity.difficulty.beginner',
+  intermediate: 'activity.difficulty.intermediate',
+  advanced: 'activity.difficulty.advanced',
+  competitive: 'activity.difficulty.competitive',
 };
 
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, profile } = useAuth();
+  const { t } = useTranslation();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [title, setTitle] = useState('');
@@ -54,7 +56,7 @@ export default function EditActivityScreen() {
   if (activity === undefined) {
     return (
       <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
-        <ThemedText style={{ color: '#8f8b85' }}>A carregar...</ThemedText>
+        <ThemedText style={{ color: '#8f8b85' }}>{t('activity.edit.loading')}</ThemedText>
       </View>
     );
   }
@@ -65,7 +67,7 @@ export default function EditActivityScreen() {
     return (
       <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
         <ThemedText style={{ color: '#8f8b85' }}>
-          Só o organizador ou um admin pode editar esta atividade.
+          {t('activity.edit.noPermission')}
         </ThemedText>
       </View>
     );
@@ -82,12 +84,12 @@ export default function EditActivityScreen() {
     setError(null);
 
     if (!title.trim()) {
-      setError('O título não pode ficar vazio');
+      setError(t('activity.edit.error.emptyTitle'));
       return;
     }
 
     if (maxParticipants < minParticipants) {
-      setError(`Já existem ${currentActivity.participantsList.length} participantes e o máximo não pode ser menor`);
+      setError(t('activity.edit.error.tooFewMax', { count: currentActivity.participantsList.length }));
       return;
     }
 
@@ -102,7 +104,7 @@ export default function EditActivityScreen() {
       });
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível guardar as alterações');
+      setError(err instanceof Error ? err.message : t('activity.edit.error.generic'));
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +112,7 @@ export default function EditActivityScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Editar atividade' }} />
+      <Stack.Screen options={{ title: t('activity.edit.screenTitle') }} />
 
       <ScrollView
         style={{ backgroundColor: '#0a0a0b' }}
@@ -118,10 +120,10 @@ export default function EditActivityScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.container}>
           <View style={styles.field}>
-            <ThemedText style={styles.label}>TÍTULO</ThemedText>
+            <ThemedText style={styles.label}>{t('activity.edit.titleLabel')}</ThemedText>
             <TextInput
               style={styles.input}
-              placeholder="Título"
+              placeholder={t('activity.edit.titlePlaceholder')}
               placeholderTextColor="#8f8b85"
               value={title}
               onChangeText={setTitle}
@@ -129,10 +131,10 @@ export default function EditActivityScreen() {
           </View>
 
           <View style={styles.field}>
-            <ThemedText style={styles.label}>DESCRIÇÃO</ThemedText>
+            <ThemedText style={styles.label}>{t('activity.edit.descriptionLabel')}</ThemedText>
             <TextInput
               style={[styles.input, styles.multiline]}
-              placeholder="Descrição"
+              placeholder={t('activity.edit.descriptionPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={description}
               onChangeText={setDescription}
@@ -141,7 +143,7 @@ export default function EditActivityScreen() {
           </View>
 
           <View style={styles.field}>
-            <ThemedText style={styles.label}>DIFICULDADE</ThemedText>
+            <ThemedText style={styles.label}>{t('activity.edit.difficultyLabel')}</ThemedText>
             <View style={styles.chipRow}>
               {DIFFICULTY_OPTIONS.map((level) => {
                 const isActive = difficultyLevel === level;
@@ -149,7 +151,7 @@ export default function EditActivityScreen() {
                   <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
                     <View style={[styles.chip, isActive && styles.chipActive]}>
                       <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                        {DIFFICULTY_LABELS[level]}
+                        {t(DIFFICULTY_KEYS[level])}
                       </ThemedText>
                     </View>
                   </Pressable>
@@ -159,7 +161,7 @@ export default function EditActivityScreen() {
           </View>
 
           <View style={styles.field}>
-            <ThemedText style={styles.label}>MÁX. JOGADORES</ThemedText>
+            <ThemedText style={styles.label}>{t('activity.edit.maxPlayersLabel')}</ThemedText>
             <View style={styles.stepper}>
               <Pressable
                 disabled={maxParticipants <= minParticipants}
@@ -182,8 +184,8 @@ export default function EditActivityScreen() {
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.switchLabel}>Requer aprovação para participar</ThemedText>
-              <ThemedText style={styles.switchHint}>Tu aprovas cada pedido de inscrição</ThemedText>
+              <ThemedText style={styles.switchLabel}>{t('activity.edit.approvalLabel')}</ThemedText>
+              <ThemedText style={styles.switchHint}>{t('activity.edit.approvalHint')}</ThemedText>
             </View>
             <Switch
               value={requiresApproval}
@@ -199,14 +201,14 @@ export default function EditActivityScreen() {
             <Pressable
               onPress={() => router.back()}
               style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}>
-              <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
+              <ThemedText style={styles.cancelButtonText}>{t('activity.edit.cancel')}</ThemedText>
             </Pressable>
             <Pressable
               disabled={submitting}
               onPress={handleSubmit}
               style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}>
               <ThemedText style={styles.saveButtonText}>
-                {submitting ? 'A guardar...' : 'Guardar alterações'}
+                {submitting ? t('activity.edit.saving') : t('activity.edit.save')}
               </ThemedText>
             </Pressable>
           </View>

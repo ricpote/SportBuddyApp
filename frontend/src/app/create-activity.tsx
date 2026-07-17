@@ -7,6 +7,7 @@ import { DateTimeField } from '@/components/date-time-field';
 import LocationPicker, { PickedLocation } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTranslation } from '@/i18n';
 import { createActivity } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { SkillLevel } from '@/types/activity';
@@ -20,18 +21,18 @@ const DIFFICULTY_OPTIONS: SkillLevel[] = [
   'competitive',
 ];
 
-const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
-  beginner: 'Iniciante',
-  intermediate: 'Intermédio',
-  advanced: 'Avançado',
-  competitive: 'Competitivo',
+const DIFFICULTY_KEYS: Record<SkillLevel, string> = {
+  beginner: 'activity.difficulty.beginner',
+  intermediate: 'activity.difficulty.intermediate',
+  advanced: 'activity.difficulty.advanced',
+  competitive: 'activity.difficulty.competitive',
 };
 
 const CATEGORY_ORDER: SportCategory[] = ['team', 'individual'];
 
-const CATEGORY_META: Record<SportCategory, { label: string }> = {
-  team: { label: 'Equipa' },
-  individual: { label: 'Individual' },
+const CATEGORY_KEYS: Record<SportCategory, string> = {
+  team: 'activity.create.category.team',
+  individual: 'activity.create.category.individual',
 };
 
 const MIN_PARTICIPANTS = 2;
@@ -45,6 +46,7 @@ function initialDate() {
 }
 
 export default function CreateActivityScreen() {
+  const { t } = useTranslation();
   const [sports, setSports] = useState<Sport[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -86,17 +88,17 @@ export default function CreateActivityScreen() {
       !location.name.trim() ||
       !location.address.trim()
     ) {
-      setError('Preenche o título, descrição, modalidade, local e morada');
+      setError(t('activity.create.error.missingFields'));
       return;
     }
 
     if (date.getTime() <= Date.now()) {
-      setError('A data tem de ser no futuro');
+      setError(t('activity.create.error.pastDate'));
       return;
     }
 
     if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
-      setError('Seleciona uma localização válida no mapa');
+      setError(t('activity.create.error.invalidLocation'));
       return;
     }
 
@@ -124,7 +126,7 @@ export default function CreateActivityScreen() {
         params: { id: activity.id },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível criar a atividade');
+      setError(err instanceof Error ? err.message : t('activity.create.error.generic'));
     } finally {
       setSubmitting(false);
     }
@@ -140,24 +142,22 @@ export default function CreateActivityScreen() {
     >
       <View style={styles.container}>
 
-        {/* TÍTULO */}
         <View style={styles.field}>
-          <ThemedText style={styles.microLabel}>Título</ThemedText>
+          <ThemedText style={styles.microLabel}>{t('activity.create.titleLabel')}</ThemedText>
           <TextInput
             style={styles.input}
-            placeholder="Título da atividade"
+            placeholder={t('activity.create.titlePlaceholder')}
             placeholderTextColor="#8f8b85"
             value={title}
             onChangeText={setTitle}
           />
         </View>
 
-        {/* DESCRIÇÃO */}
         <View style={styles.field}>
-          <ThemedText style={styles.microLabel}>Descrição</ThemedText>
+          <ThemedText style={styles.microLabel}>{t('activity.create.descriptionLabel')}</ThemedText>
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="Ex: Vamos correr 5K a ritmo tranquilo. Ponto de encontro à entrada."
+            placeholder={t('activity.create.descriptionPlaceholder')}
             placeholderTextColor="#8f8b85"
             value={description}
             onChangeText={setDescription}
@@ -165,9 +165,8 @@ export default function CreateActivityScreen() {
           />
         </View>
 
-        {/* MODALIDADE */}
         <View style={styles.field}>
-          <ThemedText style={styles.microLabel}>Modalidade</ThemedText>
+          <ThemedText style={styles.microLabel}>{t('activity.create.sportLabel')}</ThemedText>
 
           <View style={styles.segmented}>
             {CATEGORY_ORDER.map((cat) => {
@@ -179,7 +178,7 @@ export default function CreateActivityScreen() {
                   onPress={() => handleSelectCategory(cat)}
                 >
                   <ThemedText style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                    {CATEGORY_META[cat].label}
+                    {t(CATEGORY_KEYS[cat])}
                   </ThemedText>
                 </Pressable>
               );
@@ -208,15 +207,14 @@ export default function CreateActivityScreen() {
 
             {categorySports.length === 0 && (
               <ThemedText style={styles.emptyText}>
-                Sem modalidades disponíveis ainda.
+                {t('activity.create.noSports')}
               </ThemedText>
             )}
           </View>
         </View>
 
-        {/* DIFICULDADE */}
         <View style={styles.field}>
-          <ThemedText style={styles.microLabel}>Dificuldade</ThemedText>
+          <ThemedText style={styles.microLabel}>{t('activity.create.difficultyLabel')}</ThemedText>
           <View style={styles.chipRow}>
             {DIFFICULTY_OPTIONS.map((level) => {
               const isActive = difficultyLevel === level;
@@ -224,7 +222,7 @@ export default function CreateActivityScreen() {
                 <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
                   <View style={[styles.chip, isActive && styles.chipActive]}>
                     <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {DIFFICULTY_LABELS[level]}
+                      {t(DIFFICULTY_KEYS[level])}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -233,21 +231,19 @@ export default function CreateActivityScreen() {
           </View>
         </View>
 
-        {/* LOCALIZAÇÃO */}
         <View style={styles.field}>
-          <ThemedText style={styles.microLabel}>Localização</ThemedText>
+          <ThemedText style={styles.microLabel}>{t('activity.create.locationLabel')}</ThemedText>
           <LocationPicker value={location} onChange={setLocation} />
         </View>
 
-        {/* DATA E HORA + LOTAÇÃO */}
         <View style={styles.row}>
           <View style={[styles.field, styles.flex1]}>
-            <ThemedText style={styles.microLabel}>Data e hora</ThemedText>
+            <ThemedText style={styles.microLabel}>{t('activity.create.dateTimeLabel')}</ThemedText>
             <DateTimeField value={date} onChange={setDate} />
           </View>
 
           <View style={[styles.field, styles.flex1]}>
-            <ThemedText style={styles.microLabel}>Lotação</ThemedText>
+            <ThemedText style={styles.microLabel}>{t('activity.create.capacityLabel')}</ThemedText>
             <View style={styles.stepper}>
               <Pressable
                 style={styles.stepperBtn}
@@ -268,11 +264,10 @@ export default function CreateActivityScreen() {
           </View>
         </View>
 
-        {/* APROVAÇÃO */}
         <View style={styles.switchRow}>
           <View>
-            <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
-            <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
+            <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>{t('activity.create.approvalLabel')}</ThemedText>
+            <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>{t('activity.create.approvalHint')}</ThemedText>
           </View>
           <Switch
             value={requiresApproval}
@@ -284,7 +279,6 @@ export default function CreateActivityScreen() {
 
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
-        {/* BOTÃO CRIAR */}
         <Pressable
           style={({ pressed }) => [
             styles.button,
@@ -294,7 +288,7 @@ export default function CreateActivityScreen() {
           onPress={handleSubmit}
         >
           <ThemedText style={styles.buttonText} type="smallBold">
-            {submitting ? 'A criar...' : 'Criar atividade'}
+            {submitting ? t('activity.create.submitting') : t('activity.create.submit')}
           </ThemedText>
         </Pressable>
 

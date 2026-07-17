@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/i18n';
 import { listNearbyActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
 
@@ -18,6 +19,7 @@ const DEFAULT_REGION: Region = {
 const DEFAULT_RADIUS_KM = 5;
 
 export default function ActivitiesMapScreen() {
+  const { t } = useTranslation();
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
@@ -37,7 +39,7 @@ export default function ActivitiesMapScreen() {
       setActivities(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar atividades');
+      setError(err instanceof Error ? err.message : t('map.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,7 @@ export default function ActivitiesMapScreen() {
     const permission = await Location.requestForegroundPermissionsAsync();
 
     if (permission.status !== 'granted') {
-      setError('Permissão de localização negada');
+      setError(t('map.error.locationDenied'));
       setLoading(false);
       return;
     }
@@ -116,9 +118,9 @@ export default function ActivitiesMapScreen() {
                   {new Date(activity.date).toLocaleString()}
                 </ThemedText>
                 <ThemedText>
-                  {activity.participantsList.length}/{activity.maxParticipants} participantes
+                  {t('map.callout.participants', { count: activity.participantsList.length, max: activity.maxParticipants })}
                 </ThemedText>
-                <ThemedText style={styles.calloutLink}>Abrir atividade</ThemedText>
+                <ThemedText style={styles.calloutLink}>{t('map.callout.openActivity')}</ThemedText>
               </View>
             </Callout>
           </Marker>
@@ -137,7 +139,7 @@ export default function ActivitiesMapScreen() {
                 style={[styles.radiusButton, active && styles.radiusButtonActive]}
               >
                 <ThemedText style={[styles.radiusText, active && styles.radiusTextActive]}>
-                  {option} km
+                  {t('map.radius.value', { value: option })}
                 </ThemedText>
               </Pressable>
             );
@@ -146,14 +148,14 @@ export default function ActivitiesMapScreen() {
 
         <Pressable onPress={handleSearchThisArea} style={styles.searchButton}>
           <ThemedText style={styles.searchButtonText}>
-            Pesquisar nesta área
+            {t('map.search.button')}
           </ThemedText>
         </Pressable>
 
         {loading && (
           <View style={styles.statusBox}>
             <ActivityIndicator />
-            <ThemedText>A carregar atividades...</ThemedText>
+            <ThemedText>{t('map.loading')}</ThemedText>
           </View>
         )}
 
@@ -165,7 +167,7 @@ export default function ActivitiesMapScreen() {
 
         {!loading && !error && (
           <View style={styles.statusBox}>
-            <ThemedText>{activities.length} atividades encontradas</ThemedText>
+            <ThemedText>{t('map.results.count', { count: activities.length })}</ThemedText>
           </View>
         )}
       </View>

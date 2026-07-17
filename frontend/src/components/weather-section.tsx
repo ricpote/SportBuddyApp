@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useTranslation } from '@/i18n';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
 import {
   getWeatherInfo,
@@ -24,14 +25,15 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // Lisboa — usado quando a permissão de localização é negada ou falha.
 const DEFAULT_COORDS = { latitude: 38.7223, longitude: -9.1393 };
 
-function formatDayLabel(dateStr: string, index: number) {
-  if (index === 0) return 'Today';
+function formatDayLabel(dateStr: string, index: number, todayLabel: string) {
+  if (index === 0) return todayLabel;
 
   const label = new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short' });
   return label.charAt(0).toUpperCase() + label.slice(1).replace('.', '');
 }
 
 export function WeatherSection() {
+  const { t } = useTranslation();
   const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function WeatherSection() {
   return (
     <View style={styles.container}>
       <ThemedText type="subtitle" style={styles.title}>
-        Weather{locationName ? ` · ${locationName}` : ''}
+        {t('activity.weather.title')}{locationName ? ` · ${locationName}` : ''}
       </ThemedText>
 
       <View style={styles.row}>
@@ -98,7 +100,7 @@ export function WeatherSection() {
           const isSelected = selectedDate === day.date;
           const isOpen = isSelected || hoveredDate === day.date;
           const windLabel = getWindDirectionLabel(day.windDirection);
-          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? 'Unknown';
+          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? t('activity.weather.unknownWind');
 
           return (
             <Pressable
@@ -112,7 +114,7 @@ export function WeatherSection() {
                 pressed && styles.cardPressed,
               ]}>
               <ThemedText style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-                {formatDayLabel(day.date, index)}
+                {formatDayLabel(day.date, index, t('activity.weather.today'))}
               </ThemedText>
 
               <View style={styles.circle}>
@@ -155,8 +157,8 @@ export function WeatherSection() {
                     />
                     <ThemedText style={styles.detailText}>
                       {day.uvIndex !== null
-                        ? `UV ${Math.round(day.uvIndex)} · ${getUvLabel(day.uvIndex)}`
-                        : 'UV unavailable'}
+                        ? t('activity.weather.uvFormat', { value: Math.round(day.uvIndex), label: getUvLabel(day.uvIndex) })
+                        : t('activity.weather.uvUnavailable')}
                     </ThemedText>
                   </View>
 

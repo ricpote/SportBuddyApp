@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { listActivities, listNearbyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
@@ -28,9 +29,9 @@ const NEARBY_RADIUS_KM = 50;
 const MIN_RADIUS_KM = 1;
 
 const STATUS_CONFIG: Partial<Record<Activity['status'], { label: string; color: string }>> = {
-  open:      { label: 'Open',  color: '#9ccd6b' },
-  full:      { label: 'Full',  color: '#8f8b85' },
-  completed: { label: 'Ended', color: '#8f8b85' },
+  open:      { label: 'explore.status.open',  color: '#9ccd6b' },
+  full:      { label: 'explore.status.full',  color: '#8f8b85' },
+  completed: { label: 'explore.status.completed', color: '#8f8b85' },
 };
 
 const AVATAR_COLORS = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
@@ -119,6 +120,7 @@ type DateFilter = 'upcoming' | 'today' | 'weekend';
 
 export default function ExploreScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
@@ -200,7 +202,7 @@ export default function ExploreScreen() {
       }
       setActivities(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load activities');
+      setError(err instanceof Error ? err.message : t('explore.error.loadFailed'));
     }
   }, [scopeFilter, isWide, committedRadiusKm, verifiedOnly, organizerId]);
 
@@ -285,23 +287,23 @@ export default function ExploreScreen() {
             <View style={styles.badgeStack}>
               {isWaitlisted ? (
                 <View style={[styles.statusBadge, styles.waitlistBadge]}>
-                  <ThemedText style={[styles.statusText, styles.waitlistText]}>Waitlist</ThemedText>
+                  <ThemedText style={[styles.statusText, styles.waitlistText]}>{t('explore.card.waitlist')}</ThemedText>
                 </View>
               ) : isPrivate ? (
                 <View style={[styles.statusBadge, styles.privateBadge]}>
                   <Ionicons name="lock-closed" size={10} color="#8f8b85" />
-                  <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>Private</ThemedText>
+                  <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>{t('explore.card.private')}</ThemedText>
                 </View>
               ) : (
                 <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
                   <ThemedText style={[styles.statusText, { color: status.color }]}>
-                    {status.label}
+                    {t(status.label)}
                   </ThemedText>
                 </View>
               )}
               {isAlmostFull && (
                 <View style={[styles.statusBadge, { backgroundColor: '#e8823f22' }]}>
-                  <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>Almost full</ThemedText>
+                  <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>{t('explore.card.almostFull')}</ThemedText>
                 </View>
               )}
             </View>
@@ -346,7 +348,7 @@ export default function ExploreScreen() {
                 </View>
               )}
               <ThemedText style={styles.participantCount}>
-                {activity.participantsList.length} of {activity.maxParticipants}
+                {t('explore.card.participantsCount', { count: activity.participantsList.length, max: activity.maxParticipants })}
               </ThemedText>
             </View>
             <View style={styles.progressTrack}>
@@ -366,14 +368,14 @@ export default function ExploreScreen() {
   function renderFiltersPanel() {
     return (
       <View style={styles.filtersPanel}>
-        <ThemedText style={styles.filtersPanelTitle}>Filtros</ThemedText>
+        <ThemedText style={styles.filtersPanelTitle}>{t('explore.filters.title')}</ThemedText>
 
-        <ThemedText style={styles.filterSectionLabel}>QUANDO</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.whenLabel')}</ThemedText>
         <View style={styles.filterSectionStack}>
           {([
-            { key: 'upcoming', label: 'Próximas' },
-            { key: 'today', label: 'Hoje' },
-            { key: 'weekend', label: 'Este fim de semana' },
+            { key: 'upcoming', label: t('explore.filters.upcoming') },
+            { key: 'today', label: t('explore.filters.today') },
+            { key: 'weekend', label: t('explore.filters.weekend') },
           ] as { key: DateFilter; label: string }[]).map(({ key, label }) => (
             <Pressable key={key} onPress={() => setDateFilter(key)}>
               <View style={[styles.filterRowChip, dateFilter === key && styles.filterRowChipActive]}>
@@ -385,7 +387,7 @@ export default function ExploreScreen() {
           ))}
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>TIPO</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.typeLabel')}</ThemedText>
         <View style={styles.filterRowInline}>
           {(['team', 'individual'] as SportCategory[]).map((cat) => (
             <Pressable
@@ -403,20 +405,20 @@ export default function ExploreScreen() {
               }}>
               <View style={[styles.filterChipSmall, catFilter === cat && styles.filterRowChipActive]}>
                 <ThemedText style={[styles.filterRowChipText, catFilter === cat && styles.filterRowChipTextActive]}>
-                  {cat === 'team' ? 'Equipa' : 'Individual'}
+                  {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
                 </ThemedText>
               </View>
             </Pressable>
           ))}
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>DISTÂNCIA</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.distanceLabel')}</ThemedText>
         <View style={styles.distanceRow}>
           <DistanceSlider value={radiusKm} min={MIN_RADIUS_KM} max={NEARBY_RADIUS_KM} onChange={setRadiusKm} />
-          <ThemedText style={styles.distanceValue}>{radiusKm} km</ThemedText>
+          <ThemedText style={styles.distanceValue}>{t('explore.filters.radiusValue', { value: radiusKm })}</ThemedText>
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>MODALIDADE</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.sportLabel')}</ThemedText>
         <View style={styles.filterSectionStack}>
           <Pressable onPress={() => setSportFilterSet(new Set())}>
             <View style={styles.checkboxRow}>
@@ -425,7 +427,7 @@ export default function ExploreScreen() {
                 size={18}
                 color={sportFilterSet.size === 0 ? '#e8823f' : '#8f8b85'}
               />
-              <ThemedText style={styles.checkboxLabel}>Todas</ThemedText>
+              <ThemedText style={styles.checkboxLabel}>{t('explore.filters.all')}</ThemedText>
             </View>
           </Pressable>
           {visibleSports.map((sport) => {
@@ -448,12 +450,12 @@ export default function ExploreScreen() {
           <View style={styles.checkboxRow}>
             <Ionicons name={verifiedOnly ? 'checkbox' : 'square-outline'} size={18} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
             <Ionicons name="checkmark-circle-outline" size={14} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
-            <ThemedText style={styles.checkboxLabel}>Só empresas</ThemedText>
+            <ThemedText style={styles.checkboxLabel}>{t('explore.filters.verifiedOnly')}</ThemedText>
           </View>
         </Pressable>
         {verifiedOnly && (
           <ThemedText style={styles.filtersHint}>
-            Com o filtro ativo, só aparecem eventos de contas verificadas.
+            {t('explore.filters.verifiedHint')}
           </ThemedText>
         )}
       </View>
@@ -463,11 +465,11 @@ export default function ExploreScreen() {
   const headerAndSearch = (
     <>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.pageTitle}>Explore</ThemedText>
+        <ThemedText type="title" style={styles.pageTitle}>{t('explore.header.title')}</ThemedText>
         <Link href="/create-activity" asChild>
           <Pressable style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.8 }]}>
             <Ionicons name="add" size={18} color="#1a1005" style={{ marginRight: 4 }} />
-            <ThemedText style={styles.newBtnText}>New</ThemedText>
+            <ThemedText style={styles.newBtnText}>{t('explore.header.newButton')}</ThemedText>
           </Pressable>
         </Link>
       </View>
@@ -476,7 +478,7 @@ export default function ExploreScreen() {
         <Ionicons name="search-outline" size={18} color="#8f8b85" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search activity..."
+          placeholder={t('explore.search.placeholder')}
           placeholderTextColor="#8f8b85"
           value={searchText}
           onChangeText={setSearchText}
@@ -494,15 +496,15 @@ export default function ExploreScreen() {
     <>
       {activities !== null && !error && (
         <ThemedText style={styles.sectionLabel}>
-          {visibleActivities.length} {isWide ? 'ACTIVITIES' : scopeFilter === 'nearby' ? 'ACTIVITIES NEAR YOU' : 'ACTIVITIES'}
+          {visibleActivities.length} {isWide ? t('explore.list.activities') : scopeFilter === 'nearby' ? t('explore.list.activitiesNearYou') : t('explore.list.activities')}
         </ThemedText>
       )}
 
       {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
-      {activities === null && !error && <ThemedText style={styles.emptyText}>Loading activities...</ThemedText>}
+      {activities === null && !error && <ThemedText style={styles.emptyText}>{t('explore.list.loading')}</ThemedText>}
       {activities !== null && visibleActivities.length === 0 && (
         <ThemedText style={styles.emptyText}>
-          {activities.length === 0 ? 'No activities yet. Create the first one!' : 'No activities match your filters.'}
+          {activities.length === 0 ? t('explore.list.emptyNone') : t('explore.list.emptyFiltered')}
         </ThemedText>
       )}
 
@@ -538,11 +540,11 @@ export default function ExploreScreen() {
           {/* FILTER ROW (mobile) */}
           <View style={styles.filterRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChips}>
-              {(['nearby', 'all'] as ScopeFilter[]).map((t) => (
-                <Pressable key={t} onPress={() => setScopeFilter(t)}>
-                  <View style={[styles.chip, scopeFilter === t && styles.chipActive]}>
-                    <ThemedText style={[styles.chipText, scopeFilter === t && styles.chipTextActive]}>
-                      {t === 'nearby' ? 'Nearby' : 'All'}
+              {(['nearby', 'all'] as ScopeFilter[]).map((scope) => (
+                <Pressable key={scope} onPress={() => setScopeFilter(scope)}>
+                  <View style={[styles.chip, scopeFilter === scope && styles.chipActive]}>
+                    <ThemedText style={[styles.chipText, scopeFilter === scope && styles.chipTextActive]}>
+                      {scope === 'nearby' ? t('explore.scope.nearby') : t('explore.scope.all')}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -555,7 +557,7 @@ export default function ExploreScreen() {
                 }}>
                   <View style={[styles.chip, catFilter === cat && styles.chipActive]}>
                     <ThemedText style={[styles.chipText, catFilter === cat && styles.chipTextActive]}>
-                      {cat === 'team' ? 'Team' : 'Individual'}
+                      {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -565,7 +567,7 @@ export default function ExploreScreen() {
             <Pressable onPress={() => setSportModalOpen(true)} style={styles.sportDropdown}>
               <Ionicons name="options-outline" size={14} color="#c9c5bf" style={{ marginRight: 5 }} />
               <ThemedText style={styles.sportDropdownText} numberOfLines={1}>
-                {selectedSport ? selectedSport.name : 'All sports'}
+                {selectedSport ? selectedSport.name : t('explore.sport.allSports')}
               </ThemedText>
               <Ionicons name="chevron-down" size={12} color="#8f8b85" style={{ marginLeft: 3 }} />
             </Pressable>
@@ -579,12 +581,12 @@ export default function ExploreScreen() {
       <Modal visible={sportModalOpen} transparent animationType="fade" onRequestClose={() => setSportModalOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setSportModalOpen(false)}>
           <View style={styles.modalSheet}>
-            <ThemedText style={styles.modalTitle}>Sport</ThemedText>
+            <ThemedText style={styles.modalTitle}>{t('explore.sport.modalTitle')}</ThemedText>
             <Pressable
               style={[styles.modalOption, !sportFilter && styles.modalOptionActive]}
               onPress={() => { setSportFilter(null); setSportModalOpen(false); }}>
               <ThemedText style={[styles.modalOptionText, !sportFilter && styles.modalOptionTextActive]}>
-                All sports
+                {t('explore.sport.allSports')}
               </ThemedText>
               {!sportFilter && <Ionicons name="checkmark" size={16} color="#e8823f" />}
             </Pressable>

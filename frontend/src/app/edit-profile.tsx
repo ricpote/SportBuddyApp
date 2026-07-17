@@ -6,8 +6,10 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { getMyProfile, updateMyProfile } from '@/services/users';
 import { UserProfile } from '@/types/user';
+import { useTranslation } from '@/i18n';
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
@@ -29,7 +31,7 @@ export default function EditProfileScreen() {
   if (profile === undefined) {
     return (
       <View style={styles.centered}>
-        <ThemedText style={styles.loadingText}>A carregar...</ThemedText>
+        <ThemedText style={styles.loadingText}>{t('profile.loading')}</ThemedText>
       </View>
     );
   }
@@ -37,7 +39,7 @@ export default function EditProfileScreen() {
   if (profile === null) {
     return (
       <View style={styles.centered}>
-        <ThemedText style={styles.loadingText}>Não foi possível carregar o perfil.</ThemedText>
+        <ThemedText style={styles.loadingText}>{t('profile.edit.loadError')}</ThemedText>
       </View>
     );
   }
@@ -45,7 +47,7 @@ export default function EditProfileScreen() {
   async function handleSubmit() {
     setError(null);
     if (!name.trim()) {
-      setError('O nome não pode ficar vazio.');
+      setError(t('profile.edit.nameRequired'));
       return;
     }
     setSubmitting(true);
@@ -57,7 +59,7 @@ export default function EditProfileScreen() {
       });
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao guardar. Tenta novamente.');
+      setError(err instanceof Error ? err.message : t('profile.edit.saveError'));
     } finally {
       setSubmitting(false);
     }
@@ -71,20 +73,20 @@ export default function EditProfileScreen() {
     >
       <View style={styles.container}>
         
-        <ThemedText style={styles.sectionLabel}>Nome</ThemedText>
+        <ThemedText style={styles.sectionLabel}>{t('profile.edit.nameLabel')}</ThemedText>
         <TextInput
           style={styles.input}
-          placeholder="O teu nome"
+          placeholder={t('profile.edit.namePlaceholder')}
           placeholderTextColor="#8f8b85"
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
         />
 
-        <ThemedText style={styles.sectionLabel}>Bio (Opcional)</ThemedText>
+        <ThemedText style={styles.sectionLabel}>{t('profile.edit.bioLabel')}</ThemedText>
         <TextInput
           style={[styles.input, styles.multiline]}
-          placeholder="Fala um pouco sobre ti e os teus desportos favoritos..."
+          placeholder={t('profile.edit.bioPlaceholder')}
           placeholderTextColor="#8f8b85"
           value={bio}
           onChangeText={setBio}
@@ -94,10 +96,10 @@ export default function EditProfileScreen() {
 
         {profile.role === 'partner' && (
           <>
-            <ThemedText style={styles.sectionLabel}>Website (Opcional)</ThemedText>
+            <ThemedText style={styles.sectionLabel}>{t('profile.edit.websiteLabel')}</ThemedText>
             <TextInput
               style={styles.input}
-              placeholder="www.aorganizacao.pt"
+              placeholder={t('profile.edit.websitePlaceholder')}
               placeholderTextColor="#8f8b85"
               autoCapitalize="none"
               keyboardType="url"
@@ -117,7 +119,7 @@ export default function EditProfileScreen() {
           disabled={submitting}
           onPress={handleSubmit}>
           <ThemedText style={styles.buttonText} type="smallBold">
-            {submitting ? 'A guardar...' : 'Guardar alterações'}
+            {submitting ? t('profile.edit.saving') : t('profile.edit.save')}
           </ThemedText>
         </Pressable>
         

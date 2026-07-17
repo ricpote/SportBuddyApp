@@ -12,6 +12,7 @@ import {
 } from '@/services/notifications';
 import { Notification, NotificationType } from '@/types/notification';
 import { relativeDate } from '@/utils/date';
+import { useTranslation } from '@/i18n';
 
 type FilterTab = 'all' | 'requests' | 'activities' | 'social';
 
@@ -100,26 +101,27 @@ function HighlightedText({ text, unread }: { text: string; unread: boolean }) {
   );
 }
 
-function getItemAction(n: Notification): { label: string; onPress: () => void } | null {
+function getItemAction(n: Notification, t: (key: string) => string): { label: string; onPress: () => void } | null {
   switch (n.type) {
     case 'mvp_voting_open':
       return n.activityId
-        ? { label: 'Vote now', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
+        ? { label: t('notifications.voteNow'), onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
         : null;
     case 'mvp_result':
       return n.activityId
-        ? { label: 'View result', onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
+        ? { label: t('notifications.viewResult'), onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
         : null;
     case 'badge_earned':
-      return { label: 'View badge', onPress: () => router.push('/profile') };
+      return { label: t('notifications.viewBadge'), onPress: () => router.push('/profile') };
     case 'friend_request':
-      return { label: 'View request', onPress: () => router.push('/friends') };
+      return { label: t('notifications.viewRequest'), onPress: () => router.push('/friends') };
     default:
       return null;
   }
 }
 
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [submitting, setSubmitting] = useState(false);
@@ -173,7 +175,7 @@ export default function NotificationsScreen() {
   if (notifications === null) {
     return (
       <View style={styles.centered}>
-        <ThemedText style={styles.muted}>Loading...</ThemedText>
+        <ThemedText style={styles.muted}>{t('notifications.loading')}</ThemedText>
       </View>
     );
   }
@@ -186,9 +188,9 @@ export default function NotificationsScreen() {
   const unreadTotal = notifications.filter(n => !n.read).length;
 
   const sections = [
-    { key: 'today',     label: 'TODAY' },
-    { key: 'yesterday', label: 'YESTERDAY' },
-    { key: 'older',     label: 'OLDER' },
+    { key: 'today',     label: t('notifications.sectionToday') },
+    { key: 'yesterday', label: t('notifications.sectionYesterday') },
+    { key: 'older',     label: t('notifications.sectionOlder') },
   ].map(s => ({
     ...s,
     items: displayItems.filter(item => {
@@ -210,7 +212,7 @@ export default function NotificationsScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
             {(['all', 'requests', 'activities', 'social'] as FilterTab[]).map(tab => {
               const active = activeFilter === tab;
-              const label = tab === 'all' ? 'All' : tab === 'requests' ? 'Requests' : tab === 'activities' ? 'Activities' : 'Social';
+              const label = tab === 'all' ? t('notifications.filterAll') : tab === 'requests' ? t('notifications.filterRequests') : tab === 'activities' ? t('notifications.filterActivities') : t('notifications.filterSocial');
               return (
                 <Pressable
                   key={tab}
@@ -225,7 +227,7 @@ export default function NotificationsScreen() {
 
           {unreadTotal > 0 && (
             <Pressable onPress={handleMarkAll} disabled={submitting} style={({ pressed }) => [styles.markAllBtn, pressed && styles.pressed]}>
-              <Text style={styles.markAllText}>Mark read</Text>
+              <Text style={styles.markAllText}>{t('notifications.markRead')}</Text>
             </Pressable>
           )}
         </View>
@@ -234,7 +236,7 @@ export default function NotificationsScreen() {
         {displayItems.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={40} color="#1e1d22" />
-            <ThemedText style={styles.muted}>No notifications.</ThemedText>
+            <ThemedText style={styles.muted}>{t('notifications.empty')}</ThemedText>
           </View>
         )}
 
@@ -245,7 +247,7 @@ export default function NotificationsScreen() {
               <ThemedText style={styles.sectionLabel}>{section.label}</ThemedText>
               {section.key === 'older' && section.items.length > 0 && (
                 <Pressable onPress={() => setShowOlder(v => !v)} style={({ pressed }) => pressed && styles.pressed}>
-                  <Text style={styles.viewAllText}>{showOlder ? 'Hide' : `View all (${section.items.length})`}</Text>
+                  <Text style={styles.viewAllText}>{showOlder ? t('notifications.hide') : t('notifications.viewAll', { count: section.items.length })}</Text>
                 </Pressable>
               )}
             </View>
@@ -264,7 +266,7 @@ export default function NotificationsScreen() {
                     </View>
                     <View style={styles.rowBody}>
                       <Text style={[styles.notifText, isUnread && styles.notifTextUnread]}>
-                        {'Join requests for '}
+                        {t('notifications.joinRequestsFor')}
                         <Text style={styles.notifHighlight}>{item.activityTitle}</Text>
                       </Text>
                       <ThemedText style={styles.notifTime}>{relativeDate(item.notifications[0].createdAt)}</ThemedText>
@@ -272,7 +274,7 @@ export default function NotificationsScreen() {
                         onPress={() => { markRead(item.notifications.map(n => n.id)); router.push({ pathname: '/activity/[id]', params: { id: item.activityId } }); }}
                         style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
                       >
-                        <Text style={styles.actionBtnText}>Review requests</Text>
+                        <Text style={styles.actionBtnText}>{t('notifications.reviewRequests')}</Text>
                       </Pressable>
                     </View>
                     {isUnread && <View style={styles.unreadDot} />}
@@ -282,7 +284,7 @@ export default function NotificationsScreen() {
 
               const n = item.notification;
               const meta = TYPE_META[n.type] ?? { icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, color: '#c9c5bf' };
-              const action = getItemAction(n);
+              const action = getItemAction(n, t);
 
               return (
                 <Pressable
