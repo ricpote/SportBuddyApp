@@ -29,9 +29,9 @@ const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
 
 const CATEGORY_ORDER: SportCategory[] = ['team', 'individual'];
 
-const CATEGORY_META: Record<SportCategory, { label: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  team: { label: 'Equipa', subtitle: 'Futebol, basquete, pádel...', icon: 'people-outline' },
-  individual: { label: 'Individual', subtitle: 'Corrida, ciclismo, ténis...', icon: 'walk-outline' },
+const CATEGORY_META: Record<SportCategory, { label: string }> = {
+  team: { label: 'Equipa' },
+  individual: { label: 'Individual' },
 };
 
 const MIN_PARTICIPANTS = 2;
@@ -48,7 +48,7 @@ export default function CreateActivityScreen() {
   const [sports, setSports] = useState<Sport[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<SportCategory | null>(null);
+  const [category, setCategory] = useState<SportCategory>('team');
   const [sportId, setSportId] = useState<string | null>(null);
   const [maxParticipants, setMaxParticipants] = useState(10);
 
@@ -152,184 +152,151 @@ export default function CreateActivityScreen() {
           />
         </View>
 
-        {/* TIPO DE MODALIDADE (antes de escolher equipa/individual) */}
-        {category === null && (
-          <View style={styles.field}>
-            <ThemedText style={styles.microLabel}>Tipo de modalidade</ThemedText>
-            <View style={styles.categoryCardRow}>
-              {CATEGORY_ORDER.map((cat) => {
-                const meta = CATEGORY_META[cat];
-                return (
-                  <Pressable
-                    key={cat}
-                    style={({ pressed }) => [styles.categoryCard, pressed && styles.pressed]}
-                    onPress={() => handleSelectCategory(cat)}
-                  >
-                    <View style={styles.categoryCardIcon}>
-                      <Ionicons name={meta.icon} size={22} color="#c9c5bf" />
-                    </View>
-                    <ThemedText style={styles.categoryCardTitle}>{meta.label}</ThemedText>
-                    <ThemedText style={styles.categoryCardSubtitle}>{meta.subtitle}</ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={styles.hintRow}>
-              <Ionicons name="arrow-down-outline" size={14} color="#8f8b85" />
-              <ThemedText style={styles.hintText}>Escolhe um tipo para ver os desportos</ThemedText>
+        {/* DESCRIÇÃO */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Descrição</ThemedText>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="Ex: Vamos correr 5K a ritmo tranquilo. Ponto de encontro à entrada."
+            placeholderTextColor="#8f8b85"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+        </View>
+
+        {/* MODALIDADE */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Modalidade</ThemedText>
+
+          <View style={styles.segmented}>
+            {CATEGORY_ORDER.map((cat) => {
+              const isActive = category === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  style={[styles.segment, isActive && styles.segmentActive]}
+                  onPress={() => handleSelectCategory(cat)}
+                >
+                  <ThemedText style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                    {CATEGORY_META[cat].label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.chipRow}>
+            {categorySports.map((sport) => {
+              const isActive = sportId === sport.id;
+              return (
+                <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
+                  <View style={[styles.chip, isActive && styles.chipActive]}>
+                    <SportIcon
+                      sportName={sport.name}
+                      size={16}
+                      color={isActive ? '#0a0a0b' : '#c9c5bf'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                      {sport.name}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })}
+
+            {categorySports.length === 0 && (
+              <ThemedText style={styles.emptyText}>
+                Sem modalidades disponíveis ainda.
+              </ThemedText>
+            )}
+          </View>
+        </View>
+
+        {/* DIFICULDADE */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Dificuldade</ThemedText>
+          <View style={styles.chipRow}>
+            {DIFFICULTY_OPTIONS.map((level) => {
+              const isActive = difficultyLevel === level;
+              return (
+                <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
+                  <View style={[styles.chip, isActive && styles.chipActive]}>
+                    <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                      {DIFFICULTY_LABELS[level]}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* LOCALIZAÇÃO */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Localização</ThemedText>
+          <LocationPicker value={location} onChange={setLocation} />
+        </View>
+
+        {/* DATA E HORA + LOTAÇÃO */}
+        <View style={styles.row}>
+          <View style={[styles.field, styles.flex1]}>
+            <ThemedText style={styles.microLabel}>Data e hora</ThemedText>
+            <DateTimeField value={date} onChange={setDate} />
+          </View>
+
+          <View style={[styles.field, styles.flex1]}>
+            <ThemedText style={styles.microLabel}>Lotação</ThemedText>
+            <View style={styles.stepper}>
+              <Pressable
+                style={styles.stepperBtn}
+                disabled={maxParticipants <= MIN_PARTICIPANTS}
+                onPress={() => setMaxParticipants((n) => Math.max(MIN_PARTICIPANTS, n - 1))}
+              >
+                <Ionicons name="remove" size={16} color="#c9c5bf" />
+              </Pressable>
+              <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
+              <Pressable
+                style={[styles.stepperBtn, styles.stepperBtnActive]}
+                disabled={maxParticipants >= MAX_PARTICIPANTS}
+                onPress={() => setMaxParticipants((n) => Math.min(MAX_PARTICIPANTS, n + 1))}
+              >
+                <Ionicons name="add" size={16} color="#0a0a0b" />
+              </Pressable>
             </View>
           </View>
-        )}
+        </View>
 
-        {category !== null && (
-          <>
-            {/* DESCRIÇÃO */}
-            <View style={styles.field}>
-              <ThemedText style={styles.microLabel}>Descrição</ThemedText>
-              <TextInput
-                style={[styles.input, styles.multiline]}
-                placeholder="Ex: Vamos correr 5K a ritmo tranquilo. Ponto de encontro à entrada."
-                placeholderTextColor="#8f8b85"
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
-            </View>
+        {/* APROVAÇÃO */}
+        <View style={styles.switchRow}>
+          <View>
+            <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
+            <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
+          </View>
+          <Switch
+            value={requiresApproval}
+            onValueChange={setRequiresApproval}
+            trackColor={{ false: '#141315', true: '#e8823f' }}
+            thumbColor={requiresApproval ? '#f4f2ef' : '#c9c5bf'}
+          />
+        </View>
 
-            {/* MODALIDADE */}
-            <View style={styles.field}>
-              <ThemedText style={styles.microLabel}>Modalidade</ThemedText>
+        {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
-              <View style={styles.segmented}>
-                {CATEGORY_ORDER.map((cat) => {
-                  const isActive = category === cat;
-                  return (
-                    <Pressable
-                      key={cat}
-                      style={[styles.segment, isActive && styles.segmentActive]}
-                      onPress={() => handleSelectCategory(cat)}
-                    >
-                      <ThemedText style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                        {CATEGORY_META[cat].label}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <View style={styles.chipRow}>
-                {categorySports.map((sport) => {
-                  const isActive = sportId === sport.id;
-                  return (
-                    <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
-                      <View style={[styles.chip, isActive && styles.chipActive]}>
-                        <SportIcon
-                          sportName={sport.name}
-                          size={16}
-                          color={isActive ? '#0a0a0b' : '#c9c5bf'}
-                          style={{ marginRight: 6 }}
-                        />
-                        <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                          {sport.name}
-                        </ThemedText>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-
-                {categorySports.length === 0 && (
-                  <ThemedText style={styles.emptyText}>
-                    Sem modalidades disponíveis ainda.
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-
-            {/* DIFICULDADE */}
-            <View style={styles.field}>
-              <ThemedText style={styles.microLabel}>Dificuldade</ThemedText>
-              <View style={styles.chipRow}>
-                {DIFFICULTY_OPTIONS.map((level) => {
-                  const isActive = difficultyLevel === level;
-                  return (
-                    <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
-                      <View style={[styles.chip, isActive && styles.chipActive]}>
-                        <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                          {DIFFICULTY_LABELS[level]}
-                        </ThemedText>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* LOCALIZAÇÃO */}
-            <View style={styles.field}>
-              <ThemedText style={styles.microLabel}>Localização</ThemedText>
-              <LocationPicker value={location} onChange={setLocation} />
-            </View>
-
-            {/* DATA E HORA + LOTAÇÃO */}
-            <View style={styles.row}>
-              <View style={[styles.field, styles.flex1]}>
-                <ThemedText style={styles.microLabel}>Data e hora</ThemedText>
-                <DateTimeField value={date} onChange={setDate} />
-              </View>
-
-              <View style={[styles.field, styles.flex1]}>
-                <ThemedText style={styles.microLabel}>Lotação</ThemedText>
-                <View style={styles.stepper}>
-                  <Pressable
-                    style={styles.stepperBtn}
-                    disabled={maxParticipants <= MIN_PARTICIPANTS}
-                    onPress={() => setMaxParticipants((n) => Math.max(MIN_PARTICIPANTS, n - 1))}
-                  >
-                    <Ionicons name="remove" size={16} color="#c9c5bf" />
-                  </Pressable>
-                  <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
-                  <Pressable
-                    style={[styles.stepperBtn, styles.stepperBtnActive]}
-                    disabled={maxParticipants >= MAX_PARTICIPANTS}
-                    onPress={() => setMaxParticipants((n) => Math.min(MAX_PARTICIPANTS, n + 1))}
-                  >
-                    <Ionicons name="add" size={16} color="#0a0a0b" />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            {/* APROVAÇÃO */}
-            <View style={styles.switchRow}>
-              <View>
-                <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
-                <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
-              </View>
-              <Switch
-                value={requiresApproval}
-                onValueChange={setRequiresApproval}
-                trackColor={{ false: '#141315', true: '#e8823f' }}
-                thumbColor={requiresApproval ? '#f4f2ef' : '#c9c5bf'}
-              />
-            </View>
-
-            {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-
-            {/* BOTÃO CRIAR */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.pressed,
-              ]}
-              disabled={submitting}
-              onPress={handleSubmit}
-            >
-              <ThemedText style={styles.buttonText} type="smallBold">
-                {submitting ? 'A criar...' : 'Criar atividade'}
-              </ThemedText>
-            </Pressable>
-          </>
-        )}
+        {/* BOTÃO CRIAR */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.pressed,
+          ]}
+          disabled={submitting}
+          onPress={handleSubmit}
+        >
+          <ThemedText style={styles.buttonText} type="smallBold">
+            {submitting ? 'A criar...' : 'Criar atividade'}
+          </ThemedText>
+        </Pressable>
 
       </View>
     </ScrollView>
@@ -381,51 +348,6 @@ const styles = StyleSheet.create({
     height: 100,
     paddingTop: 16,
     textAlignVertical: 'top',
-  },
-  categoryCardRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  categoryCard: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#111012',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16,
-    paddingVertical: Spacing.four,
-    paddingHorizontal: Spacing.two,
-  },
-  categoryCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  categoryCardTitle: {
-    color: '#f4f2ef',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  categoryCardSubtitle: {
-    color: '#8f8b85',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  hintRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: Spacing.one,
-  },
-  hintText: {
-    color: '#8f8b85',
-    fontSize: 13,
   },
   segmented: {
     flexDirection: 'row',
