@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+﻿import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -15,7 +15,7 @@ function toLocalInputValue(date: Date) {
 export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
   return (
     <View style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
       <input
         type="datetime-local"
         value={toLocalInputValue(value)}
@@ -26,13 +26,13 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
         style={{
           height: 52, // Mesma altura dos outros inputs
           borderRadius: 12,
-          border: '1px solid #334155', // Borda subtil
+          border: '1px solid #141315', // Borda subtil
           paddingLeft: 16,
           paddingRight: 16,
           fontSize: 16,
-          fontFamily: 'inherit',
-          color: '#FFFFFF', // Texto branco
-          backgroundColor: '#1E293B', // Fundo escuro do input
+          fontFamily: 'HankenGrotesk_400Regular',
+          color: '#f4f2ef', // Texto branco
+          backgroundColor: '#111012', // Fundo escuro do input
           colorScheme: 'dark', // Diz ao Google Chrome/Safari para usar a versão escura do calendário
           outline: 'none',
         }}
@@ -44,10 +44,9 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
-    marginTop: Spacing.two,
   },
   label: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
     fontSize: 16,
   },

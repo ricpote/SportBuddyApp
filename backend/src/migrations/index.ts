@@ -1,8 +1,13 @@
 import { Migration } from "./migration.types";
 import { backfillBadgesMigration } from "./001-backfill-badges-for-existing-users.migration";
+import { backfillUserNameEmailLowerMigration } from "./002-backfill-user-name-email-lower.migration";
+import { backfillUserFollowFieldsMigration } from "./003-backfill-user-follow-fields.migration";
+import { backfillActivityRatingsMigration } from "./004-backfill-activity-ratings.migration";
 
-// Add new one-off data migrations here, in order. Each one runs exactly
-// once, ever. The badge *catalog* itself (which badges exist) is no longer
-// managed here — see `config/badge-catalog.ts` and `syncBadgeCatalog`, which
-// reconcile Firestore with the code on every startup instead.
-export const allMigrations: Migration[] = [backfillBadgesMigration];
+
+export const allMigrations: Migration[] = [
+  backfillBadgesMigration,
+  backfillUserNameEmailLowerMigration,
+  backfillUserFollowFieldsMigration,
+  backfillActivityRatingsMigration,
+];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -192,35 +192,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   radiusButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
   },
   radiusButtonActive: {
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
   },
   radiusText: {
-    color: '#0F172A',
+    color: '#1a1005',
     fontWeight: '600',
   },
   radiusTextActive: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   searchButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
   },
   searchButtonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: '700',
   },
   statusBox: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   calloutLink: {
     marginTop: 6,
-    color: '#CF8444',
+    color: '#e8823f',
     fontWeight: '700',
   },
 });

@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { db } from "../config/firebase";
 import { usersService } from "../services/users.service";
 import { badgesService } from "../services/badges.service";
 import { PublicUser, UpdateUserDto, User, UserRole } from "../models/user.model";
@@ -9,7 +10,7 @@ type UserParams = { userId: string };
 
 function toPublicProfile(user: User): PublicUser {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { email: _email, firebaseUid: _uid, ...publicFields } = user;
+  const { email: _email, firebaseUid: _uid, nameLower: _nameLower, emailLower: _emailLower, ...publicFields } = user;
   return publicFields as PublicUser;
 }
 
@@ -45,6 +46,9 @@ export async function createMyProfile(
       email: req.user.email ?? req.body.email,
       sports: req.body.sports,
       location: req.body.location,
+      accountType: req.body.accountType,
+      nif: req.body.nif,
+      responsibleName: req.body.responsibleName,
     });
 
     return res.status(201).json(user);
@@ -67,6 +71,7 @@ export async function updateMe(req: AuthenticatedRequest, res: Response) {
     if (req.body.name !== undefined) data.name = req.body.name;
     if (req.body.bio !== undefined) data.bio = req.body.bio;
     if (req.body.avatarUrl !== undefined) data.avatarUrl = req.body.avatarUrl;
+    if (req.body.website !== undefined) data.website = req.body.website;
     if (req.body.sports !== undefined) data.sports = req.body.sports;
     if (req.body.location !== undefined) data.location = req.body.location;
 
@@ -190,16 +195,92 @@ export async function getUserProfile(
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Não expor dados privados (localização e lista de amigos) de outros
-    // utilizadores; devolver apenas se o requester é amigo deste perfil.
-    const { location: _location, friends, ...publicFields } = toPublicProfile(user);
-    const isFriend = req.user
-      ? (friends ?? []).includes(req.user.uid)
-      : false;
+    const { location: _location, friends, followers, ...publicFields } = toPublicProfile(user);
+    const isFriend = req.user ? (friends ?? []).includes(req.user.uid) : false;
+    const friendCount = (friends ?? []).length;
+    const isFollowing = req.user ? (followers ?? []).includes(req.user.uid) : false;
+    const followersCount = (followers ?? []).length;
 
-    return res.json({ ...publicFields, isFriend });
+    let hasSentRequest = false;
+    let incomingRequestId: string | null = null;
+    if (req.user && !isFriend) {
+      const [sentSnap, receivedSnap] = await Promise.all([
+        db.collection("friendRequests")
+          .where("requesterId", "==", req.user.uid)
+          .where("addresseeId", "==", userId)
+          .get(),
+        db.collection("friendRequests")
+          .where("requesterId", "==", userId)
+          .where("addresseeId", "==", req.user.uid)
+          .get(),
+      ]);
+      hasSentRequest = !sentSnap.empty;
+      if (!receivedSnap.empty) incomingRequestId = receivedSnap.docs[0].id;
+    }
+
+    return res.json({
+      ...publicFields,
+      isFriend,
+      friendCount,
+      isFollowing,
+      followersCount,
+      hasSentRequest,
+      incomingRequestId,
+    });
   } catch {
     return res.status(500).json({ message: "Error getting user profile" });
+  }
+}
+
+export async function followOrganization(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { userId } = req.params;
+    await usersService.followUser(req.user.uid, userId);
+    return res.status(200).json({ message: "Followed" });
+  } catch (error) {
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : "Error following account",
+    });
+  }
+}
+
+export async function unfollowOrganization(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { userId } = req.params;
+    await usersService.unfollowUser(req.user.uid, userId);
+    return res.status(200).json({ message: "Unfollowed" });
+  } catch (error) {
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : "Error unfollowing account",
+    });
+  }
+}
+
+export async function getMutualFriends(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const { userId } = req.params;
+    const mutual = await usersService.getMutualFriends(req.user.uid, userId);
+    return res.json(mutual);
+  } catch {
+    return res.status(500).json({ message: "Error getting mutual friends" });
   }
 }
 
@@ -312,6 +393,33 @@ export async function banUser(
   } catch (error) {
     return res.status(400).json({
       message: error instanceof Error ? error.message : "Error banning user",
+    });
+  }
+}
+
+export async function suspendUser(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    const isAdmin = requireAdmin(req, res);
+    if (!isAdmin) return;
+
+    const { userId } = req.params;
+    if (req.user?.uid === userId) {
+      return res.status(400).json({ message: "Admins cannot suspend themselves" });
+    }
+
+    const days = Number((req.body as { days?: number }).days);
+    if (!Number.isFinite(days) || days <= 0 || days > 365) {
+      return res.status(400).json({ message: "days must be a number between 1 and 365" });
+    }
+
+    const updated = await usersService.suspendUser(userId, days);
+    return res.json(updated);
+  } catch (error) {
+    return res.status(400).json({
+      message: error instanceof Error ? error.message : "Error suspending user",
     });
   }
 }

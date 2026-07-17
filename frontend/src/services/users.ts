@@ -18,8 +18,20 @@ export function getUserProfile(userId: string): Promise<PublicUser> {
   return api.get<PublicUser>(`/api/users/${userId}`);
 }
 
-export function updateMyProfile(data: { name?: string; bio?: string }): Promise<UserProfile> {
+export function getMutualFriends(userId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+  return api.get(`/api/users/${userId}/mutual-friends`);
+}
+
+export function updateMyProfile(data: { name?: string; bio?: string; website?: string }): Promise<UserProfile> {
   return api.patch<UserProfile>('/api/users/me', data);
+}
+
+export function followUser(userId: string): Promise<{ message: string }> {
+  return api.post<{ message: string }>(`/api/users/${userId}/follow`);
+}
+
+export function unfollowUser(userId: string): Promise<{ message: string }> {
+  return api.delete<{ message: string }>(`/api/users/${userId}/follow`);
 }
 
 export function uploadMyAvatar(imageData: string): Promise<UserProfile> {
@@ -36,6 +48,11 @@ export function banUser(userId: string): Promise<AdminUser> {
 
 export function reactivateUser(userId: string): Promise<AdminUser> {
   return api.patch<AdminUser>(`/api/users/${userId}/reactivate`);
+}
+
+// Suspensão temporária: a conta reativa-se sozinha ao fim de `days` dias.
+export function suspendUser(userId: string, days: number): Promise<AdminUser> {
+  return api.patch<AdminUser>(`/api/users/${userId}/suspend`, { days });
 }
 
 export function deleteUser(userId: string): Promise<{ message: string }> {

@@ -1,31 +1,12 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { sportsService } from "../services/sports.service";
-import { usersService } from "../services/users.service";
 import { CreateSportDto, UpdateSportDto } from "../models/sport.model";
+import { requireAdmin } from "../util/admin.util";
 
 type SportParams = {
   sportId: string;
 };
-
-async function requireAdmin(
-  req: AuthenticatedRequest,
-  res: Response,
-): Promise<boolean> {
-  if (!req.user) {
-    res.status(401).json({ message: "User not authenticated" });
-    return false;
-  }
-
-  const user = await usersService.getUserByFirebaseUid(req.user.uid);
-
-  if (!user || user.role !== "admin") {
-    res.status(403).json({ message: "Admin access required" });
-    return false;
-  }
-
-  return true;
-}
 
 export async function listSports(_req: Request, res: Response): Promise<void> {
   try {
@@ -66,7 +47,7 @@ export async function createSport(
   res: Response,
 ): Promise<void> {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const data: CreateSportDto = {
@@ -100,7 +81,7 @@ export async function updateSport(
   res: Response,
 ): Promise<void> {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { sportId } = req.params;
@@ -120,7 +101,7 @@ export async function deleteSport(
   res: Response,
 ): Promise<void> {
   try {
-    const isAdmin = await requireAdmin(req, res);
+    const isAdmin = requireAdmin(req, res);
     if (!isAdmin) return;
 
     const { sportId } = req.params;

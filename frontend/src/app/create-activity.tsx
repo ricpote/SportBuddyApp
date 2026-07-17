@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
@@ -28,10 +29,13 @@ const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
 
 const CATEGORY_ORDER: SportCategory[] = ['team', 'individual'];
 
-const CATEGORY_LABELS: Record<SportCategory, string> = {
-  team: 'Equipa',
-  individual: 'Individual',
+const CATEGORY_META: Record<SportCategory, { label: string }> = {
+  team: { label: 'Equipa' },
+  individual: { label: 'Individual' },
 };
+
+const MIN_PARTICIPANTS = 2;
+const MAX_PARTICIPANTS = 200;
 
 function initialDate() {
   const date = new Date();
@@ -44,8 +48,9 @@ export default function CreateActivityScreen() {
   const [sports, setSports] = useState<Sport[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<SportCategory>('team');
   const [sportId, setSportId] = useState<string | null>(null);
-  const [maxParticipants, setMaxParticipants] = useState('10');
+  const [maxParticipants, setMaxParticipants] = useState(10);
 
   const [location, setLocation] = useState<PickedLocation>({
     name: '',
@@ -66,6 +71,11 @@ export default function CreateActivityScreen() {
       .catch(() => setSports([]));
   }, []);
 
+  function handleSelectCategory(next: SportCategory) {
+    if (next !== category) setSportId(null);
+    setCategory(next);
+  }
+
   async function handleSubmit() {
     setError(null);
 
@@ -85,13 +95,6 @@ export default function CreateActivityScreen() {
       return;
     }
 
-    const parsedMax = Number(maxParticipants);
-
-    if (!Number.isInteger(parsedMax) || parsedMax < 2) {
-      setError('O número máximo de participantes tem de ser pelo menos 2');
-      return;
-    }
-
     if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
       setError('Seleciona uma localização válida no mapa');
       return;
@@ -104,7 +107,7 @@ export default function CreateActivityScreen() {
         title: title.trim(),
         description: description.trim(),
         sportId,
-        maxParticipants: parsedMax,
+        maxParticipants,
         location: {
           name: location.name.trim(),
           address: location.address.trim(),
@@ -127,123 +130,155 @@ export default function CreateActivityScreen() {
     }
   }
 
+  const categorySports = sports.filter((sport) => sport.category === category);
+
   return (
-    <ScrollView 
-      style={{ backgroundColor: '#0F172A' }} 
+    <ScrollView
+      style={{ backgroundColor: '#0a0a0b' }}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
-        
-        {/* TÍTULO E DESCRIÇÃO */}
-        <TextInput
-          style={styles.input}
-          placeholder="Título da atividade"
-          placeholderTextColor="#64748B"
-          value={title}
-          onChangeText={setTitle}
-        />
 
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          placeholder="Descrição (ex: Vamos jogar um 5 para 5 amigável. Levem bola se tiverem!)"
-          placeholderTextColor="#64748B"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        {/* MODALIDADE */}
-        <ThemedText style={styles.sectionLabel}>Modalidade</ThemedText>
-
-        {CATEGORY_ORDER.map((category) => {
-          const group = sports.filter((sport) => sport.category === category);
-
-          if (group.length === 0) return null;
-
-          return (
-            <View key={category} style={styles.categoryGroup}>
-              <ThemedText style={styles.categoryLabel}>
-                {CATEGORY_LABELS[category]}
-              </ThemedText>
-
-              <View style={styles.chipRow}>
-                {group.map((sport) => {
-                  const isActive = sportId === sport.id;
-                  return (
-                    <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
-                      <View style={[styles.chip, isActive && styles.chipActive]}>
-                        <SportIcon
-                          sportName={sport.name}
-                          size={16}
-                          color={isActive ? '#0F172A' : '#A0AEC0'}
-                          style={{ marginRight: 6 }}
-                        />
-                        <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                          {sport.name}
-                        </ThemedText>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          );
-        })}
-
-        {sports.length === 0 && (
-          <ThemedText style={styles.emptyText}>
-            Sem modalidades disponíveis ainda.
-          </ThemedText>
-        )}
-
-        {/* DIFICULDADE */}
-        <ThemedText style={styles.sectionLabel}>Dificuldade</ThemedText>
-
-        <View style={styles.chipRow}>
-          {DIFFICULTY_OPTIONS.map((level) => {
-            const isActive = difficultyLevel === level;
-            return (
-              <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
-                <View style={[styles.chip, isActive && styles.chipActive]}>
-                  <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                    {DIFFICULTY_LABELS[level]}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            );
-          })}
+        {/* TÍTULO */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Título</ThemedText>
+          <TextInput
+            style={styles.input}
+            placeholder="Título da atividade"
+            placeholderTextColor="#8f8b85"
+            value={title}
+            onChangeText={setTitle}
+          />
         </View>
 
-        {/* LOCALIZAÇÃO (Componente externo, poderá necessitar de ajustes no seu próprio ficheiro se tiver fundo branco) */}
-        <ThemedText style={styles.sectionLabel}>Localização</ThemedText>
-        <LocationPicker value={location} onChange={setLocation} />
+        {/* DESCRIÇÃO */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Descrição</ThemedText>
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="Ex: Vamos correr 5K a ritmo tranquilo. Ponto de encontro à entrada."
+            placeholderTextColor="#8f8b85"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+        </View>
 
-        {/* DATA E HORA */}
-        <DateTimeField label="Data e hora" value={date} onChange={setDate} />
+        {/* MODALIDADE */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Modalidade</ThemedText>
 
-        {/* MÁXIMO DE PARTICIPANTES */}
-        <ThemedText style={styles.sectionLabel}>Lotação</ThemedText>
-        <TextInput
-          style={styles.input}
-          placeholder="Máximo de participantes"
-          placeholderTextColor="#64748B"
-          keyboardType="number-pad"
-          value={maxParticipants}
-          onChangeText={setMaxParticipants}
-        />
+          <View style={styles.segmented}>
+            {CATEGORY_ORDER.map((cat) => {
+              const isActive = category === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  style={[styles.segment, isActive && styles.segmentActive]}
+                  onPress={() => handleSelectCategory(cat)}
+                >
+                  <ThemedText style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                    {CATEGORY_META[cat].label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.chipRow}>
+            {categorySports.map((sport) => {
+              const isActive = sportId === sport.id;
+              return (
+                <Pressable key={sport.id} onPress={() => setSportId(sport.id)}>
+                  <View style={[styles.chip, isActive && styles.chipActive]}>
+                    <SportIcon
+                      sportName={sport.name}
+                      size={16}
+                      color={isActive ? '#0a0a0b' : '#c9c5bf'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                      {sport.name}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })}
+
+            {categorySports.length === 0 && (
+              <ThemedText style={styles.emptyText}>
+                Sem modalidades disponíveis ainda.
+              </ThemedText>
+            )}
+          </View>
+        </View>
+
+        {/* DIFICULDADE */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Dificuldade</ThemedText>
+          <View style={styles.chipRow}>
+            {DIFFICULTY_OPTIONS.map((level) => {
+              const isActive = difficultyLevel === level;
+              return (
+                <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
+                  <View style={[styles.chip, isActive && styles.chipActive]}>
+                    <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                      {DIFFICULTY_LABELS[level]}
+                    </ThemedText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* LOCALIZAÇÃO */}
+        <View style={styles.field}>
+          <ThemedText style={styles.microLabel}>Localização</ThemedText>
+          <LocationPicker value={location} onChange={setLocation} />
+        </View>
+
+        {/* DATA E HORA + LOTAÇÃO */}
+        <View style={styles.row}>
+          <View style={[styles.field, styles.flex1]}>
+            <ThemedText style={styles.microLabel}>Data e hora</ThemedText>
+            <DateTimeField value={date} onChange={setDate} />
+          </View>
+
+          <View style={[styles.field, styles.flex1]}>
+            <ThemedText style={styles.microLabel}>Lotação</ThemedText>
+            <View style={styles.stepper}>
+              <Pressable
+                style={styles.stepperBtn}
+                disabled={maxParticipants <= MIN_PARTICIPANTS}
+                onPress={() => setMaxParticipants((n) => Math.max(MIN_PARTICIPANTS, n - 1))}
+              >
+                <Ionicons name="remove" size={16} color="#c9c5bf" />
+              </Pressable>
+              <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
+              <Pressable
+                style={[styles.stepperBtn, styles.stepperBtnActive]}
+                disabled={maxParticipants >= MAX_PARTICIPANTS}
+                onPress={() => setMaxParticipants((n) => Math.min(MAX_PARTICIPANTS, n + 1))}
+              >
+                <Ionicons name="add" size={16} color="#0a0a0b" />
+              </Pressable>
+            </View>
+          </View>
+        </View>
 
         {/* APROVAÇÃO */}
         <View style={styles.switchRow}>
           <View>
-            <ThemedText style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
-            <ThemedText style={{ color: '#A0AEC0', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
+            <ThemedText style={{ color: '#f4f2ef', fontWeight: 'bold' }}>Requer aprovação</ThemedText>
+            <ThemedText style={{ color: '#c9c5bf', fontSize: 12 }}>Aceitar manualmente quem entra</ThemedText>
           </View>
-          <Switch 
-            value={requiresApproval} 
-            onValueChange={setRequiresApproval} 
-            trackColor={{ false: '#334155', true: '#CF8444' }}
-            thumbColor={requiresApproval ? '#FFFFFF' : '#A0AEC0'}
+          <Switch
+            value={requiresApproval}
+            onValueChange={setRequiresApproval}
+            trackColor={{ false: '#141315', true: '#e8823f' }}
+            thumbColor={requiresApproval ? '#f4f2ef' : '#c9c5bf'}
           />
         </View>
 
@@ -262,7 +297,7 @@ export default function CreateActivityScreen() {
             {submitting ? 'A criar...' : 'Criar atividade'}
           </ThemedText>
         </Pressable>
-        
+
       </View>
     </ScrollView>
   );
@@ -280,76 +315,132 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     gap: Spacing.three,
   },
+  field: {
+    gap: Spacing.two,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.three,
+  },
+  flex1: {
+    flex: 1,
+    minWidth: 160,
+  },
+  microLabel: {
+    color: '#8f8b85',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
   input: {
     height: 52,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   multiline: {
     height: 100,
     paddingTop: 16,
     textAlignVertical: 'top',
   },
-  sectionLabel: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginTop: Spacing.two,
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    padding: 4,
   },
-  categoryGroup: {
-    gap: Spacing.one,
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: 8,
   },
-  categoryLabel: {
-    color: '#64748B',
-    fontSize: 14,
-    marginBottom: 4,
+  segmentActive: {
+    backgroundColor: '#e8823f',
+  },
+  segmentText: {
+    color: '#c9c5bf',
+    fontWeight: '600',
+  },
+  segmentTextActive: {
+    color: '#1a1005',
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: Spacing.one,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   chipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
   },
   chipText: {
-    color: '#A0AEC0',
+    color: '#c9c5bf',
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0F172A',
+    color: '#1a1005',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 52,
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperBtnActive: {
+    backgroundColor: '#e8823f',
+  },
+  stepperValue: {
+    color: '#f4f2ef',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     marginTop: Spacing.two,
   },
   button: {
     height: 52,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -357,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.six,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
   pressed: {
@@ -365,11 +456,11 @@ const styles = StyleSheet.create({
   },
   error: {
     textAlign: 'center',
-    color: '#FF6B6B',
+    color: '#eb8f84',
     marginTop: Spacing.two,
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     fontSize: 14,
   },
 });

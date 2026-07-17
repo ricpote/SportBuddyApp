@@ -10,11 +10,15 @@ import {
   listUsers,
   updateUserRole,
   banUser,
+  suspendUser,
   reactivateUser,
   deleteUser,
   setDisplayedBadge,
   getMyBadges,
   getUserBadges,
+  getMutualFriends,
+  followOrganization,
+  unfollowOrganization,
 } from "../controllers/users.controller";
 
 const router = Router();
@@ -33,11 +37,15 @@ router.get("/search", authMiddleware, searchUsers);
 // Public profile
 router.get("/:userId", authMiddleware, getUserProfile);
 router.get("/:userId/badges", authMiddleware, getUserBadges);
+router.get("/:userId/mutual-friends", authMiddleware, getMutualFriends);
+router.post("/:userId/follow", authMiddleware, followOrganization);
+router.delete("/:userId/follow", authMiddleware, unfollowOrganization);
 
 // Admin — user management
 router.get("/", authMiddleware, listUsers);
 router.patch("/:userId/role", authMiddleware, updateUserRole);
 router.patch("/:userId/ban", authMiddleware, banUser);
+router.patch("/:userId/suspend", authMiddleware, suspendUser);
 router.patch("/:userId/reactivate", authMiddleware, reactivateUser);
 router.delete("/:userId", authMiddleware, deleteUser);
 

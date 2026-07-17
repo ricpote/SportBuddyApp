@@ -1,4 +1,4 @@
-export type UserRole = "participant" | "activity_manager" | "partner" | "admin";
+export type UserRole = "participant" | "partner" | "admin";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced" | "competitive";
 
@@ -19,10 +19,14 @@ export type UserStats = {
   activitiesJoined: number;
   activitiesCreated: number;
   mvpVotesReceived: number;
-  fairPlayVotesReceived: number;
   badges: string[];
   badgesUnlockedAt?: Record<string, string>;
   bySport?: Record<string, { joined: number }>;
+};
+
+export type UserRating = {
+  average: number;
+  count: number;
 };
 
 export type User = {
@@ -31,11 +35,22 @@ export type User = {
 
   name: string;
   email: string;
+  nameLower: string;
+  emailLower: string;
   bio?: string;
   avatarUrl?: string;
+  website?: string;
+
+  // Só relevante para contas de empresa (role "partner").
+  nif?: string;
+  nifLower?: string;
+  responsibleName?: string;
 
   role: UserRole;
   status: UserStatus;
+  // Só usado quando status é "banned" por uma suspensão temporária; a conta
+  // reativa-se sozinha (ver auth.middleware.ts) quando este prazo passa.
+  bannedUntil?: Date | null;
 
   sports: UserSportProfile[];
 
@@ -44,25 +59,35 @@ export type User = {
   stats: UserStats;
 
   friends: string[];
+  following: string[];
+  followers: string[];
+  rating: UserRating;
   displayedBadge?: string;
 
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type PublicUser = Omit<User, "email" | "firebaseUid">;
+export type PublicUser = Omit<
+  User,
+  "email" | "firebaseUid" | "nameLower" | "emailLower" | "nif" | "nifLower" | "responsibleName"
+>;
 
 export type CreateUserDto = {
   name: string;
   email: string;
   sports?: UserSportProfile[];
   location?: UserLocation;
+  accountType?: "personal" | "organization";
+  nif?: string;
+  responsibleName?: string;
 };
 
 export type UpdateUserDto = {
   name?: string;
   bio?: string;
   avatarUrl?: string;
+  website?: string;
   sports?: UserSportProfile[];
   location?: UserLocation;
 };
@@ -78,6 +103,7 @@ export function createUserObject(
   data: CreateUserDto
 ): User {
   const now = new Date();
+  const isOrganization = data.accountType === "organization";
 
   return {
     id,
@@ -85,8 +111,18 @@ export function createUserObject(
 
     name: data.name,
     email: data.email,
+    nameLower: data.name.toLowerCase(),
+    emailLower: data.email.toLowerCase(),
 
-    role: "participant",
+    ...(isOrganization
+      ? {
+          nif: data.nif,
+          nifLower: data.nif?.toLowerCase(),
+          responsibleName: data.responsibleName,
+        }
+      : {}),
+
+    role: isOrganization ? "partner" : "participant",
     status: "active",
 
     sports: data.sports ?? [],
@@ -97,11 +133,13 @@ export function createUserObject(
       activitiesJoined: 0,
       activitiesCreated: 0,
       mvpVotesReceived: 0,
-      fairPlayVotesReceived: 0,
       badges: [],
     },
 
     friends: [],
+    following: [],
+    followers: [],
+    rating: { average: 0, count: 0 },
 
     createdAt: now,
     updatedAt: now,

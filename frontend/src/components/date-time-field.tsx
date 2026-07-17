@@ -1,4 +1,4 @@
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+﻿import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 
 export type DateTimeFieldProps = {
-  label: string;
+  label?: string;
   value: Date;
   onChange: (date: Date) => void;
 };
@@ -17,7 +17,7 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
   if (Platform.OS === 'ios') {
     return (
       <View style={styles.iosRow}>
-        <ThemedText style={styles.label}>{label}</ThemedText>
+        {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
         <DateTimePicker
           value={value}
           mode="datetime"
@@ -38,7 +38,7 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 
   return (
     <View style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      {label ? <ThemedText style={styles.label}>{label}</ThemedText> : null}
       <View style={styles.row}>
         <Pressable style={styles.flex1} onPress={() => setMode('date')}>
           <View style={styles.input}>
@@ -68,7 +68,6 @@ export function DateTimeField({ label, value, onChange }: DateTimeFieldProps) {
 const styles = StyleSheet.create({
   field: {
     gap: Spacing.two,
-    marginTop: Spacing.two,
   },
   row: {
     flexDirection: 'row',
@@ -79,14 +78,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: Spacing.two,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   label: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -95,15 +94,15 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 52, // Mesma altura dos TextInput
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12, // Mesmos cantos arredondados
     paddingHorizontal: 16,
     justifyContent: 'center',
   },
   inputText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
 });

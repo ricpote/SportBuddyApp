@@ -26,6 +26,8 @@ export type Activity = {
   sportId: string;
 
   createdBy: string;
+  createdByName: string;
+  createdByVerified: boolean;
 
   participantsList: string[];
   waitlist: string[];
@@ -42,11 +44,22 @@ export type Activity = {
 
   status: ActivityStatus;
 
+  joinedAt: Record<string, string>;
+
   mvpVotes: Record<string, string>;
   mvpWinners: string[];
   // null enquanto a votação está aberta — tem de existir no documento
   // para a query do cron (where votingClosedAt == null) o encontrar.
   votingClosedAt?: Date | null;
+
+  // Avaliação (1-5) que cada participante deu à atividade, só depois de "completed".
+  ratings: Record<string, number>;
+  ratingAverage: number;
+  ratingCount: number;
+
+  lastMessage?: string;
+  lastMessageAt?: Date;
+  lastMessageSender?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -71,9 +84,15 @@ export type CreateActivityDto = {
 export function createActivityObject(
   id: string,
   createdBy: string,
-  data: CreateActivityDto
+  data: CreateActivityDto,
+  createdByName: string,
+  createdByVerified: boolean
 ): Activity {
   const now = new Date();
+
+  // Contas de empresa (verified) só disponibilizam o espaço — não entram
+  // como participante da própria atividade.
+  const participantsList = createdByVerified ? [] : [createdBy];
 
   return {
     id,
@@ -84,8 +103,10 @@ export function createActivityObject(
     sportId: data.sportId,
 
     createdBy,
+    createdByName,
+    createdByVerified,
 
-    participantsList: [createdBy],
+    participantsList,
     waitlist: [],
 
     maxParticipants: data.maxParticipants,
@@ -98,13 +119,31 @@ export function createActivityObject(
 
     requiresApproval: data.requiresApproval,
 
-    status: data.maxParticipants <= 1 ? "full" : "open",
+    status: participantsList.length >= data.maxParticipants ? "full" : "open",
+
+    joinedAt: { [createdBy]: now.toISOString() },
 
     mvpVotes: {},
     mvpWinners: [],
     votingClosedAt: null,
 
+    ratings: {},
+    ratingAverage: 0,
+    ratingCount: 0,
+
     createdAt: now,
     updatedAt: now,
   };
 }
+
+
+export type FeedItemType = 'joined' | 'created' | 'mvp';
+
+export type FeedItem = {
+  type: FeedItemType;
+  userId: string;
+  userName: string;
+  activityId: string;
+  activityTitle: string;
+  timestamp: string;
+};

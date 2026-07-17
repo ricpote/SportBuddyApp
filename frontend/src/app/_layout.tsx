@@ -1,43 +1,54 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+﻿import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { Archivo_700Bold, Archivo_900Black } from '@expo-google-fonts/archivo';
+import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from '@expo-google-fonts/hanken-grotesk';
+import { Platform, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
+import { WebSidebar } from '@/components/web-sidebar';
 
 // 1. Criamos o nosso tema personalizado "Dark Premium"
 const SportBuddyTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: '#CF8444',       // Laranja da app (botões nativos e setas)
-    background: '#0F172A',    // Fundo principal de todos os ecrãs
-    card: '#1E293B',          // Fundo das barras (headers e bottom tabs)
-    text: '#FFFFFF',          // Texto principal
-    border: '#334155',        // Linhas de separação nativas
-    notification: '#FF6B6B',  // Cor das bolinhas de notificação
+    primary: '#e8823f',
+    background: '#0a0a0b',
+    card: '#0c0c0d',
+    text: '#f4f2ef',
+    border: 'rgba(255,255,255,0.06)',
+    notification: '#eb8f84',
   },
 };
 
 function RootNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, signingUp } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
 
   if (initializing) {
     return null;
   }
 
+  const authedUser = signingUp ? null : user;
+
   return (
-    <Stack 
-      // 2. Aplicamos estilos globais aos cabeçalhos de navegação
-      screenOptions={{ 
+    <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
+      {isDesktop && !!authedUser && <WebSidebar />}
+      <View style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
         headerShown: false,
-        headerStyle: { backgroundColor: '#1E293B' },
-        headerTintColor: '#CF8444', // Cor da seta de "voltar atrás"
-        headerTitleStyle: { color: '#FFFFFF', fontWeight: 'bold' },
+        headerStyle: { backgroundColor: '#0c0c0d' },
+        headerTintColor: '#e8823f', // Cor da seta de "voltar atrás"
+        headerTitleStyle: { color: '#f4f2ef', fontWeight: 'bold' },
         headerShadowVisible: false, // Remove a linha feia por baixo do header
       }}
     >
-      <Stack.Protected guard={!!user}>
+      <Stack.Protected guard={!!authedUser}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="create-activity"
@@ -72,17 +83,37 @@ function RootNavigator() {
           name="friends"
           options={{ headerShown: true, title: 'Amigos' }}
         />
+        <Stack.Screen
+          name="following"
+          options={{ headerShown: true, title: 'A seguir' }}
+        />
+        <Stack.Screen
+          name="badges"
+          options={{ headerShown: true, title: 'Badges', presentation: 'modal' }}
+        />
       </Stack.Protected>
-      <Stack.Protected guard={!user}>
+      <Stack.Protected guard={!authedUser}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
+      </View>
+    </View>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Archivo_700Bold,
+    Archivo_900Black,
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
+    HankenGrotesk_700Bold,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
-    // 3. Forçamos o nosso tema para a app nunca ficar branca de repente
     <ThemeProvider value={SportBuddyTheme}>
       <AnimatedSplashOverlay />
       <AuthProvider>

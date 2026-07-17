@@ -12,6 +12,7 @@ export type Conversation = {
   otherUser: { id: string; name: string; avatarUrl?: string };
   lastMessage?: string;
   lastMessageAt?: string;
+  lastMessageSenderId?: string;
 };
 
 export type DirectMessage = {

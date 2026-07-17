@@ -1,87 +1,147 @@
-import { Link, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, Image, Platform } from 'react-native';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
-import { BadgesSection } from '@/components/badges-section';
-import { MaxContentWidth, Spacing, TopTabInset, BottomTabInset } from '@/constants/theme';
+import { BadgeIcon } from '@/components/badge-icon';
+import { SportIcon } from '@/utils/sport-icon';
+import { BottomTabInset, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
 import { getMyActivities } from '@/services/activities';
+import { getBadgeCatalog, getMyBadges, setDisplayedBadge } from '@/services/badges';
+import { getFriends } from '@/services/friends';
+import { listSports } from '@/services/sports';
 import { uploadMyAvatar } from '@/services/users';
+import { Badge, UserBadge } from '@/types/badge';
 import { Activity } from '@/types/activity';
+import { UserStats } from '@/types/user';
 import { relativeDate } from '@/utils/date';
+import { compressImageDataUrl } from '@/utils/image';
 
-const STATUS_LABELS: Record<Activity['status'], string> = {
+const STATUS_COLOR: Record<Activity['status'], string> = {
+  open: '#9ccd6b',
+  full: '#e8823f',
+  cancelled: '#eb8f84',
+  completed: '#8f8b85',
+};
+
+const STATUS_LABEL: Record<Activity['status'], string> = {
   open: 'Aberta',
   full: 'Completa',
   cancelled: 'Cancelada',
   completed: 'Terminada',
 };
 
-async function compressImageDataUrl(dataUrl: string): Promise<string> {
-  if (Platform.OS !== 'web') {
-    return dataUrl;
-  }
+function memberSince(ts?: string): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const m = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()];
+  return `${m} ${d.getFullYear()}`;
+}
 
-  return new Promise((resolve, reject) => {
-    const image = new window.Image();
+function locName(loc?: string | { name?: string }): string | null {
+  if (!loc) return null;
+  if (typeof loc === 'string') return loc || null;
+  return loc.name ?? null;
+}
 
-    image.onload = () => {
-      const maxSize = 192;
-      const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
-      const width = Math.max(1, Math.round(image.width * scale));
-      const height = Math.max(1, Math.round(image.height * scale));
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const context = canvas.getContext('2d');
-
-      if (!context) {
-        reject(new Error('Nao foi possivel processar a imagem'));
-        return;
-      }
-
-      context.drawImage(image, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.6));
-    };
-
-    image.onerror = () => reject(new Error('Nao foi possivel processar a imagem'));
-    image.src = dataUrl;
-  });
+function badgeProgress(b: Badge, stats: UserStats): number {
+  if (b.criteriaType === 'activitiesJoined') return stats.activitiesJoined;
+  if (b.criteriaType === 'mvpVotesReceived') return stats.mvpVotesReceived;
+  return 0;
 }
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
-  const safeAreaInsets = useSafeAreaInsets();
-  const { pendingCount, refresh: refreshBadge } = usePendingWaitlist();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const { refresh: refreshBadge } = usePendingWaitlist();
+  const isWide = width >= 700;
+
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
+  const [activityLimit, setActivityLimit] = useState(5);
+  const [managedLimit, setManagedLimit] = useState(5);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [friendCount, setFriendCount] = useState(0);
+  const [earnedBadges, setEarnedBadges] = useState<UserBadge[] | null>(null);
+  const [catalog, setCatalog] = useState<Badge[] | null>(null);
+  const [sports, setSports] = useState<{ id: string; name: string }[] | null>(null);
+  const [updatingBadgeId, setUpdatingBadgeId] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      getMyActivities()
-        .then((data) => { setActivities(data); refreshBadge(); })
-        .catch(() => setActivities(null));
-    }, [refreshBadge])
+  const load = useCallback(() => {
+    getMyActivities().then(setActivities).catch(() => setActivities(null));
+    getFriends().then(list => setFriendCount(list.length)).catch(() => {});
+    getMyBadges().then(setEarnedBadges).catch(() => setEarnedBadges(null));
+    getBadgeCatalog().then(setCatalog).catch(() => setCatalog(null));
+    listSports().then(setSports).catch(() => setSports(null));
+    refreshBadge();
+  }, [refreshBadge]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    if (profile?.role === 'partner') {
+      router.replace({ pathname: '/user/[id]', params: { id: profile.id } });
+    }
+  }, [profile?.role, profile?.id, router]);
+
+  const sportMap = (sports ?? []).reduce<Record<string, string>>(
+    (m, s) => { m[s.id] = s.name; return m; }, {}
   );
 
-  const myActivities = (activities ?? []).filter((a) => {
+  const earnedIds = new Set((earnedBadges ?? []).map(b => b.id));
+
+  const managedActivities = (activities ?? []).filter(
+    a => a.createdBy === user?.uid && (a.status === 'open' || a.status === 'full')
+  );
+
+  const filteredActivities = (activities ?? []).filter(a => {
+    if (a.status === 'cancelled') return false;
     if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
-    if (activityFilter === 'past') return a.status === 'completed' || a.status === 'cancelled';
+    if (activityFilter === 'past') return a.status === 'completed';
     return true;
   });
+  const visibleActivities = filteredActivities.slice(0, activityLimit);
 
-  const createdCount = profile?.stats.activitiesCreated ?? 0;
-  const joinedCount = profile?.stats.activitiesJoined ?? 0;
+  const earnedWithCurrentIcon = (earnedBadges ?? []).map(eb => {
+    const catalogEntry = (catalog ?? []).find(c => c.id === eb.id);
+    return { ...eb, icon: catalogEntry?.icon ?? eb.icon };
+  });
 
-  // Função para escolher imagem da galeria
+  const earnedByFamily = new Map<string, typeof earnedWithCurrentIcon[number]>();
+  for (const badge of earnedWithCurrentIcon) {
+    const key = badge.criteriaType === 'activitiesJoinedBySport'
+      ? `sport_${badge.sportId}`
+      : badge.criteriaType;
+    const existing = earnedByFamily.get(key);
+    if (!existing || badge.threshold > existing.threshold) {
+      earnedByFamily.set(key, badge);
+    }
+  }
+
+  const displayedEarned = Array.from(earnedByFamily.values())
+    .sort((a, b) => b.threshold - a.threshold)
+    .slice(0, 4);
+
+  const lockedWithProgress = (catalog ?? [])
+    .filter(b => !earnedIds.has(b.id) && b.criteriaType !== 'activitiesJoinedBySport')
+    .map(b => {
+      const current = profile ? badgeProgress(b, profile.stats) : 0;
+      return { ...b, current, pct: current / b.threshold };
+    });
+  const nextBadge = [...lockedWithProgress]
+    .sort((a, b) => b.pct - a.pct)
+    .find(b => b.pct > 0 && b.pct < 1);
+
+  const memberSinceStr = memberSince(profile?.createdAt);
+  const locationStr = locName(profile?.location);
+
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -91,407 +151,481 @@ export default function ProfileScreen() {
         quality: 0.4,
         base64: true,
       });
-
       if (!result.canceled && result.assets[0]?.base64) {
         setUploadingAvatar(true);
-
-        const mimeType = result.assets[0].mimeType ?? 'image/jpeg';
-        const rawImageData = `data:${mimeType};base64,${result.assets[0].base64}`;
-        const imageData = await compressImageDataUrl(rawImageData);
-        await uploadMyAvatar(imageData);
+        const mime = result.assets[0].mimeType ?? 'image/jpeg';
+        const raw = `data:${mime};base64,${result.assets[0].base64}`;
+        await uploadMyAvatar(await compressImageDataUrl(raw));
         await refreshProfile();
       }
-    } catch (error) {
-      console.log('Erro ao selecionar imagem:', error);
-      setUploadingAvatar(false);
+    } catch {
     } finally {
       setUploadingAvatar(false);
     }
   };
 
+  const handleBadgeTap = async (badge: UserBadge) => {
+    if (updatingBadgeId) return;
+    setUpdatingBadgeId(badge.id);
+    try {
+      await setDisplayedBadge(badge.isDisplayed ? null : badge.id);
+      await getMyBadges().then(setEarnedBadges);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível atualizar o badge.');
+    } finally {
+      setUpdatingBadgeId(null);
+    }
+  };
+
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: '#0F172A' }]}
+      style={styles.scroll}
       contentContainerStyle={[
-        styles.contentContainer,
+        styles.content,
         {
-          paddingTop: safeAreaInsets.top + TopTabInset + Spacing.four,
-          paddingBottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
+          paddingTop: insets.top + TopTabInset + Spacing.four,
+          paddingBottom: insets.bottom + BottomTabInset + Spacing.three,
         },
       ]}>
-      <View style={styles.container}>
-        
-        {/* CARTÃO PRINCIPAL DE PERFIL */}
-        <View style={styles.profileMainCard}>
-          
-          {/* IMAGEM + INFO */}
-          <View style={styles.profileHeaderRow}>
-            {/* Imagem de Perfil Circular */}
-            <Pressable onPress={handlePickImage} style={styles.imageWrapper} disabled={uploadingAvatar}>
+      <View style={styles.center}>
+        <View style={[styles.columns, isWide && styles.columnsWide]}>
+
+          {/* ── LEFT COLUMN ──────────────────────────────── */}
+          <View style={[styles.leftCol, isWide && styles.leftColWide]}>
+
+            <Pressable onPress={handlePickImage} style={styles.avatarWrap} disabled={uploadingAvatar}>
               {profile?.avatarUrl ? (
-                <Image source={{ uri: profile.avatarUrl }} style={styles.profileImage} />
+                <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
               ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="person" size={36} color="#64748B" />
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={40} color="#8f8b85" />
                 </View>
               )}
-              <View style={styles.onlineBadge} />
-              <View style={styles.editImageBadge}>
-                <Ionicons name="camera" size={12} color="#FFFFFF" />
+              <View style={styles.cameraBtn}>
+                <Ionicons name="camera" size={13} color="#f4f2ef" />
               </View>
             </Pressable>
 
-            {/* Nome e Detalhes */}
-            <View style={styles.profileInfo}>
-              <View style={styles.nameRow}>
-                <ThemedText style={styles.profileName} numberOfLines={1}>
-                  {profile?.name ?? user?.displayName ?? '—'}
-                </ThemedText>
-                <Link href="/edit-profile" asChild>
-                  <Pressable hitSlop={10}>
-                    <Ionicons name="pencil" size={16} color="#A0AEC0" />
-                  </Pressable>
-                </Link>
-              </View>
-
-              <ThemedText style={styles.profileEmail}>{profile?.email ?? user?.email}</ThemedText>
-              <ThemedText style={styles.profileRole}>
-                Função: {profile?.role ?? 'participant'}
+            <View style={styles.nameBlock}>
+              <ThemedText style={styles.name} numberOfLines={1}>
+                {profile?.name ?? user?.displayName ?? '—'}
               </ThemedText>
-              {uploadingAvatar && (
-                <ThemedText style={styles.uploadingText}>A guardar foto...</ThemedText>
-              )}
+              {(profile?.email ?? user?.email) ? (
+                <ThemedText type="small" style={styles.metaText}>{profile?.email ?? user?.email}</ThemedText>
+              ) : null}
+              {memberSinceStr ? (
+                <ThemedText type="small" style={styles.metaText}>Membro desde {memberSinceStr}</ThemedText>
+              ) : null}
             </View>
-          </View>
 
-          {/* BIO (Se o utilizador tiver preenchido) */}
-          {profile?.bio ? (
-            <>
-              <View style={styles.divider} />
-              <ThemedText style={styles.bioText}>
-                {profile.bio}
-              </ThemedText>
-            </>
-          ) : null}
+            {locationStr ? (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={13} color="#8f8b85" />
+                <ThemedText type="small" style={styles.metaText}>{locationStr}</ThemedText>
+              </View>
+            ) : null}
 
-        </View>
+            {uploadingAvatar ? (
+              <ThemedText type="small" style={styles.uploadingText}>A guardar...</ThemedText>
+            ) : null}
 
-        {/* ESTATÍSTICAS EM GRELHA (Cartões Individuais) */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Ionicons name="calendar-outline" size={20} color="#CF8444" />
-            <ThemedText style={styles.statValue}>{joinedCount}</ThemedText>
-            <ThemedText style={styles.statLabel}>Participadas</ThemedText>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Ionicons name="people-outline" size={20} color="#10B981" />
-            <ThemedText style={styles.statValue}>{createdCount}</ThemedText>
-            <ThemedText style={styles.statLabel}>Organizadas</ThemedText>
-          </View>
-        </View>
+            {profile?.sports && profile.sports.length > 0 && (
+              <View style={styles.sportChips}>
+                {profile.sports.slice(0, 5).map(sid => {
+                  const sName = sportMap[sid] ?? sid;
+                  return (
+                    <View key={sid} style={styles.sportChip}>
+                      <SportIcon sportName={sName} size={12} color="#e8823f" />
+                      <ThemedText type="small" style={styles.sportChipText}>{sName}</ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
 
-        <BadgesSection />
+            <View style={styles.divider} />
 
-        {/* ALERTAS */}
-        {pendingCount > 0 && (
-          <View style={[styles.card, styles.pendingCard]}>
-            <ThemedText type="smallBold" style={styles.pendingText}>
-              {pendingCount === 1 ? '1 atividade com pedidos na lista de espera' : `${pendingCount} atividades com pedidos na lista de espera`}
-            </ThemedText>
-            <ThemedText type="small" style={styles.pendingSubText}>Abre a atividade para admitir ou rejeitar.</ThemedText>
-          </View>
-        )}
-
-        {/* TABS DE ATIVIDADES */}
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
-        <View style={styles.filterRow}>
-          {(['all', 'active', 'past'] as const).map((f) => {
-            const isActive = activityFilter === f;
-            return (
-              <Pressable key={f} onPress={() => setActivityFilter(f)}>
-                <View style={[styles.filterChip, isActive && styles.filterChipActive]}>
-                  <ThemedText type="small" style={[styles.filterText, isActive && styles.filterTextActive]}>
-                    {f === 'all' ? 'Todas' : f === 'active' ? 'Ativas' : 'Passadas'}
+            <View style={styles.statsList}>
+              {[
+                { label: 'Participadas', value: profile?.stats.activitiesJoined ?? 0, accent: false, href: null },
+                { label: 'Organizadas',  value: profile?.stats.activitiesCreated ?? 0, accent: false, href: null },
+                { label: 'MVP',          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false, href: null },
+                { label: 'Amigos',       value: friendCount,                            accent: false, href: '/friends' },
+                { label: 'A seguir',     value: profile?.following?.length ?? 0,        accent: false, href: '/following' },
+              ].map(({ label, value, accent, href }) => (
+                <Pressable key={label} style={({ pressed }) => [styles.statRow, pressed && href && styles.pressed]} onPress={() => href && router.push(href as any)}>
+                  <ThemedText type="small" style={styles.statLabel}>{label}</ThemedText>
+                  <ThemedText type="smallBold" style={[styles.statValue, accent && styles.statAccent]}>
+                    {value}
                   </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+
+            {nextBadge ? (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.nextBadgeBox}>
+                  <View style={styles.nextBadgeRow}>
+                    <ThemedText type="small" style={styles.nextBadgeLabel}>Próxima: </ThemedText>
+                    <ThemedText type="smallBold" style={styles.nextBadgeName} numberOfLines={1}>
+                      {nextBadge.name}
+                    </ThemedText>
+                    <ThemedText type="small" style={styles.nextBadgeCount}>
+                      {' '}{nextBadge.current}/{nextBadge.threshold}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${Math.min(nextBadge.pct * 100, 100)}%` as any },
+                      ]}
+                    />
+                  </View>
                 </View>
-              </Pressable>
-            );
-          })}
-        </View>
+              </>
+            ) : null}
 
-        {/* LISTA DE ATIVIDADES */}
-        {activities === null && (
-          <ThemedText style={styles.emptyText}>A carregar...</ThemedText>
-        )}
+            <Pressable
+              style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
+              onPress={signOut}>
+              <Ionicons name="log-out-outline" size={16} color="#eb8f84" />
+              <ThemedText type="smallBold" style={styles.logoutText}>Terminar sessão</ThemedText>
+            </Pressable>
+          </View>
 
-        {activities !== null && myActivities.length === 0 && (
-          <ThemedText style={styles.emptyText}>
-            Ainda não participas em nenhuma atividade.
-          </ThemedText>
-        )}
+          {/* ── RIGHT COLUMN ─────────────────────────────── */}
+          <View style={[styles.rightCol, isWide && styles.rightColWide]}>
 
-        <View style={styles.list}>
-          {myActivities.map((activity) => (
-            <Link
-              key={activity.id}
-              href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
-              asChild>
-              <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                <View style={styles.activityCard}>
-                  <ThemedText type="smallBold" style={styles.activityTitle}>{activity.title}</ThemedText>
-                  <ThemedText type="small" style={styles.activitySubText}>
-                    {relativeDate(activity.date)} · {STATUS_LABELS[activity.status]}
-                    {user && activity.createdBy === user.uid
-                      ? ' · Organizador'
-                      : user && activity.waitlist.includes(user.uid)
-                        ? ' · Em lista de espera'
-                        : ''}
-                  </ThemedText>
+            {managedActivities.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <ThemedText type="subtitle" style={styles.sectionTitle}>A gerir</ThemedText>
+                    <ThemedText type="subtitle" style={styles.sectionCount}> {managedActivities.length}</ThemedText>
+                  </View>
                 </View>
-              </Pressable>
-            </Link>
-          ))}
-        </View>
 
-        {/* BOTÃO DE LOGOUT */}
-        <Pressable
-          style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
-          onPress={signOut}>
-          <Ionicons name="log-out-outline" size={18} color="#FF6B6B" style={{ marginRight: 6 }} />
-          <ThemedText type="smallBold" style={{ color: '#FF6B6B' }}>Terminar sessão</ThemedText>
-        </Pressable>
-        
+                <View style={styles.actList}>
+                  {managedActivities.slice(0, managedLimit).map(activity => {
+                    const sportName = sportMap[activity.sportId];
+                    const pendingCount = activity.requiresApproval ? (activity.waitlist?.length ?? 0) : 0;
+                    const participantCount = activity.participantsList?.length ?? 0;
+                    return (
+                      <Link
+                        key={activity.id}
+                        href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
+                        asChild>
+                        <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                          <View style={styles.actItem}>
+                            <View style={styles.sportCircle}>
+                              <SportIcon sportName={sportName} size={20} color="#f4f2ef" />
+                            </View>
+                            <View style={styles.actInfo}>
+                              <ThemedText type="smallBold" style={styles.actTitle} numberOfLines={1}>
+                                {activity.title}
+                              </ThemedText>
+                              <ThemedText type="small" style={styles.actMeta}>
+                                {pendingCount > 0
+                                  ? `${pendingCount} pedido${pendingCount > 1 ? 's' : ''} pendente${pendingCount > 1 ? 's' : ''}`
+                                  : `${participantCount} / ${activity.maxParticipants} inscritos`}
+                              </ThemedText>
+                            </View>
+                            {pendingCount > 0 ? (
+                              <View style={[styles.statusChip, { backgroundColor: 'rgba(232,130,63,0.15)' }]}>
+                                <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>
+                                  {pendingCount} pedido{pendingCount > 1 ? 's' : ''}
+                                </ThemedText>
+                              </View>
+                            ) : (
+                              <View style={[styles.statusChip, { backgroundColor: 'rgba(156,205,107,0.15)' }]}>
+                                <ThemedText style={[styles.statusText, { color: '#9ccd6b' }]}>Aberta</ThemedText>
+                              </View>
+                            )}
+                            <Ionicons name="settings-outline" size={18} color="#8f8b85" />
+                          </View>
+                        </Pressable>
+                      </Link>
+                    );
+                  })}
+                </View>
+
+                {managedLimit < managedActivities.length && (
+                  <Pressable
+                    style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
+                    onPress={() => setManagedLimit(l => l + 5)}>
+                    <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
+                  </Pressable>
+                )}
+              </>
+            )}
+
+            <View style={styles.sectionHeader}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>Badges</ThemedText>
+              <Pressable
+                style={({ pressed }) => [styles.verTodasBtn, pressed && styles.pressed]}
+                onPress={() => router.push('/badges')}>
+                <ThemedText type="small" style={styles.verTodasText}>Ver todas ›</ThemedText>
+              </Pressable>
+            </View>
+
+            {displayedEarned.length > 0 ? (
+              <View style={styles.badgeGrid}>
+                {displayedEarned.map(badge => (
+                  <Pressable
+                    key={badge.id}
+                    style={({ pressed }) => [styles.badgeCell, pressed && styles.pressed]}
+                    onPress={() => handleBadgeTap(badge)}>
+                    <BadgeIcon badgeId={badge.id} icon={badge.icon} size={100} />
+                    <ThemedText style={styles.badgeName} numberOfLines={2}>{badge.name}</ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <ThemedText type="small" style={styles.emptyText}>Ainda sem badges.</ThemedText>
+            )}
+
+            <View style={styles.historicHeader}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
+              <View style={styles.filterRow}>
+                {(['active', 'past'] as const).map(f => (
+                  <Pressable key={f} onPress={() => { setActivityFilter(activityFilter === f ? 'all' : f); setActivityLimit(5); }}>
+                    <View style={[styles.filterChip, activityFilter === f && styles.filterChipOn]}>
+                      <ThemedText
+                        type="small"
+                        style={[styles.filterText, activityFilter === f && styles.filterTextOn]}>
+                        {f === 'active' ? 'Ativas' : 'Passadas'}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {activities === null && (
+              <ThemedText type="small" style={styles.emptyText}>A carregar...</ThemedText>
+            )}
+            {activities !== null && filteredActivities.length === 0 && (
+              <ThemedText type="small" style={styles.emptyText}>Sem atividades.</ThemedText>
+            )}
+
+            <View style={styles.actList}>
+              {visibleActivities.map(activity => {
+
+                const sportName = sportMap[activity.sportId];
+                const loc = (activity as any).location?.name as string | undefined;
+                const color = STATUS_COLOR[activity.status];
+                return (
+                  <Link
+                    key={activity.id}
+                    href={{ pathname: '/activity/[id]', params: { id: activity.id } }}
+                    asChild>
+                    <Pressable style={({ pressed }) => pressed && styles.pressed}>
+                      <View style={styles.actItem}>
+                        <View style={styles.sportCircle}>
+                          <SportIcon sportName={sportName} size={20} color="#f4f2ef" />
+                        </View>
+                        <View style={styles.actInfo}>
+                          <ThemedText type="smallBold" style={styles.actTitle} numberOfLines={1}>
+                            {activity.title}
+                          </ThemedText>
+                          <ThemedText type="small" style={styles.actMeta}>
+                            {relativeDate(activity.date)}{loc ? ` · ${loc}` : ''}
+                          </ThemedText>
+                        </View>
+                        <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
+                          <ThemedText style={[styles.statusText, { color }]}>
+                            {STATUS_LABEL[activity.status]}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </Link>
+                );
+              })}
+            </View>
+
+            {activityLimit < filteredActivities.length && (
+              <Pressable
+                style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
+                onPress={() => setActivityLimit(l => l + 5)}>
+                <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
+              </Pressable>
+            )}
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
+  scroll: { flex: 1 },
+  content: { flexDirection: 'row', justifyContent: 'center' },
+  center: { width: '100%', maxWidth: 900, paddingHorizontal: Spacing.four },
+
+  columns: { gap: Spacing.four },
+  columnsWide: { flexDirection: 'row' },
+
+  leftCol: { gap: Spacing.four },
+  leftColWide: { width: 220 },
+
+  rightCol: { gap: Spacing.three },
+  rightColWide: { flex: 1, minWidth: 0 },
+
+  avatarWrap: { alignSelf: 'center', position: 'relative' },
+  avatar: { width: 120, height: 120, borderRadius: 60 },
+  avatarPlaceholder: {
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: '#141315',
+    alignItems: 'center', justifyContent: 'center',
   },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  container: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  card: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  
-  /* ESTILOS DO CARTÃO PRINCIPAL */
-  profileMainCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  profileHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  imageWrapper: {
-    position: 'relative',
-    marginRight: 16,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  imagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  onlineBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#10B981',
-    borderWidth: 2,
-    borderColor: '#1E293B',
-  },
-  editImageBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#CF8444',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1E293B',
-  },
-  profileInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  profileName: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-    flexShrink: 1,
-  },
-  profileEmail: {
-    color: '#A0AEC0',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  profileRole: {
-    color: '#CF8444',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  uploadingText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  
-  /* ESTILOS DA BIO */
-  divider: {
-    height: 1,
-    backgroundColor: '#334155',
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  bioText: {
-    color: '#CBD5E1',
-    fontSize: 14,
-    lineHeight: 20,
+  cameraBtn: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#e8823f',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#0a0a0b',
   },
 
-  /* ESTILOS DA GRELHA DE ESTATÍSTICAS */
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 4,
-  },
-  statValue: {
-    color: '#FFFFFF',
+  name: {
+    color: '#f4f2ef',
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 4,
+    fontFamily: 'HankenGrotesk_700Bold',
+    textAlign: 'center',
   },
-  statLabel: {
-    color: '#A0AEC0',
-    fontSize: 12,
+  nameBlock: { alignItems: 'center', gap: 2 },
+  metaText: { color: '#8f8b85', textAlign: 'center' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'center' },
+  uploadingText: { color: '#8f8b85', textAlign: 'center', fontSize: 12 },
+
+  editBtn: {
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 12, height: 42,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  editBtnText: { color: '#f4f2ef' },
+
+  pendingCard: {
+    backgroundColor: 'rgba(232,130,63,0.12)',
+    borderWidth: 1, borderColor: '#e8823f',
+    borderRadius: 10, padding: Spacing.two,
+  },
+  pendingText: { color: '#e8823f', textAlign: 'center' },
+
+  sportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sportChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#141315',
+    borderRadius: 20, paddingVertical: 4, paddingHorizontal: 8,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  sportChipText: { color: '#c9c5bf', fontSize: 12 },
+  addSportChip: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#141315',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
 
-  /* RESTANTES ESTILOS */
-  sectionTitle: {
-    color: '#FFFFFF',
-    marginTop: Spacing.two,
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+
+  statsList: { gap: Spacing.two },
+  statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statLabel: { color: '#8f8b85' },
+  statValue: { color: '#f4f2ef', fontSize: 20, fontFamily: 'HankenGrotesk_700Bold' },
+  statAccent: { color: '#e8823f' },
+
+  nextBadgeBox: { gap: 8 },
+  nextBadgeRow: { flexDirection: 'row', alignItems: 'center' },
+  nextBadgeLabel: { color: '#8f8b85' },
+  nextBadgeName: { color: '#f4f2ef', flexShrink: 1 },
+  nextBadgeCount: { color: '#8f8b85' },
+  progressTrack: {
+    height: 6, borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
   },
-  logoutButton: {
+  progressFill: {
+    height: '100%' as any, borderRadius: 3,
+    backgroundColor: '#e8823f',
+  },
+
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(235,143,132,0.1)',
+    borderWidth: 1, borderColor: '#eb8f84',
+    borderRadius: 12, height: 44,
+    marginTop: Spacing.one,
+  },
+  logoutText: { color: '#eb8f84' },
+
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline' },
+  sectionTitle: { color: '#f4f2ef', fontSize: 20, fontFamily: 'HankenGrotesk_700Bold' },
+  sectionCount: { color: '#8f8b85', fontSize: 20, fontFamily: 'HankenGrotesk_700Bold' },
+  sectionSub: { color: '#8f8b85' },
+  verTodasBtn: { paddingVertical: 2 },
+  verTodasText: { color: '#e8823f' },
+
+  badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  badgeCell: { width: 100, alignItems: 'center', paddingBottom: 4 },
+
+  lockedWrap: {
+    width: 72, height: 72,
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  badgeName: { color: '#c9c5bf', textAlign: 'center', marginTop: -8, fontSize: 12, width: 100 },
+  badgeProgress: { color: '#8f8b85', fontSize: 11, textAlign: 'center' },
+
+  historicHeader: {
     flexDirection: 'row',
-    backgroundColor: '#FF6B6B20',
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-    height: 48,
-    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.two,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  pendingCard: {
-    backgroundColor: '#CF844420',
-    borderColor: '#CF8444',
-    alignItems: 'center',
-  },
-  pendingText: {
-    color: '#CF8444',
-    textAlign: 'center',
-  },
-  pendingSubText: {
-    color: '#CF8444',
-    opacity: 0.8,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  filterRow: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: Spacing.two,
   },
+  filterRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   filterChip: {
-    backgroundColor: '#1E293B',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: '#111012', paddingVertical: 7, paddingHorizontal: 14,
+    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  filterChipActive: {
-    backgroundColor: '#CF8444',
-    borderColor: '#CF8444',
+  filterChipOn: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
+  filterText: { color: '#c9c5bf' },
+  filterTextOn: { color: '#0a0a0b' },
+
+  emptyText: { color: '#8f8b85', textAlign: 'center', paddingVertical: Spacing.two },
+  actList: { gap: Spacing.two },
+  actItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#111012',
+    borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  filterText: {
-    color: '#A0AEC0',
-    fontWeight: '600',
+  sportCircle: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: 'rgba(232,130,63,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  filterTextActive: {
-    color: '#0F172A',
+  actInfo: { flex: 1, gap: 2, minWidth: 0 },
+  actTitle: { color: '#f4f2ef' },
+  actMeta: { color: '#8f8b85' },
+  statusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  statusText: { fontSize: 11, fontFamily: 'HankenGrotesk_600SemiBold' },
+
+  showAllBtn: {
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
   },
-  emptyText: {
-    color: '#64748B',
-    textAlign: 'center',
-    marginTop: Spacing.four,
-  },
-  list: {
-    gap: Spacing.three,
-  },
-  activityCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 4,
-  },
-  activityTitle: {
-    color: '#CF8444',
-    fontSize: 16,
-  },
-  activitySubText: {
-    color: '#A0AEC0',
-  },
+  showAllText: { color: '#e8823f' },
+
+  pressed: { opacity: 0.7 },
 });

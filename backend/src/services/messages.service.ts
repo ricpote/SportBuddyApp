@@ -35,14 +35,21 @@ export class MessagesService {
 
     const docRef = this.messagesRef(activityId).doc();
     const message = createMessageObject(docRef.id, activityId, senderId, data);
+    const preview = data.text.length > 60 ? data.text.slice(0, 60) + "…" : data.text;
+    const sender = await usersService.getUserById(senderId);
+    const senderName = sender?.name ?? "Alguém";
 
-    await docRef.set(message);
+    await Promise.all([
+      docRef.set(message),
+      db.collection(ACTIVITIES_COLLECTION).doc(activityId).update({
+        lastMessage: preview,
+        lastMessageAt: new Date(),
+        lastMessageSender: senderName,
+      }),
+    ]);
 
     const others = activity.participantsList.filter(id => id !== senderId);
     if (others.length > 0) {
-      const sender = await usersService.getUserById(senderId);
-      const senderName = sender?.name ?? "Alguém";
-      const preview = data.text.length > 60 ? data.text.slice(0, 60) + "…" : data.text;
       await notificationsService.createNotificationForMany(
         others,
         "new_message",
@@ -78,6 +85,23 @@ export class MessagesService {
     });
   }
 
+  async getLastActivityMessage(activityId: string, requesterId: string): Promise<{ text: string; senderName: string; createdAt: Date } | null> {
+    const activity = await activitiesService.getActivityById(activityId);
+    if (!activity) throw new Error("Activity not found");
+    if (!activity.participantsList.includes(requesterId)) throw new Error("Only participants can read messages");
+
+    const snap = await this.messagesRef(activityId).orderBy("createdAt", "desc").limit(1).get();
+    if (snap.empty) return null;
+
+    const data = snap.docs[0].data();
+    const sender = await usersService.getUserById(data.senderId);
+    return {
+      text: data.text,
+      senderName: sender?.name ?? "Alguém",
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+    };
+  }
+
   async getOrCreateConversation(requesterId: string, otherUserId: string): Promise<string> {
     const requesterDoc = await db.collection("users").doc(requesterId).get();
     if (!requesterDoc.exists) throw new Error("Utilizador não encontrado");
@@ -110,24 +134,26 @@ export class MessagesService {
       .where("participants", "array-contains", userId)
       .get();
 
-    const results: ConversationDto[] = [];
+    const results = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const otherUserId = (data.participants as string[]).find((id) => id !== userId)!;
+        const otherUserDoc = await db.collection("users").doc(otherUserId).get();
+        if (!otherUserDoc.exists) return null;
 
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const otherUserId = (data.participants as string[]).find((id) => id !== userId)!;
-      const otherUserDoc = await db.collection("users").doc(otherUserId).get();
-      if (!otherUserDoc.exists) continue;
-
-      const otherUser = otherUserDoc.data()!;
-      results.push({
-        id: doc.id,
-        otherUser: { id: otherUserId, name: otherUser.name, avatarUrl: otherUser.avatarUrl },
-        lastMessage: data.lastMessage,
-        lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate() : data.lastMessageAt,
-      });
-    }
+        const otherUser = otherUserDoc.data()!;
+        return {
+          id: doc.id,
+          otherUser: { id: otherUserId, name: otherUser.name, avatarUrl: otherUser.avatarUrl },
+          lastMessage: data.lastMessage,
+          lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate() : data.lastMessageAt,
+          lastMessageSenderId: data.lastMessageSenderId,
+        } as ConversationDto;
+      })
+    );
 
     return results
+      .filter((c): c is ConversationDto => c !== null)
       .filter((c) => c.lastMessage !== undefined)
       .sort((a, b) => {
         const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
@@ -156,7 +182,7 @@ export class MessagesService {
 
     await Promise.all([
       docRef.set(message),
-      this.conversationsRef.doc(conversationId).update({ lastMessage: preview, lastMessageAt: new Date() }),
+      this.conversationsRef.doc(conversationId).update({ lastMessage: preview, lastMessageAt: new Date(), lastMessageSenderId: senderId }),
     ]);
 
     return message;

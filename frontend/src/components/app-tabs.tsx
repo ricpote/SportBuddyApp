@@ -1,4 +1,4 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+﻿import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 11,
     fontWeight: 'bold',
     lineHeight: 13,

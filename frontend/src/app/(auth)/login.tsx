@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+﻿import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,11 +8,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 
-const BG = '#0F172A';
-const ORANGE = '#CF8444';
-const TEXT = '#FFFFFF';
-const TEXT_SEC = '#A0AEC0';
-const ERROR = '#FF6B6B';
+const BG = '#0a0a0b';
+const ORANGE = '#e8823f';
+const TEXT = '#f4f2ef';
+const TEXT_SEC = '#c9c5bf';
+const ERROR = '#eb8f84';
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle } = useAuth();
@@ -67,14 +67,6 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
             <ThemedText style={styles.navTitle}>SportBuddy</ThemedText>
-          </View>
-          <View style={styles.navLinks}>
-            <Pressable style={styles.navLinkPressable}>
-              <ThemedText style={styles.navLink}>Sobre</ThemedText>
-            </Pressable>
-            <Pressable style={styles.navLinkPressable}>
-              <ThemedText style={styles.navLink}>Contacto</ThemedText>
-            </Pressable>
           </View>
         </View>
 
@@ -199,8 +191,8 @@ const styles = StyleSheet.create({
     height: 350,
     top: '35%',
     right: -120,
-    backgroundColor: '#6366F1',
-    opacity: 0.1,
+    backgroundColor: '#e8823f',
+    opacity: 0.08,
   },
   navbar: {
     flexDirection: 'row',
@@ -244,7 +236,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(12, 12, 13, 0.75)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
@@ -321,7 +313,7 @@ const styles = StyleSheet.create({
   },
   googleButton: {
     height: 52,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f4f2ef',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

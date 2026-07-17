@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+﻿import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -11,6 +11,7 @@ export default function EditProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,6 +21,7 @@ export default function EditProfileScreen() {
         setProfile(data);
         setName(data.name);
         setBio(data.bio ?? '');
+        setWebsite(data.website ?? '');
       })
       .catch(() => setProfile(null));
   }, []);
@@ -48,7 +50,11 @@ export default function EditProfileScreen() {
     }
     setSubmitting(true);
     try {
-      await updateMyProfile({ name: name.trim(), bio: bio.trim() || undefined });
+      await updateMyProfile({
+        name: name.trim(),
+        bio: bio.trim() || undefined,
+        website: profile?.role === 'partner' ? website.trim() || undefined : undefined,
+      });
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao guardar. Tenta novamente.');
@@ -69,7 +75,7 @@ export default function EditProfileScreen() {
         <TextInput
           style={styles.input}
           placeholder="O teu nome"
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -79,12 +85,27 @@ export default function EditProfileScreen() {
         <TextInput
           style={[styles.input, styles.multiline]}
           placeholder="Fala um pouco sobre ti e os teus desportos favoritos..."
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#8f8b85"
           value={bio}
           onChangeText={setBio}
           multiline
           numberOfLines={4}
         />
+
+        {profile.role === 'partner' && (
+          <>
+            <ThemedText style={styles.sectionLabel}>Website (Opcional)</ThemedText>
+            <TextInput
+              style={styles.input}
+              placeholder="www.aorganizacao.pt"
+              placeholderTextColor="#8f8b85"
+              autoCapitalize="none"
+              keyboardType="url"
+              value={website}
+              onChangeText={setWebsite}
+            />
+          </>
+        )}
 
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
@@ -107,7 +128,7 @@ export default function EditProfileScreen() {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#0F172A', // Fundo escuro principal
+    backgroundColor: '#0a0a0b', // Fundo escuro principal
   },
   scrollContent: {
     flexGrow: 1,
@@ -117,10 +138,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0a0a0b',
   },
   loadingText: {
-    color: '#64748B',
+    color: '#8f8b85',
   },
   container: {
     width: '100%',
@@ -130,20 +151,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionLabel: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontWeight: 'bold',
     fontSize: 16,
     marginTop: Spacing.two,
   },
   input: {
     minHeight: 52, // Mais alto para toque confortável
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12, // Cantos redondos Premium
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   multiline: {
     height: 120,
@@ -152,14 +173,14 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 52,
-    backgroundColor: '#CF8444', // Laranja de destaque
+    backgroundColor: '#e8823f', // Laranja de destaque
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.four,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
     fontSize: 16,
   },
   pressed: {
@@ -167,7 +188,7 @@ const styles = StyleSheet.create({
   },
   error: {
     textAlign: 'center',
-    color: '#FF6B6B', // Vermelho para erros
+    color: '#eb8f84', // Vermelho para erros
     marginTop: Spacing.two,
   },
 });

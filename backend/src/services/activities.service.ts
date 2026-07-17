@@ -4,11 +4,13 @@ import {
   Activity,
   ActivityStatus,
   CreateActivityDto,
+  FeedItem,
   createActivityObject,
   SkillLevel,
 } from "../models/activity.model";
 import { UserRole } from "../models/user.model";
 import { isWithinRadiusKm, isValidCoordinates } from "../util/geo.util";
+import { tallyMvpWinners } from "../util/mvp.util";
 import { usersService } from "./users.service";
 import { sportsService } from "./sports.service";
 import { notificationsService } from "./notifications.service";
@@ -20,10 +22,10 @@ function toDate(value: unknown): Date {
   return value instanceof Timestamp ? value.toDate() : (value as Date);
 }
 
+// Sem `date`: a data não é editável depois da atividade ser criada.
 export type UpdateActivityDto = {
   title?: string;
   description?: string;
-  date?: Date;
   maxParticipants?: number;
   difficultyLevel?: Activity["difficultyLevel"];
   requiresApproval?: boolean;
@@ -34,6 +36,7 @@ export type ListActivitiesFilters = {
   sportId?: string;
   difficultyLevel?: SkillLevel;
   createdBy?: string;
+  verifiedOnly?: boolean;
   lat?: number;
   lng?: number;
   radiusKm?: number;
@@ -56,6 +59,9 @@ function normalizeActivity(data: FirebaseFirestore.DocumentData): Activity {
     date: data.date?.toDate ? data.date.toDate() : data.date,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+    votingClosedAt: data.votingClosedAt?.toDate
+      ? data.votingClosedAt.toDate().toISOString()
+      : (data.votingClosedAt ?? null),
   } as Activity;
 }
 
@@ -80,7 +86,7 @@ export class ActivitiesService {
     }
 
     const docRef = this.activitiesRef.doc();
-    const activity = createActivityObject(docRef.id, createdBy, data);
+    const activity = createActivityObject(docRef.id, createdBy, data, creator.name, creator.role === "partner");
 
     await docRef.set(activity);
 
@@ -101,17 +107,46 @@ export class ActivitiesService {
       activity.status !== "cancelled" &&
       new Date(activity.date) < new Date()
     ) {
-      const now = new Date();
-      const participants = activity.participantsList.filter(id => id !== activity.createdBy);
-      await Promise.all([
-        this.activitiesRef.doc(activityId).update({ status: "completed" as ActivityStatus, updatedAt: now }),
-        usersService.incrementStat(activity.createdBy, "activitiesCreated", 1),
-        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
-      ]);
-      return { ...activity, status: "completed", updatedAt: now };
+      return this.completeActivityIfDue(activityId, activity);
     }
 
     return activity;
+  }
+
+  private async completeActivityIfDue(activityId: string, fallback: Activity): Promise<Activity> {
+    const docRef = this.activitiesRef.doc(activityId);
+
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) return null;
+
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
+
+      if (
+        activity.status === "completed" ||
+        activity.status === "cancelled" ||
+        new Date(activity.date) >= new Date()
+      ) {
+        return { activity, didComplete: false };
+      }
+
+      const now = new Date();
+      tx.update(docRef, { status: "completed" as ActivityStatus, updatedAt: now });
+
+      return { activity: { ...activity, status: "completed" as ActivityStatus, updatedAt: now }, didComplete: true };
+    });
+
+    if (!result) return fallback;
+
+    if (result.didComplete) {
+      const participants = result.activity.participantsList.filter(id => id !== result.activity.createdBy);
+      await Promise.all([
+        usersService.incrementStat(result.activity.createdBy, "activitiesCreated", 1),
+        ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
+      ]);
+    }
+
+    return result.activity;
   }
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
@@ -131,6 +166,10 @@ export class ActivitiesService {
 
     if (filters.createdBy) {
       query = query.where("createdBy", "==", filters.createdBy);
+    }
+
+    if (filters.verifiedOnly) {
+      query = query.where("createdByVerified", "==", true);
     }
 
     const snapshot = await query.get();
@@ -207,6 +246,64 @@ export class ActivitiesService {
     return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
+  async getFriendsFeed(friendIds: string[], friendNames: Map<string, string>): Promise<FeedItem[]> {
+    if (friendIds.length === 0) return [];
+
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // últimos 30 dias
+    const chunks: string[][] = [];
+    for (let i = 0; i < friendIds.length; i += 10) chunks.push(friendIds.slice(i, i + 10));
+
+    const [participantSnaps, createdSnaps] = await Promise.all([
+      Promise.all(chunks.map((ids) =>
+        this.activitiesRef.where("participantsList", "array-contains-any", ids).get()
+      )),
+      Promise.all(chunks.map((ids) =>
+        this.activitiesRef.where("createdBy", "in", ids).get()
+      )),
+    ]);
+
+    const seen = new Set<string>();
+    const items: FeedItem[] = [];
+
+    const process = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+      if (seen.has(doc.id)) return;
+      seen.add(doc.id);
+      const a = normalizeActivity({ id: doc.id, ...doc.data() });
+      const createdAt = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt as Date;
+      if (createdAt < since) return;
+
+      // 'created' event
+      if (friendIds.includes(a.createdBy)) {
+        items.push({ type: 'created', userId: a.createdBy, userName: friendNames.get(a.createdBy) ?? '', activityId: a.id, activityTitle: a.title, timestamp: createdAt.toISOString() });
+      }
+
+      // 'joined' events for participants who didn't create
+      for (const uid of a.participantsList) {
+        if (uid !== a.createdBy && friendIds.includes(uid)) {
+          const joinedTimestamp = a.joinedAt?.[uid] ?? createdAt.toISOString();
+          items.push({ type: 'joined', userId: uid, userName: friendNames.get(uid) ?? '', activityId: a.id, activityTitle: a.title, timestamp: joinedTimestamp });
+        }
+      }
+
+      // 'mvp' events
+      if (a.status === 'completed' && a.mvpWinners?.length) {
+        for (const uid of a.mvpWinners) {
+          if (friendIds.includes(uid)) {
+            items.push({ type: 'mvp', userId: uid, userName: friendNames.get(uid) ?? '', activityId: a.id, activityTitle: a.title, timestamp: typeof a.votingClosedAt === 'string' ? a.votingClosedAt : createdAt.toISOString() });
+          }
+        }
+      }
+    };
+
+    for (const snapshot of [...participantSnaps, ...createdSnaps]) {
+      for (const doc of snapshot.docs) process(doc);
+    }
+
+    return items
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 30);
+  }
+
   async getMyActivities(userId: string, filters: MyActivitiesFilters = {}): Promise<Activity[]> {
     let participantQuery: FirebaseFirestore.Query = this.activitiesRef
       .where("participantsList", "array-contains", userId)
@@ -253,6 +350,18 @@ export class ActivitiesService {
     return activities.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
+  async getUserActivities(userId: string, limit = 5): Promise<Activity[]> {
+    const snap = await this.activitiesRef
+      .where("participantsList", "array-contains", userId)
+      .orderBy("date", "asc")
+      .get();
+    return snap.docs
+      .map(doc => normalizeActivity({ id: doc.id, ...doc.data() }))
+      .filter(a => a.status === "completed")
+      .reverse()
+      .slice(0, limit);
+  }
+
   async updateActivity(
     activityId: string,
     requesterId: string,
@@ -287,11 +396,7 @@ export class ActivitiesService {
       if (description.length > 1000) throw new Error("A descrição é demasiado longa");
       changes.description = description;
     }
-    if (data.date !== undefined) {
-      if (Number.isNaN(data.date.getTime())) throw new Error("Data inválida");
-      if (data.date <= now) throw new Error("A data tem de ser no futuro");
-      changes.date = data.date;
-    }
+    // A data não é editável depois de criada — combinam mudanças no chat.
     if (data.difficultyLevel !== undefined) changes.difficultyLevel = data.difficultyLevel;
     if (data.requiresApproval !== undefined) changes.requiresApproval = data.requiresApproval;
     if (data.maxParticipants !== undefined) {
@@ -480,7 +585,7 @@ export class ActivitiesService {
       const updatedParticipants = [...activity.participantsList, userId];
       const isFull = updatedParticipants.length >= activity.maxParticipants;
       const newStatus: ActivityStatus = isFull ? "full" : "open";
-      tx.update(docRef, { participantsList: updatedParticipants, status: newStatus, updatedAt: now });
+      tx.update(docRef, { participantsList: updatedParticipants, status: newStatus, updatedAt: now, [`joinedAt.${userId}`]: now.toISOString() });
       return { activity, updatedParticipants, newStatus, now, joined: true };
     });
 
@@ -558,7 +663,8 @@ export class ActivitiesService {
 
       const isFull = updatedParticipants.length >= activity.maxParticipants;
       const newStatus: ActivityStatus = isFull ? "full" : "open";
-      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+      const { [userId]: _removed, ...remainingJoinedAt } = activity.joinedAt ?? {};
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now, joinedAt: remainingJoinedAt });
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now, leftParticipants: true, promoted };
     });
 
@@ -604,7 +710,7 @@ export class ActivitiesService {
       const newStatus: ActivityStatus = isFull ? "full" : "open";
       const now = new Date();
 
-      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now });
+      tx.update(docRef, { participantsList: updatedParticipants, waitlist: updatedWaitlist, status: newStatus, updatedAt: now, [`joinedAt.${userId}`]: now.toISOString() });
 
       return { activity, updatedParticipants, updatedWaitlist, newStatus, now };
     });
@@ -651,60 +757,90 @@ export class ActivitiesService {
   }
 
   async voteMvp(activityId: string, voterId: string, votedForId: string): Promise<void> {
-    const activity = await this.getActivityById(activityId);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    if (!activity) throw new Error("Activity not found");
-    if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
-    if (activity.votingClosedAt) throw new Error("MVP voting is closed");
-    if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
-    if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
-    if (voterId === votedForId) throw new Error("You cannot vote for yourself");
-    if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) throw new Error("Activity not found");
 
-    const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
-    const now = new Date();
-    const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
 
-    if (allVoted) {
-      await this.closeMvpVoting(activityId, activity, updatedVotes, now);
-    } else {
-      await this.activitiesRef.doc(activityId).update({ mvpVotes: updatedVotes, updatedAt: now });
+      if (activity.status !== "completed") throw new Error("MVP voting is only available for completed activities");
+      if (activity.votingClosedAt) throw new Error("MVP voting is closed");
+      if (!activity.participantsList.includes(voterId)) throw new Error("Only participants can vote");
+      if (!activity.participantsList.includes(votedForId)) throw new Error("You can only vote for a participant");
+      if (voterId === votedForId) throw new Error("You cannot vote for yourself");
+      if (activity.mvpVotes[voterId]) throw new Error("You have already voted");
+
+      const updatedVotes = { ...activity.mvpVotes, [voterId]: votedForId };
+      const now = new Date();
+      const allVoted = activity.participantsList.every(id => updatedVotes[id] !== undefined);
+
+      if (allVoted) {
+        const winners = tallyMvpWinners(updatedVotes);
+        tx.update(docRef, { mvpVotes: updatedVotes, mvpWinners: winners, votingClosedAt: now, updatedAt: now });
+        return { activity, closed: true as const, winners };
+      }
+
+      tx.update(docRef, { mvpVotes: updatedVotes, updatedAt: now });
+      return { activity, closed: false as const };
+    });
+
+    if (result.closed) {
+      for (const winnerId of result.winners) {
+        await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
+      }
+
+      await notificationsService.createNotificationForMany(
+        result.activity.participantsList,
+        "mvp_result",
+        result.winners.length === 1
+          ? `A votação de MVP da atividade "${result.activity.title}" terminou!`
+          : `A votação de MVP da atividade "${result.activity.title}" terminou com empate!`,
+        activityId
+      );
     }
   }
 
-  private async closeMvpVoting(
-    activityId: string,
-    activity: Activity,
-    votes: Record<string, string>,
-    now: Date
-  ): Promise<void> {
-    const tally: Record<string, number> = {};
-    for (const votedFor of Object.values(votes)) {
-      tally[votedFor] = (tally[votedFor] ?? 0) + 1;
+  async rateActivity(activityId: string, raterId: string, rating: number): Promise<void> {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new Error("A avaliação tem de ser um número inteiro entre 1 e 5");
     }
 
-    const maxVotes = Math.max(...Object.values(tally));
-    const winners = Object.keys(tally).filter(id => tally[id] === maxVotes);
+    const docRef = this.activitiesRef.doc(activityId);
 
-    await this.activitiesRef.doc(activityId).update({
-      mvpVotes: votes,
-      mvpWinners: winners,
-      votingClosedAt: now,
-      updatedAt: now,
+    const result = await db.runTransaction(async (tx) => {
+      const doc = await tx.get(docRef);
+      if (!doc.exists) throw new Error("Activity not found");
+
+      const activity = normalizeActivity({ id: doc.id, ...doc.data()! });
+
+      if (activity.status !== "completed") {
+        throw new Error("Só é possível avaliar atividades terminadas");
+      }
+      if (!activity.participantsList.includes(raterId)) {
+        throw new Error("Só participantes podem avaliar a atividade");
+      }
+      if (activity.ratings?.[raterId] !== undefined) {
+        throw new Error("Já avaliaste esta atividade");
+      }
+
+      const updatedRatings = { ...(activity.ratings ?? {}), [raterId]: rating };
+      const values = Object.values(updatedRatings);
+      const ratingAverage = values.reduce((sum, r) => sum + r, 0) / values.length;
+      const now = new Date();
+
+      tx.update(docRef, {
+        ratings: updatedRatings,
+        ratingAverage,
+        ratingCount: values.length,
+        updatedAt: now,
+      });
+
+      return { activity };
     });
 
-    for (const winnerId of winners) {
-      await usersService.incrementStat(winnerId, "mvpVotesReceived", 1);
-    }
-
-    await notificationsService.createNotificationForMany(
-      activity.participantsList,
-      "mvp_result",
-      winners.length === 1
-        ? `A votação de MVP da atividade "${activity.title}" terminou!`
-        : `A votação de MVP da atividade "${activity.title}" terminou com empate!`,
-      activityId
-    );
+    await usersService.addRatingToUser(result.activity.createdBy, rating);
   }
 }
 

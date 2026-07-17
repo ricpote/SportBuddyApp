@@ -37,6 +37,21 @@ export async function getMyActivities(
   }
 }
 
+export async function getUserActivities(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const { userId } = req.params as { userId: string };
+    const activities = await activitiesService.getUserActivities(userId, 5);
+    res.status(200).json(activities);
+  } catch (error) {
+    res.status(500).json({
+      message: error instanceof Error ? error.message : "Error getting user activities",
+    });
+  }
+}
+
 export async function getFriendsActivities(
   req: AuthenticatedRequest,
   res: Response
@@ -57,6 +72,27 @@ export async function getFriendsActivities(
     res.status(500).json({
       message: error instanceof Error ? error.message : "Error getting friends' activities",
     });
+  }
+}
+
+export async function getFriendsFeed(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
+    const friends = await friendsService.getFriends(req.user.uid);
+    const friendIds = friends.map((f) => f.userId);
+    const friendNames = new Map(
+      await Promise.all(friends.map(async (f) => {
+        const u = await usersService.getUserById(f.userId);
+        return [f.userId, u?.name ?? ''] as [string, string];
+      }))
+    );
+    const feed = await activitiesService.getFriendsFeed(friendIds, friendNames);
+    res.status(200).json(feed);
+  } catch (error) {
+    res.status(500).json({ message: error instanceof Error ? error.message : "Error getting feed" });
   }
 }
 
@@ -89,6 +125,11 @@ export async function listActivities(
         ? Number(req.query.radiusKm)
         : undefined;
 
+    const createdBy =
+      typeof req.query.createdBy === "string" ? req.query.createdBy : undefined;
+
+    const verifiedOnly = req.query.verifiedOnly === "true";
+
     const activities = await activitiesService.listActivities({
       sportId,
       difficultyLevel,
@@ -96,6 +137,8 @@ export async function listActivities(
       lat,
       lng,
       radiusKm,
+      createdBy,
+      verifiedOnly,
     });
 
     res.status(200).json(activities);
@@ -171,10 +214,9 @@ export async function updateActivity(
 
     const { activityId } = req.params;
 
-    const updateData = {
-      ...req.body,
-      date: req.body.date ? new Date(req.body.date) : undefined,
-    };
+    // A data não é editável: mudanças de horário combinam-se no chat.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { date: _date, ...updateData } = req.body;
 
     const activity = await activitiesService.updateActivity(
       activityId,
@@ -472,6 +514,39 @@ export async function voteMvp(
   } catch (error) {
     res.status(400).json({
       message: error instanceof Error ? error.message : "Error voting for MVP",
+    });
+  }
+}
+
+export async function rateActivity(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "User not authenticated" });
+      return;
+    }
+
+    const { activityId } = req.params;
+    const { rating } = req.body as { rating?: number };
+
+    if (typeof rating !== "number") {
+      res.status(400).json({ message: "rating is required" });
+      return;
+    }
+
+    const user = await usersService.getUserByFirebaseUid(req.user.uid);
+    if (!user) {
+      res.status(404).json({ message: "User profile not found" });
+      return;
+    }
+
+    await activitiesService.rateActivity(activityId, user.id, rating);
+    res.status(200).json({ message: "Rating registered successfully" });
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : "Error rating activity",
     });
   }
 }

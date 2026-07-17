@@ -1,8 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -13,19 +14,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { AvatarCircle } from '@/components/avatar-circle';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { getActivity } from '@/services/activities';
+import { getActivity, voteMvp } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
+import { getSport } from '@/services/sports';
 import { getUserProfile } from '@/services/users';
 import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 import { PublicUser } from '@/types/user';
+import { relativeDate } from '@/utils/date';
 
 const POLL_INTERVAL_MS = 4000;
+
+type ListItem =
+  | { type: 'message'; data: Message; showSenderInfo: boolean }
+  | { type: 'system'; id: string; text: string; iconName?: string };
 
 function avatarColor(userId: string): string {
   const colors = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
@@ -34,20 +40,44 @@ function avatarColor(userId: string): string {
   return colors[hash % colors.length];
 }
 
+function sportIconName(name = ''): string {
+  const n = name.toLowerCase();
+  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
+  if (n.includes('basket')) return 'basketball-outline';
+  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
+  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
+  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
+  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
+  if (n.includes('golf')) return 'golf-outline';
+  return 'fitness-outline';
+}
+
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const uid = user?.uid;
 
   const { markRead } = useChatBadge();
   const [activity, setActivity] = useState<Activity | null>(null);
+  const [sportName, setSportName] = useState('');
   const [profiles, setProfiles] = useState<Map<string, PublicUser>>(new Map());
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const listRef = useRef<FlatList<Message>>(null);
+  const [voteModalVisible, setVoteModalVisible] = useState(false);
+  const [voting, setVoting] = useState(false);
+  const listRef = useRef<FlatList<ListItem>>(null);
   const latestCountRef = useRef(0);
+  const inputRef = useRef<TextInput>(null);
+  const handleSendRef = useRef<() => void>(() => {});
+
+  const isCompleted = activity?.status === 'completed';
+  const hasVoted = !!(uid && activity?.mvpVotes && uid in activity.mvpVotes);
+  const votedForId = uid && activity?.mvpVotes ? activity.mvpVotes[uid] : null;
+  const votingClosed = !!activity?.votingClosedAt ||
+    (isCompleted && !!activity?.updatedAt && Date.now() - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
 
   useEffect(() => {
     if (!id) return;
@@ -59,7 +89,12 @@ export default function ChatScreen() {
     getActivity(id)
       .then((a) => {
         setActivity(a);
-        Promise.allSettled(a.participantsList.map((uid) => getUserProfile(uid))).then((results) => {
+        if (a.sportId) {
+          getSport(a.sportId)
+            .then((s) => setSportName(s.name))
+            .catch(() => {});
+        }
+        Promise.allSettled(a.participantsList.map((pid) => getUserProfile(pid))).then((results) => {
           const map = new Map<string, PublicUser>();
           results.forEach((r, i) => {
             if (r.status === 'fulfilled') map.set(a.participantsList[i], r.value);
@@ -76,12 +111,15 @@ export default function ChatScreen() {
     function fetchMessages() {
       getMessages(id!)
         .then((data) => {
-          setMessages(data);
+          setMessages((prev) => {
+            const temps = prev.filter((m) => m.id.startsWith('temp-'));
+            return [...data, ...temps];
+          });
           if (data.length > latestCountRef.current) {
             latestCountRef.current = data.length;
             setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-            // Estamos com o chat aberto, por isso o que chega fica logo visto
-            markRead(id!);
+            const lastMsg = data[data.length - 1];
+            markRead(id!, lastMsg ? new Date(lastMsg.createdAt).getTime() : undefined);
           }
         })
         .catch(() => {});
@@ -92,42 +130,116 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
+  handleSendRef.current = handleSend;
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const ref = inputRef.current as any;
+    const node: HTMLTextAreaElement | null = ref?._node ?? ref?._inputRef?.current ?? ref;
+    if (!node?.addEventListener) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendRef.current();
+      }
+    };
+    node.addEventListener('keydown', handler);
+    return () => node.removeEventListener('keydown', handler);
+  }, []);
+
   async function handleSend() {
     const trimmed = text.trim();
-    if (!trimmed || sending || !id) return;
+    if (!trimmed || sending || !id || !uid) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: Message = {
+      id: tempId,
+      activityId: id,
+      senderId: uid,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, tempMsg]);
+    setText('');
+    latestCountRef.current += 1;
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
 
     setSending(true);
     setError(null);
     try {
       const msg = await sendMessage(id, trimmed);
-      setMessages((prev) => [...prev, msg]);
-      setText('');
-      latestCountRef.current += 1;
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id).map((m) => m.id === tempId ? msg : m));
       markRead(id);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      latestCountRef.current -= 1;
       setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
     } finally {
       setSending(false);
     }
   }
 
-  function renderMessage({ item, index }: { item: Message; index: number }) {
-    const isOwn = item.senderId === user?.uid;
-    const profile = profiles.get(item.senderId);
-    const color = avatarColor(item.senderId);
+  async function handleVote(votedFor: string) {
+    if (!id || voting) return;
+    setVoting(true);
+    try {
+      await voteMvp(id, votedFor);
+      const updated = await getActivity(id);
+      setActivity(updated);
+      setVoteModalVisible(false);
+    } catch {
+      // silently ignore
+    } finally {
+      setVoting(false);
+    }
+  }
 
-    const prev = messages[index - 1];
-    const showAvatar = !isOwn && item.senderId !== prev?.senderId;
-    const showName = !isOwn && item.senderId !== prev?.senderId;
+  // Build flat list items with system events injected
+  const items: ListItem[] = [];
+  if (activity) {
+    const creator = profiles.get(activity.createdBy);
+    items.push({
+      type: 'system',
+      id: 'created',
+      text: `${creator?.name ?? 'Alguém'} criou a atividade · ${relativeDate(activity.createdAt)}`,
+    });
+  }
+  let prevSenderId: string | null = null;
+  messages.forEach((m) => {
+    items.push({ type: 'message', data: m, showSenderInfo: m.senderId !== prevSenderId });
+    prevSenderId = m.senderId;
+  });
+  if (isCompleted) {
+    items.push({ type: 'system', id: 'terminated', text: 'Atividade terminada', iconName: 'flag-outline' });
+  }
+
+  function renderItem({ item }: { item: ListItem }) {
+    if (item.type === 'system') {
+      return (
+        <View style={styles.systemRow}>
+          {item.iconName ? (
+            <Ionicons name={item.iconName as any} size={13} color="#8f8b85" style={{ marginRight: 5 }} />
+          ) : null}
+          <ThemedText style={styles.systemText}>{item.text}</ThemedText>
+        </View>
+      );
+    }
+
+    const msg = item.data;
+    const isOwn = msg.senderId === uid;
+    const profile = profiles.get(msg.senderId);
+    const color = avatarColor(msg.senderId);
 
     return (
       <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
         {!isOwn && (
           <Pressable
-            style={styles.avatar}
-            onPress={() => showAvatar && router.push({ pathname: '/user/[id]', params: { id: item.senderId } })}>
-            {showAvatar && (
+            style={styles.avatarSlot}
+            onPress={() =>
+              item.showSenderInfo &&
+              router.push({ pathname: '/user/[id]', params: { id: msg.senderId } })
+            }>
+            {item.showSenderInfo && (
               <AvatarCircle
                 name={profile?.name ?? '?'}
                 avatarUrl={profile?.avatarUrl}
@@ -139,208 +251,377 @@ export default function ChatScreen() {
         )}
 
         <View style={[styles.bubbleCol, isOwn && { alignItems: 'flex-end' }]}>
-          {showName && profile && (
-            <ThemedText style={styles.senderName}>
-              {profile.name}
+          {item.showSenderInfo && (
+            <ThemedText
+              style={[
+                styles.senderName,
+                isOwn && { marginLeft: 0, marginRight: 4, textAlign: 'right' as const },
+              ]}>
+              {isOwn ? 'Tu' : (profile?.name ?? '...')}
             </ThemedText>
           )}
-          <View
-            style={[
-              styles.bubbleInner,
-              isOwn ? styles.bubbleOwn : styles.bubbleOther,
-            ]}>
-            <ThemedText style={{ color: isOwn ? '#FFFFFF' : '#E2E8F0', fontSize: 15 }}>
-              {item.text}
-            </ThemedText>
-            <ThemedText style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#94A3B8' }]}>
-              {new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-            </ThemedText>
+          <View style={[styles.bubbleInner, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+            <ThemedText style={styles.bubbleText}>{msg.text}</ThemedText>
+            <View style={styles.bubbleMeta}>
+              <ThemedText
+                style={[styles.bubbleTime, { color: isOwn ? 'rgba(255,255,255,0.6)' : '#8f8b85' }]}>
+                {new Date(msg.createdAt).toLocaleTimeString('pt-PT', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </ThemedText>
+              {isOwn && (
+                <Ionicons name="checkmark-done-outline" size={14} color="rgba(255,255,255,0.5)" />
+              )}
+            </View>
           </View>
         </View>
       </View>
     );
   }
 
+  const iconName = sportIconName(sportName || activity?.title || '');
+  const count = activity?.participantsList.length ?? 0;
+
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-      <View style={[styles.flex, styles.centered]}>
-        <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
-          
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            renderItem={renderMessage}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <ThemedText style={styles.empty}>
-                Sem mensagens ainda. Diz olá! 👋
-              </ThemedText>
-            }
-            onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-          />
+    <>
+      <Stack.Screen
+        options={{
+          headerTitle: () =>
+            activity ? (
+              <Pressable
+                onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
+                style={({ pressed }) => [styles.headerTitle, pressed && { opacity: 0.7 }]}>
+                <View style={styles.headerIconWrap}>
+                  <Ionicons name={iconName as any} size={20} color="#e8823f" />
+                </View>
+                <View>
+                  <ThemedText style={styles.headerName} numberOfLines={1}>
+                    {activity.title}
+                  </ThemedText>
+                  <ThemedText style={styles.headerSub} numberOfLines={1}>
+                    {count} participante{count !== 1 ? 's' : ''} · {activity.location.name}
+                  </ThemedText>
+                </View>
+              </Pressable>
+            ) : null,
+        }}
+      />
 
-          {error && (
-            <ThemedText style={styles.error}>{error}</ThemedText>
-          )}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <View style={[styles.flex, styles.centered]}>
+          <View style={[styles.flex, { width: '100%', maxWidth: MaxContentWidth }]}>
 
-          {activity?.status === 'completed' && (
-            <View style={styles.completedBanner}>
-              <ThemedText type="small" style={styles.completedText}>
-                Atividade terminada — podes continuar a conversar com o grupo.
-              </ThemedText>
-            </View>
-          )}
-
-          <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Escreve uma mensagem..."
-              placeholderTextColor="#64748B"
-              value={text}
-              onChangeText={setText}
-              multiline
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
+            <FlatList
+              ref={listRef}
+              data={items}
+              keyExtractor={(item) => (item.type === 'system' ? item.id : item.data.id)}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
+              }
+              onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             />
+
+            {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+
+            {isCompleted ? (
+              <View style={[styles.votingSection, { paddingBottom: insets.bottom + 12 }]}>
+                <View style={styles.votingHeader}>
+                  <View style={styles.trophyWrap}>
+                    <Ionicons
+                      name="trophy-outline"
+                      size={20}
+                      color={hasVoted || votingClosed ? '#8f8b85' : '#e8823f'}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={styles.votingTitle}>
+                      {hasVoted
+                        ? 'Voto registado!'
+                        : votingClosed
+                          ? 'Votação encerrada'
+                          : 'Vota no MVP desta atividade'}
+                    </ThemedText>
+                    <ThemedText style={styles.votingSubtitle}>
+                      {hasVoted
+                        ? `Votaste em ${profiles.get(votedForId!)?.name ?? 'alguém'}`
+                        : votingClosed
+                          ? 'O período de votação expirou'
+                          : 'A votação está aberta'}
+                    </ThemedText>
+                  </View>
+                </View>
+                {hasVoted ? (
+                  <View style={styles.voteBtnDone}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#8f8b85" style={{ marginRight: 6 }} />
+                    <ThemedText style={styles.voteBtnDoneText}>Já votaste</ThemedText>
+                  </View>
+                ) : votingClosed ? (
+                  <View style={styles.voteBtnDone}>
+                    <ThemedText style={styles.voteBtnDoneText}>Voto indisponível</ThemedText>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [styles.voteBtn, pressed && { opacity: 0.85 }]}
+                    onPress={() => setVoteModalVisible(true)}>
+                    <ThemedText style={styles.voteBtnText}>Votar agora</ThemedText>
+                  </Pressable>
+                )}
+                <View style={styles.readOnlyRow}>
+                  <Ionicons name="lock-closed-outline" size={12} color="#8f8b85" />
+                  <ThemedText style={styles.readOnlyText}>
+                    Conversa em modo leitura
+                  </ThemedText>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mensagem..."
+                  placeholderTextColor="#8f8b85"
+                  value={text}
+                  onChangeText={setText}
+                  multiline
+                  returnKeyType="send"
+                  onSubmitEditing={handleSend}
+                  ref={inputRef}
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.sendBtn,
+                    { opacity: !text.trim() || sending ? 0.4 : pressed ? 0.75 : 1 },
+                  ]}
+                  onPress={handleSend}
+                  disabled={!text.trim() || sending}>
+                  <Ionicons name="send" size={20} color="#f4f2ef" style={{ marginLeft: 4 }} />
+                </Pressable>
+              </View>
+            )}
+
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+
+      <Modal
+        visible={voteModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setVoteModalVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setVoteModalVisible(false)}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <ThemedText style={styles.modalTitle}>Vota no MVP</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>
+              Escolhe o melhor jogador desta atividade
+            </ThemedText>
+            {activity?.participantsList
+              .filter((pid) => pid !== uid)
+              .map((pid) => {
+                const profile = profiles.get(pid);
+                return (
+                  <Pressable
+                    key={pid}
+                    style={({ pressed }) => [styles.modalRow, pressed && { opacity: 0.7 }]}
+                    onPress={() => handleVote(pid)}
+                    disabled={voting}>
+                    <AvatarCircle
+                      name={profile?.name ?? '?'}
+                      avatarUrl={profile?.avatarUrl}
+                      size={40}
+                      backgroundColor={avatarColor(pid)}
+                    />
+                    <ThemedText style={styles.modalName}>{profile?.name ?? '...'}</ThemedText>
+                    <Ionicons name="chevron-forward" size={16} color="#8f8b85" />
+                  </Pressable>
+                );
+              })}
             <Pressable
-              style={({ pressed }) => [
-                styles.sendBtn,
-                { opacity: (!text.trim() || sending) ? 0.4 : pressed ? 0.7 : 1 },
-              ]}
-              onPress={handleSend}
-              disabled={!text.trim() || sending}>
-              <Ionicons name="send" size={20} color="#FFFFFF" style={{ marginLeft: 4 }} />
+              style={styles.modalCancel}
+              onPress={() => setVoteModalVisible(false)}>
+              <ThemedText style={styles.modalCancelText}>Cancelar</ThemedText>
             </Pressable>
           </View>
-          
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { 
-    flex: 1, 
-    backgroundColor: '#0F172A' 
-  },
-  centered: { 
-    alignItems: 'center' 
-  },
-  listContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-    flexGrow: 1,
-  },
-  empty: {
-    textAlign: 'center',
-    color: '#64748B',
-    marginTop: 40,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.two,
-    marginVertical: 4,
-  },
-  rowOwn: {
-    justifyContent: 'flex-end',
-  },
-  rowOther: {
-    justifyContent: 'flex-start',
-  },
-  avatar: {
+  flex: { flex: 1, backgroundColor: '#0a0a0b' },
+  centered: { alignItems: 'center' },
+
+  // Header
+  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 8,
+    backgroundColor: 'rgba(232,130,63,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    marginBottom: 2, // Alinhar ligeiramente com a base do balão
   },
-  bubbleCol: {
-    maxWidth: '75%',
-    gap: 4,
+  headerName: { fontSize: 15, fontWeight: '600', color: '#f4f2ef' },
+  headerSub: { fontSize: 12, color: '#8f8b85', marginTop: 1 },
+
+  // List
+  listContent: { padding: Spacing.three, gap: 2, flexGrow: 1 },
+  empty: { textAlign: 'center', color: '#8f8b85', marginTop: 40 },
+
+  // System messages
+  systemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
-  senderName: {
+  systemText: {
     fontSize: 12,
-    color: '#A0AEC0',
-    marginLeft: 4,
+    color: '#8f8b85',
+    textAlign: 'center',
   },
-  bubbleInner: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 4,
-  },
-  bubbleOwn: {
-    backgroundColor: '#CF8444', // Laranja do utilizador
-    borderBottomRightRadius: 4, // Cauda do balão à direita
-  },
+
+  // Message rows
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two, marginVertical: 2 },
+  rowOwn: { justifyContent: 'flex-end' },
+  rowOther: { justifyContent: 'flex-start' },
+  avatarSlot: { width: 36, height: 36, borderRadius: 18, flexShrink: 0 },
+  bubbleCol: { maxWidth: '75%', gap: 3 },
+  senderName: { fontSize: 12, color: '#c9c5bf', marginLeft: 4 },
+  bubbleInner: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, gap: 4 },
+  bubbleOwn: { backgroundColor: '#e8823f', borderBottomRightRadius: 4 },
   bubbleOther: {
-    backgroundColor: '#1E293B', // Cinzento escuro do remetente
+    backgroundColor: '#111012',
     borderWidth: 1,
-    borderColor: '#334155',
-    borderBottomLeftRadius: 4, // Cauda do balão à esquerda
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderBottomLeftRadius: 4,
   },
-  bubbleTime: {
-    fontSize: 11,
-    alignSelf: 'flex-end',
-    marginTop: 2,
-  },
+  bubbleText: { color: '#f4f2ef', fontSize: 15 },
+  bubbleMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  bubbleTime: { fontSize: 11 },
+
+  // Input
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
+    paddingTop: Spacing.two,
     gap: Spacing.two,
-    backgroundColor: '#0F172A', // Garante que a zona do input não é transparente
+    backgroundColor: '#0a0a0b',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: 'rgba(255,255,255,0.07)',
   },
   input: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#111012',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#334155',
-    paddingHorizontal: 20,
-    paddingTop: 14, // Alinha verticalmente com o botão de enviar
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 18,
+    paddingTop: 14,
     paddingBottom: 14,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
   sendBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#CF8444',
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  error: {
-    color: '#FF6B6B',
-    textAlign: 'center',
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.one,
-  },
-  completedBanner: {
-    backgroundColor: '#10B98120',
+  error: { color: '#eb8f84', textAlign: 'center', paddingHorizontal: Spacing.three, paddingBottom: 6 },
+
+  // Voting section
+  votingSection: {
+    backgroundColor: '#0c0c0d',
     borderTopWidth: 1,
-    borderTopColor: '#10B981',
+    borderTopColor: 'rgba(255,255,255,0.07)',
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingTop: 16,
+    gap: 12,
   },
-  completedText: {
-    color: '#10B981',
-    textAlign: 'center',
-    fontSize: 13,
+  votingHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  trophyWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(232,130,63,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  votingTitle: { fontSize: 15, fontWeight: '600', color: '#f4f2ef' },
+  votingSubtitle: { fontSize: 13, color: '#8f8b85', marginTop: 2 },
+  voteBtn: {
+    backgroundColor: '#e8823f',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  voteBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  voteBtnDone: {
+    backgroundColor: '#1e1e20',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  voteBtnDoneText: { color: '#8f8b85', fontSize: 16, fontWeight: '700' },
+  readOnlyRow: { flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'center', paddingBottom: 4 },
+  readOnlyText: { fontSize: 12, color: '#8f8b85' },
+
+  // MVP voting modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#111012',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 4,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#f4f2ef', textAlign: 'center' },
+  modalSubtitle: { fontSize: 14, color: '#8f8b85', textAlign: 'center', marginBottom: 12 },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  modalName: { flex: 1, fontSize: 15, color: '#f4f2ef', fontWeight: '500' },
+  modalCancel: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+  },
+  modalCancelText: { fontSize: 15, color: '#8f8b85' },
 });

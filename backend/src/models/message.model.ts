@@ -41,4 +41,5 @@ export type ConversationDto = {
   otherUser: { id: string; name: string; avatarUrl?: string };
   lastMessage?: string;
   lastMessageAt?: Date;
+  lastMessageSenderId?: string;
 };

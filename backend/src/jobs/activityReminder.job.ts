@@ -3,8 +3,25 @@ import { db } from "../config/firebase";
 import { Activity, ActivityStatus } from "../models/activity.model";
 import { notificationsService } from "../services/notifications.service";
 import { usersService } from "../services/users.service";
+import { tallyMvpWinners } from "../util/mvp.util";
 
 const ACTIVITIES_COLLECTION = "activities";
+const LOCKS_COLLECTION = "_locks";
+
+async function tryAcquireLock(jobName: string, windowMs: number): Promise<boolean> {
+  const lockRef = db.collection(LOCKS_COLLECTION).doc(jobName);
+  const now = Date.now();
+
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(lockRef);
+    const lastRunAt = doc.exists ? (doc.data()!.lastRunAt as number) : 0;
+
+    if (now - lastRunAt < windowMs) return false;
+
+    tx.set(lockRef, { lastRunAt: now });
+    return true;
+  });
+}
 
 async function checkActivities() {
   const now = new Date();
@@ -69,16 +86,7 @@ async function checkMvpVoting() {
     if (updatedAt > cutoff) continue;
 
     const votes = activity.mvpVotes ?? {};
-    const tally: Record<string, number> = {};
-    for (const votedFor of Object.values(votes)) {
-      tally[votedFor as string] = (tally[votedFor as string] ?? 0) + 1;
-    }
-
-    const winners: string[] = [];
-    if (Object.keys(tally).length > 0) {
-      const maxVotes = Math.max(...Object.values(tally));
-      winners.push(...Object.keys(tally).filter(id => tally[id] === maxVotes));
-    }
+    const winners = tallyMvpWinners(votes);
 
     await doc.ref.update({ mvpWinners: winners, votingClosedAt: now, updatedAt: now });
 
@@ -100,7 +108,14 @@ async function checkMvpVoting() {
 }
 
 export function startActivityReminderJob() {
-  cron.schedule("0 * * * *", () => {
+  cron.schedule("0 * * * *", async () => {
+    const acquired = await tryAcquireLock("activity-reminder-job", 55 * 60 * 1000).catch((err) => {
+      console.error("Error acquiring activity reminder job lock:", err);
+      return false;
+    });
+
+    if (!acquired) return;
+
     checkActivities().catch(err => console.error("Error in activity reminder job:", err));
     checkMvpVoting().catch(err => console.error("Error in MVP voting job:", err));
   });

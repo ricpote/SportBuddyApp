@@ -1,13 +1,11 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
-import { DateTimeField } from '@/components/date-time-field';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { useTheme } from '@/hooks/use-theme';
 import { getActivity, updateActivity } from '@/services/activities';
 import { Activity, SkillLevel } from '@/types/activity';
 
@@ -20,21 +18,19 @@ const DIFFICULTY_OPTIONS: SkillLevel[] = [
 
 const DIFFICULTY_LABELS: Record<SkillLevel, string> = {
   beginner: 'Iniciante',
-  intermediate: 'Intermedio',
-  advanced: 'Avancado',
+  intermediate: 'Intermédio',
+  advanced: 'Avançado',
   competitive: 'Competitivo',
 };
 
 export default function EditActivityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, profile } = useAuth();
-  const theme = useTheme();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [maxParticipants, setMaxParticipants] = useState('');
-  const [date, setDate] = useState<Date>(new Date());
+  const [maxParticipants, setMaxParticipants] = useState(2);
   const [difficultyLevel, setDifficultyLevel] = useState<SkillLevel>('beginner');
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,8 +44,7 @@ export default function EditActivityScreen() {
         setActivity(data);
         setTitle(data.title);
         setDescription(data.description);
-        setMaxParticipants(String(data.maxParticipants));
-        setDate(new Date(data.date));
+        setMaxParticipants(data.maxParticipants);
         setDifficultyLevel(data.difficultyLevel);
         setRequiresApproval(data.requiresApproval);
       })
@@ -58,50 +53,41 @@ export default function EditActivityScreen() {
 
   if (activity === undefined) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText themeColor="textSecondary">A carregar...</ThemedText>
-      </ThemedView>
+      <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
+        <ThemedText style={{ color: '#8f8b85' }}>A carregar...</ThemedText>
+      </View>
     );
   }
 
-  const canEdit =
-    !!user && (activity?.createdBy === user.uid || profile?.role === 'admin');
+  const canEdit = !!user && (activity?.createdBy === user.uid || profile?.role === 'admin');
 
   if (activity === null || !canEdit) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText themeColor="textSecondary">
-          So o organizador ou um admin pode editar esta atividade.
+      <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
+        <ThemedText style={{ color: '#8f8b85' }}>
+          Só o organizador ou um admin pode editar esta atividade.
         </ThemedText>
-      </ThemedView>
+      </View>
     );
   }
 
   const currentActivity = activity;
+  const minParticipants = Math.max(2, currentActivity.participantsList.length);
+
+  function adjustMaxParticipants(delta: number) {
+    setMaxParticipants((current) => Math.max(minParticipants, current + delta));
+  }
 
   async function handleSubmit() {
     setError(null);
 
     if (!title.trim()) {
-      setError('O titulo nao pode ficar vazio');
+      setError('O título não pode ficar vazio');
       return;
     }
 
-    if (date.getTime() <= Date.now()) {
-      setError('A data tem de ser no futuro');
-      return;
-    }
-
-    const parsedMax = Number(maxParticipants);
-    if (!Number.isInteger(parsedMax) || parsedMax < 2) {
-      setError('O numero maximo de participantes tem de ser pelo menos 2');
-      return;
-    }
-
-    if (parsedMax < currentActivity.participantsList.length) {
-      setError(
-        `Ja existem ${currentActivity.participantsList.length} participantes e o maximo nao pode ser menor`
-      );
+    if (maxParticipants < minParticipants) {
+      setError(`Já existem ${currentActivity.participantsList.length} participantes e o máximo não pode ser menor`);
       return;
     }
 
@@ -110,104 +96,123 @@ export default function EditActivityScreen() {
       await updateActivity(currentActivity.id, {
         title: title.trim(),
         description: description.trim(),
-        maxParticipants: parsedMax,
-        date: date.toISOString(),
+        maxParticipants,
         difficultyLevel,
         requiresApproval,
       });
       router.back();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Nao foi possivel guardar as alteracoes'
-      );
+      setError(err instanceof Error ? err.message : 'Não foi possível guardar as alterações');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <ThemedView style={styles.container}>
-        <TextInput
-          style={[
-            styles.input,
-            { color: theme.text, backgroundColor: theme.backgroundElement },
-          ]}
-          placeholder="Titulo"
-          placeholderTextColor={theme.textSecondary}
-          value={title}
-          onChangeText={setTitle}
-        />
+    <>
+      <Stack.Screen options={{ title: 'Editar atividade' }} />
 
-        <TextInput
-          style={[
-            styles.input,
-            styles.multiline,
-            { color: theme.text, backgroundColor: theme.backgroundElement },
-          ]}
-          placeholder="Descricao"
-          placeholderTextColor={theme.textSecondary}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
+      <ScrollView
+        style={{ backgroundColor: '#0a0a0b' }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.container}>
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>TÍTULO</ThemedText>
+            <TextInput
+              style={styles.input}
+              placeholder="Título"
+              placeholderTextColor="#8f8b85"
+              value={title}
+              onChangeText={setTitle}
+            />
+          </View>
 
-        <ThemedText type="smallBold">Dificuldade</ThemedText>
-        <ThemedView style={styles.chipRow}>
-          {DIFFICULTY_OPTIONS.map((level) => (
-            <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
-              <ThemedView
-                type={
-                  difficultyLevel === level
-                    ? 'backgroundSelected'
-                    : 'backgroundElement'
-                }
-                style={styles.chip}>
-                <ThemedText type="small">
-                  {DIFFICULTY_LABELS[level]}
-                </ThemedText>
-              </ThemedView>
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>DESCRIÇÃO</ThemedText>
+            <TextInput
+              style={[styles.input, styles.multiline]}
+              placeholder="Descrição"
+              placeholderTextColor="#8f8b85"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+          </View>
+
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>DIFICULDADE</ThemedText>
+            <View style={styles.chipRow}>
+              {DIFFICULTY_OPTIONS.map((level) => {
+                const isActive = difficultyLevel === level;
+                return (
+                  <Pressable key={level} onPress={() => setDifficultyLevel(level)}>
+                    <View style={[styles.chip, isActive && styles.chipActive]}>
+                      <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
+                        {DIFFICULTY_LABELS[level]}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <ThemedText style={styles.label}>MÁX. JOGADORES</ThemedText>
+            <View style={styles.stepper}>
+              <Pressable
+                disabled={maxParticipants <= minParticipants}
+                onPress={() => adjustMaxParticipants(-1)}
+                style={({ pressed }) => [
+                  styles.stepperButton,
+                  maxParticipants <= minParticipants && styles.stepperButtonDisabled,
+                  pressed && styles.pressed,
+                ]}>
+                <Ionicons name="remove" size={16} color="#f4f2ef" />
+              </Pressable>
+              <ThemedText style={styles.stepperValue}>{maxParticipants}</ThemedText>
+              <Pressable
+                onPress={() => adjustMaxParticipants(1)}
+                style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}>
+                <Ionicons name="add" size={16} color="#f4f2ef" />
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.switchLabel}>Requer aprovação para participar</ThemedText>
+              <ThemedText style={styles.switchHint}>Tu aprovas cada pedido de inscrição</ThemedText>
+            </View>
+            <Switch
+              value={requiresApproval}
+              onValueChange={setRequiresApproval}
+              trackColor={{ false: '#141315', true: '#e8823f' }}
+              thumbColor={requiresApproval ? '#f4f2ef' : '#c9c5bf'}
+            />
+          </View>
+
+          {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}>
+              <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
             </Pressable>
-          ))}
-        </ThemedView>
-
-        <DateTimeField label="Data e hora" value={date} onChange={setDate} />
-
-        <TextInput
-          style={[
-            styles.input,
-            { color: theme.text, backgroundColor: theme.backgroundElement },
-          ]}
-          placeholder="Maximo de participantes"
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="number-pad"
-          value={maxParticipants}
-          onChangeText={setMaxParticipants}
-        />
-
-        <ThemedView style={styles.switchRow}>
-          <ThemedText>Requer aprovacao para participar</ThemedText>
-          <Switch value={requiresApproval} onValueChange={setRequiresApproval} />
-        </ThemedView>
-
-        {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            { backgroundColor: theme.text },
-            pressed && styles.pressed,
-          ]}
-          disabled={submitting}
-          onPress={handleSubmit}>
-          <ThemedText style={{ color: theme.background }} type="smallBold">
-            {submitting ? 'A guardar...' : 'Guardar alteracoes'}
-          </ThemedText>
-        </Pressable>
-      </ThemedView>
-    </ScrollView>
+            <Pressable
+              disabled={submitting}
+              onPress={handleSubmit}
+              style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}>
+              <ThemedText style={styles.saveButtonText}>
+                {submitting ? 'A guardar...' : 'Guardar alterações'}
+              </ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
@@ -215,6 +220,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
+    paddingVertical: Spacing.four,
   },
   centered: {
     flex: 1,
@@ -224,48 +230,142 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: MaxContentWidth,
-    padding: Spacing.four,
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.three,
+  },
+  field: {
+    gap: 6,
+  },
+  label: {
+    color: '#8f8b85',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
   input: {
-    height: 48,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    height: 52,
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
+    color: '#f4f2ef',
   },
   multiline: {
-    height: 96,
-    paddingTop: Spacing.two,
+    height: 100,
+    paddingTop: 16,
     textAlignVertical: 'top',
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginBottom: Spacing.two,
+    gap: 8,
   },
   chip: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.five,
+    backgroundColor: '#111012',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  chipActive: {
+    backgroundColor: '#e8823f',
+    borderColor: '#e8823f',
+  },
+  chipText: {
+    color: '#c9c5bf',
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#1a1005',
+  },
+  stepper: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1c1a1d',
+  },
+  stepperButtonDisabled: {
+    opacity: 0.4,
+  },
+  stepperValue: {
+    color: '#f4f2ef',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: Spacing.two,
+    backgroundColor: '#111012',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
-  button: {
-    height: 48,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
+  switchLabel: {
+    color: '#f4f2ef',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  switchHint: {
+    color: '#8f8b85',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
     marginTop: Spacing.two,
   },
+  cancelButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111012',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  cancelButtonText: {
+    color: '#f4f2ef',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    flex: 1.4,
+    height: 52,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8823f',
+  },
+  saveButtonText: {
+    color: '#1a1005',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.7,
   },
   error: {
     textAlign: 'center',
+    color: '#eb8f84',
   },
 });

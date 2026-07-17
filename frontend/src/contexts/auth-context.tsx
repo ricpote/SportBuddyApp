@@ -20,8 +20,16 @@ type AuthContextValue = {
   profile: UserProfile | null;
   initializing: boolean;
   profileLoading: boolean;
+  signingUp: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUpOrganization: (
+    orgName: string,
+    nif: string,
+    responsibleName: string,
+    email: string,
+    password: string
+  ) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -29,11 +37,25 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'auth/email-already-in-use': 'Este email já está registado.',
+  'auth/invalid-email': 'Email inválido.',
+  'auth/weak-password': 'A palavra-passe é demasiado fraca.',
+};
+
+function translateAuthError(err: unknown): Error {
+  const code = (err as { code?: string } | null)?.code;
+  const message = code ? AUTH_ERROR_MESSAGES[code] : undefined;
+  if (message) return new Error(message);
+  return err instanceof Error ? err : new Error('Não foi possível criar a conta');
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [signingUp, setSigningUp] = useState(false);
 
   const loadProfile = useCallback(async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
@@ -66,15 +88,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(name: string, email: string, password: string) {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: name });
-
+    setSigningUp(true);
     try {
-      await api.post('/api/users/profile', { name, email });
-      await loadProfile(credential.user);
-    } catch (err) {
-      await credential.user.delete();
-      throw err;
+      let credential;
+      try {
+        credential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        throw translateAuthError(err);
+      }
+
+      await updateProfile(credential.user, { displayName: name });
+
+      try {
+        await api.post('/api/users/profile', { name, email });
+        await loadProfile(credential.user);
+      } catch (err) {
+        await credential.user.delete();
+        throw err;
+      }
+    } finally {
+      setSigningUp(false);
+    }
+  }
+
+  async function signUpOrganization(
+    orgName: string,
+    nif: string,
+    responsibleName: string,
+    email: string,
+    password: string
+  ) {
+    setSigningUp(true);
+    try {
+      let credential;
+      try {
+        credential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        throw translateAuthError(err);
+      }
+
+      await updateProfile(credential.user, { displayName: orgName });
+
+      try {
+        await api.post('/api/users/profile', {
+          name: orgName,
+          email,
+          accountType: 'organization',
+          nif,
+          responsibleName,
+        });
+        await loadProfile(credential.user);
+      } catch (err) {
+        await credential.user.delete();
+        throw err;
+      }
+    } finally {
+      setSigningUp(false);
     }
   }
 
@@ -121,8 +190,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         initializing,
         profileLoading,
+        signingUp,
         signIn,
         signUp,
+        signUpOrganization,
         signInWithGoogle,
         signOut,
         refreshProfile,

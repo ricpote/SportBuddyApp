@@ -1,21 +1,44 @@
 import { api } from '@/services/api';
-import { Activity, CreateActivityInput, SkillLevel } from '@/types/activity';
+import { Activity, CreateActivityInput, FeedItem, SkillLevel } from '@/types/activity';
 
+// Sem `date`: a data não é editável depois da atividade ser criada.
 export type UpdateActivityInput = {
   title?: string;
   description?: string;
   maxParticipants?: number;
-  date?: string;
   difficultyLevel?: SkillLevel;
   requiresApproval?: boolean;
 };
 
-export function listActivities(): Promise<Activity[]> {
-  return api.get<Activity[]>('/api/activities');
+export type ListActivitiesFilters = {
+  createdBy?: string;
+  verifiedOnly?: boolean;
+  status?: Activity['status'];
+};
+
+export function listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
+  const params = new URLSearchParams();
+  if (filters.createdBy) params.set('createdBy', filters.createdBy);
+  if (filters.verifiedOnly) params.set('verifiedOnly', 'true');
+  if (filters.status) params.set('status', filters.status);
+  const query = params.toString();
+  return api.get<Activity[]>(`/api/activities${query ? `?${query}` : ''}`);
+}
+
+export function rateActivity(activityId: string, rating: number): Promise<{ message: string }> {
+  return api.post<{ message: string }>(`/api/activities/${activityId}/rate`, { rating });
 }
 
 export function getMyActivities(): Promise<Activity[]> {
   return api.get<Activity[]>('/api/activities/me');
+}
+
+export function getUserActivities(userId: string): Promise<Activity[]> {
+  return api.get<Activity[]>(`/api/activities/user/${userId}`);
+}
+
+export function getFriendsFeed(): Promise<FeedItem[]> {
+  return api.get<FeedItem[]>('/api/activities/friends/feed');
 }
 
 export function getFriendsActivities(): Promise<Activity[]> {
@@ -79,6 +102,7 @@ export function voteMvp(activityId: string, votedForId: string): Promise<{ messa
     radiusKm: number;
     sportId?: string;
     difficultyLevel?: string;
+    verifiedOnly?: boolean;
   };
 
   export function listNearbyActivities(
@@ -96,6 +120,10 @@ export function voteMvp(activityId: string, votedForId: string): Promise<{ messa
 
     if (filters.difficultyLevel) {
       params.set('difficultyLevel', filters.difficultyLevel);
+    }
+
+    if (filters.verifiedOnly) {
+      params.set('verifiedOnly', 'true');
     }
 
     return api.get<Activity[]>(`/api/activities?${params.toString()}`);

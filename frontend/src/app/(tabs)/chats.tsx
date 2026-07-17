@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -12,6 +12,8 @@ import { useChatBadge } from '@/contexts/chat-badge-context';
 import { getMyActivities } from '@/services/activities';
 import { getConversations, openConversation } from '@/services/conversations';
 import { getFriends } from '@/services/friends';
+import { getLastActivityMessage } from '@/services/messages';
+import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
 import { Friend } from '@/types/friend';
 import { Conversation } from '@/types/message';
@@ -26,34 +28,70 @@ function avatarColor(userId: string): string {
   return colors[hash % colors.length];
 }
 
+function sportIconName(name = ''): any {
+  const n = name.toLowerCase();
+  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
+  if (n.includes('basket')) return 'basketball-outline';
+  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
+  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
+  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
+  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
+  if (n.includes('golf')) return 'golf-outline';
+  return 'fitness-outline';
+}
+
 export default function ChatsScreen() {
   const { user } = useAuth();
   const safeAreaInsets = useSafeAreaInsets();
   const { checkUnread, checkUnreadConversations, unreadIds = [], unreadConversationIds = [] } = useChatBadge();
-  const [tab, setTab] = useState<ChatTab>('friends');
+  const [tab, setTab] = useState<ChatTab>('activities');
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sportsMap, setSportsMap] = useState<Map<string, string>>(new Map());
 
-  // Modo "nova conversa": mostra a lista de amigos para escolher um
   const [newChatMode, setNewChatMode] = useState(false);
   const [friends, setFriends] = useState<Friend[] | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [newChatError, setNewChatError] = useState<string | null>(null);
 
+  useEffect(() => {
+    listSports()
+      .then((sports) => setSportsMap(new Map(sports.map((s) => [s.id, s.name]))))
+      .catch(() => {});
+  }, []);
+
   const load = useCallback(() => {
-    getMyActivities().then((data) => {
+    const uid = user?.uid ?? '';
+    getMyActivities().then(async (data) => {
       setActivities(data);
       const chattableIds = data
-        // CORREÇÃO: (a.participantsList || []) impede o erro de undefined
-        .filter((a) => a.status !== 'cancelled' && (a.participantsList || []).includes(user?.uid ?? ''))
+        .filter((a) => a.status !== 'cancelled' && (a.participantsList || []).includes(uid))
         .map((a) => a.id);
-      checkUnread(chattableIds, user?.uid);
+      checkUnread(chattableIds, uid);
+
+      // For active chats without lastMessage yet, fetch from the messages subcollection
+      const needsPreview = data.filter(
+        (a) => (a.status === 'open' || a.status === 'full') && !a.lastMessage && (a.participantsList || []).includes(uid)
+      );
+      if (needsPreview.length > 0) {
+        const results = await Promise.allSettled(needsPreview.map((a) => getLastActivityMessage(a.id)));
+        setActivities((prev) =>
+          (prev ?? []).map((a) => {
+            const idx = needsPreview.findIndex((n) => n.id === a.id);
+            if (idx === -1) return a;
+            const r = results[idx];
+            if (r.status !== 'fulfilled' || !r.value) return a;
+            return { ...a, lastMessage: r.value.text, lastMessageSender: r.value.senderName, lastMessageAt: r.value.createdAt };
+          })
+        );
+      }
     }).catch(() => setActivities([]));
 
     getConversations().then((data) => {
       setConversations(data);
-      checkUnreadConversations(data.map((c) => c.id), user?.uid);
+      checkUnreadConversations(data, user?.uid);
     }).catch(() => setConversations([]));
   }, [checkUnread, checkUnreadConversations, user?.uid]);
 
@@ -61,11 +99,7 @@ export default function ChatsScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
-    try {
-      load();
-    } finally {
-      setRefreshing(false);
-    }
+    try { load(); } finally { setRefreshing(false); }
   }
 
   async function enterNewChat() {
@@ -83,10 +117,7 @@ export default function ChatsScreen() {
     try {
       const { conversationId } = await openConversation(friendId);
       setNewChatMode(false);
-      router.push({
-        pathname: '/direct-chat/[id]',
-        params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl },
-      });
+      router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl, userId: friendId } });
     } catch (e) {
       setNewChatError(e instanceof Error ? e.message : 'Erro ao abrir conversa');
     } finally {
@@ -98,34 +129,53 @@ export default function ChatsScreen() {
   const allChats = (activities ?? []).filter(
     (a) => a.status !== 'cancelled' && (a.participantsList || []).includes(uid)
   );
-
   const activeChats = allChats.filter((a) => a.status === 'open' || a.status === 'full');
   const pastChats = allChats.filter((a) => a.status === 'completed');
 
-  function renderActivityCard(activity: Activity) {
+  const q = searchQuery.trim().toLowerCase();
+  const filteredConversations = q
+    ? (conversations ?? []).filter((c) => c.otherUser.name.toLowerCase().includes(q))
+    : (conversations ?? []);
+  const filteredActiveChats = q ? activeChats.filter((a) => a.title.toLowerCase().includes(q)) : activeChats;
+  const filteredPastChats = q ? pastChats.filter((a) => a.title.toLowerCase().includes(q)) : pastChats;
+
+  function renderActivityRow(activity: Activity) {
     const isUnread = unreadIds.includes(activity.id);
-    const participantsCount = (activity.participantsList || []).length;
+    const sportName = sportsMap.get(activity.sportId) ?? '';
+    const isPast = activity.status === 'completed';
+    const timeStr = activity.lastMessageAt
+      ? relativeDate(activity.lastMessageAt)
+      : relativeDate(activity.date);
+    const count = activity.participantsList.length;
+    const subtitle = activity.lastMessage
+      ? `${activity.lastMessageSender ?? ''}: ${activity.lastMessage}`
+      : isPast
+        ? `${activity.location.name} · ${count} participante${count !== 1 ? 's' : ''}`
+        : `${count} participante${count !== 1 ? 's' : ''}`;
 
     return (
       <Link key={activity.id} href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
-        <Pressable style={({ pressed }) => pressed && styles.pressed}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.titleRow}>
-                <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
-                  {activity.title}
-                </ThemedText>
-                {/* Bolinha laranja se houver mensagens por ler */}
-                {isUnread && <View style={styles.unreadBadge} />}
-              </View>
-              <ThemedText type="small" style={styles.dateText}>
-                {relativeDate(activity.date)}
-              </ThemedText>
+        <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
+          <View style={[styles.rowInner, isPast && styles.rowPast]}>
+            <View style={[styles.sportIconWrap, isPast && styles.sportIconWrapPast]}>
+              <Ionicons name={sportIconName(sportName)} size={22} color={isPast ? '#6b6862' : '#e8823f'} />
             </View>
-            <View style={styles.cardFooter}>
-              <ThemedText type="small" style={styles.infoText}>
-                {activity.location.name} • {participantsCount} {participantsCount === 1 ? 'participante' : 'participantes'}
-              </ThemedText>
+            <View style={styles.rowBody}>
+              <View style={styles.rowTop}>
+                <View style={styles.rowTitleWrap}>
+                  <ThemedText style={styles.rowTitle} numberOfLines={1}>{activity.title}</ThemedText>
+                  {isPast && (
+                    <View style={styles.terminadaChip}>
+                      <ThemedText style={styles.terminadaText}>TERMINADA</ThemedText>
+                    </View>
+                  )}
+                </View>
+                {!!timeStr && <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>}
+              </View>
+              <View style={styles.rowBottom}>
+                <ThemedText style={styles.rowSub} numberOfLines={1}>{subtitle}</ThemedText>
+                {isUnread && <View style={styles.unreadDot} />}
+              </View>
             </View>
           </View>
         </Pressable>
@@ -133,48 +183,41 @@ export default function ChatsScreen() {
     );
   }
 
-  function renderConversationCard(conversation: Conversation) {
+  function renderConversationRow(conversation: Conversation) {
     const isUnread = unreadConversationIds.includes(conversation.id);
+    const timeStr = conversation.lastMessageAt ? relativeDate(conversation.lastMessageAt) : '';
 
     return (
       <Link
         key={conversation.id}
         href={{
           pathname: '/direct-chat/[id]',
-          params: {
-            id: conversation.id,
-            name: conversation.otherUser.name,
-            avatarUrl: conversation.otherUser.avatarUrl,
-          },
+          params: { id: conversation.id, name: conversation.otherUser.name, avatarUrl: conversation.otherUser.avatarUrl, userId: conversation.otherUser.id },
         }}
         asChild>
-        <Pressable style={({ pressed }) => pressed && styles.pressed}>
-          <View style={[styles.card, styles.conversationCard]}>
+        <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
+          <View style={styles.rowInner}>
             <AvatarCircle
               name={conversation.otherUser.name}
               avatarUrl={conversation.otherUser.avatarUrl}
               size={44}
               backgroundColor={avatarColor(conversation.otherUser.id)}
             />
-            <View style={styles.conversationBody}>
-              <View style={styles.cardHeader}>
-                <View style={styles.titleRow}>
-                  <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
-                    {conversation.otherUser.name}
-                  </ThemedText>
-                  {isUnread && <View style={styles.unreadBadge} />}
-                </View>
-                {conversation.lastMessageAt && (
-                  <ThemedText type="small" style={styles.dateText}>
-                    {relativeDate(conversation.lastMessageAt)}
-                  </ThemedText>
-                )}
+            <View style={styles.rowBody}>
+              <View style={styles.rowTop}>
+                <ThemedText style={styles.rowTitle} numberOfLines={1}>{conversation.otherUser.name}</ThemedText>
+                {!!timeStr && <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>}
               </View>
-              {conversation.lastMessage && (
-                <ThemedText type="small" style={styles.infoText} numberOfLines={1}>
-                  {conversation.lastMessage}
-                </ThemedText>
-              )}
+              <View style={styles.rowBottom}>
+                {conversation.lastMessage ? (
+                  <ThemedText style={styles.rowSub} numberOfLines={1}>
+                    {conversation.lastMessageSenderId === uid ? 'Tu: ' : ''}{conversation.lastMessage}
+                  </ThemedText>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                {isUnread && <View style={styles.unreadDot} />}
+              </View>
             </View>
           </View>
         </Pressable>
@@ -182,64 +225,52 @@ export default function ChatsScreen() {
     );
   }
 
-  function renderFriendRow(friend: Friend) {
+  function renderFriendPickerRow(friend: Friend) {
     const isOpening = opening === friend.userId;
-
     return (
       <Pressable
         key={friend.userId}
         onPress={() => startChatWith(friend.userId, friend.user.name, friend.user.avatarUrl)}
-        style={({ pressed }) => pressed && styles.pressed}>
-        <View style={[styles.card, styles.conversationCard, isOpening && { opacity: 0.6 }]}>
+        style={({ pressed }) => [styles.rowCard, (pressed || isOpening) && styles.pressed]}>
+        <View style={styles.rowInner}>
           <AvatarCircle
             name={friend.user.name}
             avatarUrl={friend.user.avatarUrl}
             size={44}
             backgroundColor={avatarColor(friend.userId)}
           />
-          <View style={styles.conversationBody}>
-            <ThemedText type="smallBold" style={styles.cardTitle} numberOfLines={1}>
-              {friend.user.name}
-            </ThemedText>
+          <View style={styles.rowBody}>
+            <ThemedText style={styles.rowTitle} numberOfLines={1}>{friend.user.name}</ThemedText>
           </View>
-          <Ionicons name="chatbubble-outline" size={20} color="#CF8444" />
+          <Ionicons name="chatbubble-outline" size={20} color="#e8823f" />
         </View>
       </Pressable>
     );
   }
 
-  // Vista de escolha de amigo para nova conversa
+  const topPadding = TopTabInset + Spacing.four;
+  const bottomPadding = BottomTabInset + safeAreaInsets.bottom + Spacing.four;
+
   if (newChatMode) {
     return (
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: BottomTabInset + safeAreaInsets.bottom + Spacing.four, paddingTop: TopTabInset + Spacing.four },
-        ]}>
+        contentContainerStyle={[styles.scrollContent, { paddingTop: topPadding, paddingBottom: bottomPadding }]}>
         <View style={styles.container}>
-          <View style={styles.newChatHeader}>
+          <View style={styles.headerRow}>
             <Pressable onPress={() => setNewChatMode(false)} hitSlop={12}>
-              <Ionicons name="arrow-back" size={24} color="#CF8444" />
+              <Ionicons name="arrow-back" size={24} color="#e8823f" />
             </Pressable>
             <ThemedText type="title" style={styles.pageTitle}>Nova conversa</ThemedText>
           </View>
-
-          {newChatError && (
-            <ThemedText type="small" style={styles.errorText}>{newChatError}</ThemedText>
-          )}
-
-          {friends === null && (
-            <ThemedText style={styles.emptyText}>A carregar amigos...</ThemedText>
-          )}
-
+          {newChatError && <ThemedText type="small" style={styles.errorText}>{newChatError}</ThemedText>}
+          {friends === null && <ThemedText style={styles.emptyText}>A carregar amigos...</ThemedText>}
           {friends !== null && friends.length === 0 && (
-            <ThemedText style={[styles.emptyText, { marginTop: 40 }]}>
-              Ainda não tens amigos. Adiciona amigos para poderes conversar com eles!
+            <ThemedText style={styles.emptyText}>
+              Ainda não tens amigos. Adiciona amigos para poderes conversar!
             </ThemedText>
           )}
-
-          {(friends ?? []).map(renderFriendRow)}
+          {(friends ?? []).map(renderFriendPickerRow)}
         </View>
       </ScrollView>
     );
@@ -248,87 +279,100 @@ export default function ChatsScreen() {
   return (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingBottom: BottomTabInset + safeAreaInsets.bottom + Spacing.four, paddingTop: TopTabInset + Spacing.four },
-      ]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#CF8444" />}>
+      contentContainerStyle={[styles.scrollContent, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#e8823f" />}>
       <View style={styles.container}>
+
         <View style={styles.headerRow}>
           <ThemedText type="title" style={styles.pageTitle}>Chats</ThemedText>
           {tab === 'friends' && (
-            <Pressable
-              onPress={enterNewChat}
-              style={({ pressed }) => [styles.newChatBtn, pressed && styles.pressed]}
-              hitSlop={8}>
-              <Ionicons name="add" size={24} color="#FFFFFF" />
+            <Pressable onPress={enterNewChat} style={({ pressed }) => [styles.composeBtn, pressed && styles.pressed]} hitSlop={8}>
+              <Ionicons name="create-outline" size={20} color="#1a1005" />
             </Pressable>
           )}
         </View>
 
-        {/* Separadores Amigos / Atividades */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={16} color="#8f8b85" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Procurar conversa"
+            placeholderTextColor="#8f8b85"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color="#8f8b85" />
+            </Pressable>
+          )}
+        </View>
+
         <View style={styles.tabsRow}>
-          <Pressable
-            onPress={() => setTab('friends')}
-            style={[styles.tabBtn, tab === 'friends' && styles.tabBtnActive]}>
-            <ThemedText type="smallBold" style={tab === 'friends' ? styles.tabTextActive : styles.tabText}>
-              Amigos
+          <Pressable onPress={() => setTab('activities')} style={styles.tabBtn}>
+            <ThemedText style={[styles.tabText, tab === 'activities' && styles.tabTextActive]}>
+              Atividades{activities !== null ? ` ${allChats.length}` : ''}
             </ThemedText>
-            {unreadConversationIds.length > 0 && tab !== 'friends' && <View style={styles.tabDot} />}
+            {tab === 'activities' && <View style={styles.tabUnderline} />}
           </Pressable>
-          <Pressable
-            onPress={() => setTab('activities')}
-            style={[styles.tabBtn, tab === 'activities' && styles.tabBtnActive]}>
-            <ThemedText type="smallBold" style={tab === 'activities' ? styles.tabTextActive : styles.tabText}>
-              Atividades
+          <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
+            <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
+              Amigos{conversations !== null ? ` ${conversations.length}` : ''}
             </ThemedText>
-            {unreadIds.length > 0 && tab !== 'activities' && <View style={styles.tabDot} />}
+            {tab === 'friends' && <View style={styles.tabUnderline} />}
           </Pressable>
         </View>
 
         {tab === 'friends' && (
           <>
-            {conversations === null && (
-              <ThemedText style={styles.emptyText}>A carregar...</ThemedText>
-            )}
-
-            {conversations !== null && conversations.length === 0 && (
-              <ThemedText style={[styles.emptyText, { marginTop: 40 }]}>
-                Ainda não tens conversas. Toca no + para começares uma com um amigo!
+            {conversations === null && <ThemedText style={styles.emptyText}>A carregar...</ThemedText>}
+            {conversations !== null && filteredConversations.length === 0 && (
+              <ThemedText style={styles.emptyText}>
+                {q ? 'Sem resultados.' : 'Ainda não tens conversas. Toca no ✏ para começares uma!'}
               </ThemedText>
             )}
-
-            {(conversations ?? []).map(renderConversationCard)}
+            {filteredConversations.map(renderConversationRow)}
           </>
         )}
 
         {tab === 'activities' && (
           <>
-            {activities === null && (
-              <ThemedText style={styles.emptyText}>A carregar...</ThemedText>
-            )}
-
+            {activities === null && <ThemedText style={styles.emptyText}>A carregar...</ThemedText>}
             {activities !== null && allChats.length === 0 && (
-              <ThemedText style={[styles.emptyText, { marginTop: 40 }]}>
+              <ThemedText style={styles.emptyText}>
                 Ainda não participas em nenhuma atividade. Junta-te a uma para poder conversar!
               </ThemedText>
             )}
 
-            {activeChats.length > 0 && (
+            {filteredActiveChats.length > 0 && (
               <>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>Ativas</ThemedText>
-                {activeChats.map(renderActivityCard)}
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionDot, { backgroundColor: '#9ccd6b' }]} />
+                  <ThemedText style={[styles.sectionLabel, { color: '#9ccd6b' }]}>A DECORRER</ThemedText>
+                </View>
+                {filteredActiveChats.map(renderActivityRow)}
               </>
             )}
 
-            {pastChats.length > 0 && (
+            {filteredPastChats.length > 0 && (
               <>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>Terminadas</ThemedText>
-                {pastChats.map(renderActivityCard)}
+                <View style={[styles.sectionHeader, filteredActiveChats.length > 0 && { marginTop: Spacing.three }]}>
+                  <View style={[styles.sectionDot, { backgroundColor: '#8f8b85' }]} />
+                  <ThemedText style={styles.sectionLabel}>TERMINADAS</ThemedText>
+                </View>
+                {filteredPastChats.map(renderActivityRow)}
+                <View style={styles.infoBanner}>
+                  <Ionicons name="trophy-outline" size={18} color="#e8823f" style={{ marginTop: 1 }} />
+                  <ThemedText style={styles.infoBannerText}>
+                    Não te esqueças de votar no <ThemedText style={styles.infoBannerLink}>MVP</ThemedText> das atividades terminadas.
+                  </ThemedText>
+                </View>
               </>
             )}
           </>
         )}
+
       </View>
     </ScrollView>
   );
@@ -336,7 +380,7 @@ export default function ChatsScreen() {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#0F172A', // Fundo escuro principal
+    backgroundColor: '#0c0c0d',
   },
   scrollContent: {
     flexGrow: 1,
@@ -346,124 +390,232 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  newChatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
+    marginBottom: Spacing.three,
   },
   pageTitle: {
-    color: '#FFFFFF',
-    marginBottom: Spacing.two,
+    color: '#f4f2ef',
+    fontSize: 32,
   },
-  newChatBtn: {
+  composeBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#CF8444',
+    borderRadius: 12,
+    backgroundColor: '#e8823f',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#141315',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: Spacing.three,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#f4f2ef',
+    fontSize: 14,
+    height: 20,
+    padding: 0,
   },
   tabsRow: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    padding: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
     marginBottom: Spacing.two,
   },
   tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 9,
-  },
-  tabBtnActive: {
-    backgroundColor: '#CF8444',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginRight: 24,
+    position: 'relative',
   },
   tabText: {
-    color: '#94A3B8',
+    color: '#8f8b85',
+    fontSize: 14,
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: '#f4f2ef',
   },
-  tabDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#CF8444',
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#e8823f',
+    borderRadius: 1,
   },
-  sectionTitle: {
-    color: '#FFFFFF',
-    marginTop: Spacing.two,
-    marginBottom: Spacing.one,
-  },
-  card: {
-    backgroundColor: '#1E293B',
-    padding: Spacing.four,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    gap: 8,
-  },
-  conversationCard: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: 6,
+    paddingVertical: 10,
   },
-  conversationBody: {
+  sectionDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  sectionLabel: {
+    color: '#8f8b85',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  rowCard: {
+    marginBottom: 20,
+  },
+  rowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
+    backgroundColor: '#111012',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  sportIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  sportIconWrapPast: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  rowPast: {
+    opacity: 0.65,
+  },
+  rowBody: {
     flex: 1,
-    gap: 4,
+    gap: 3,
   },
-  cardHeader: {
+  rowTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
-  titleRow: {
+  rowTitleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1, // Para garantir que o título não empurra a data para fora do ecrã
+    gap: 6,
+    flex: 1,
   },
-  cardTitle: {
-    color: '#CF8444',
-    fontSize: 16,
-    flexShrink: 1, // Permite que o título corte com "..." se for muito longo
+  rowTitle: {
+    color: '#f4f2ef',
+    fontSize: 15,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  terminadaChip: {
+    backgroundColor: '#2a2a2e',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  terminadaText: {
+    color: '#8f8b85',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  rowTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  rowTimeDot: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  rowTime: {
+    color: '#8f8b85',
+    fontSize: 12,
+    flexShrink: 0,
+  },
+  rowBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rowSub: {
+    color: '#8f8b85',
+    fontSize: 13,
+    flex: 1,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e8823f',
+    flexShrink: 0,
   },
   unreadBadge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#CF8444',
-  },
-  dateText: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#e8823f',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    flexShrink: 0,
   },
-  infoText: {
-    color: '#94A3B8',
+  unreadBadgeText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: 'rgba(232,130,63,0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232,130,63,0.2)',
+    padding: 12,
+    marginTop: Spacing.three,
+    alignItems: 'flex-start',
+  },
+  infoBannerText: {
+    flex: 1,
+    color: '#8f8b85',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  infoBannerLink: {
+    color: '#e8823f',
+    fontWeight: '600',
   },
   emptyText: {
-    color: '#64748B',
+    color: '#8f8b85',
     textAlign: 'center',
+    marginTop: 40,
   },
   errorText: {
-    color: '#FF6B6B',
+    color: '#eb8f84',
     textAlign: 'center',
   },
   pressed: {

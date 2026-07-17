@@ -6,8 +6,12 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
-async function request<T>(path: string, { body, headers, ...options }: RequestOptions = {}): Promise<T> {
-  const token = await auth.currentUser?.getIdToken();
+async function request<T>(
+  path: string,
+  { body, headers, ...options }: RequestOptions = {},
+  forceRefresh = false
+): Promise<T> {
+  const token = await auth.currentUser?.getIdToken(forceRefresh);
 
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -18,6 +22,11 @@ async function request<T>(path: string, { body, headers, ...options }: RequestOp
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
+  // Token expirado ou inválido — tenta uma vez com token forçado
+  if (response.status === 401 && !forceRefresh) {
+    return request<T>(path, { body, headers, ...options }, true);
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
@@ -32,7 +41,10 @@ async function request<T>(path: string, { body, headers, ...options }: RequestOp
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string) => {
+    const sep = path.includes('?') ? '&' : '?';
+    return request<T>(`${path}${sep}_t=${Date.now()}`, { cache: 'no-store' });
+  },
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body }),
   delete: <T>(path: string, body?: unknown) => request<T>(path, { method: 'DELETE', body }),

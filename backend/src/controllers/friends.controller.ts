@@ -3,6 +3,20 @@ import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { friendsService } from "../services/friends.service";
 import { usersService } from "../services/users.service";
 
+export async function cancelFriendRequest(
+  req: AuthenticatedRequest<{ addresseeId: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
+    const { addresseeId } = req.params;
+    await friendsService.cancelRequest(req.user.uid, addresseeId);
+    res.status(200).json({ message: "Pedido cancelado" });
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : "Erro ao cancelar pedido" });
+  }
+}
+
 export async function removeFriend(
   req: AuthenticatedRequest<{ friendId: string }>,
   res: Response

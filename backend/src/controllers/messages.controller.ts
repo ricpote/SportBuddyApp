@@ -71,3 +71,19 @@ export async function getMessages(
     });
   }
 }
+
+export async function getLastActivityMessage(
+  req: AuthenticatedRequest<ActivityParams>,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ message: "User not authenticated" }); return; }
+    const { activityId } = req.params;
+    const user = await usersService.getUserByFirebaseUid(req.user.uid);
+    if (!user) { res.status(404).json({ message: "User profile not found" }); return; }
+    const preview = await messagesService.getLastActivityMessage(activityId, user.id);
+    res.status(200).json(preview);
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : "Error getting last message" });
+  }
+}

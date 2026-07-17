@@ -19,6 +19,11 @@ import { Activity } from '@/types/activity';
 const DEFAULT_CENTER = { lat: 38.7223, lng: -9.1393 };
 const mapId = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_MAP_ID;
 const DEFAULT_RADIUS_KM = 20;
+// Admins veem tudo, em qualquer sítio. Usamos um raio maior do que a maior
+// distância possível entre dois pontos na Terra (~20 015 km) para que a
+// localização do browser (por vezes imprecisa) nunca deixe atividades de
+// fora — não interessa onde o mapa acha que estamos.
+const ADMIN_RADIUS_KM = 21000;
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -224,10 +229,11 @@ export default function MapWebScreen() {
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [snapTick, setSnapTick] = useState(0);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const [activities, setActivities] = useState<Activity[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [radiusKm, setRadiusKm] = useState(isAdmin ? ADMIN_RADIUS_KM : DEFAULT_RADIUS_KM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sportsMap, setSportsMap] = useState<Record<string, string>>({});
@@ -312,6 +318,16 @@ export default function MapWebScreen() {
     return () => clearInterval(id);
   }, []);
 
+  // Perfil de admin carrega de forma assíncrona; assim que soubermos que é
+  // admin, alarga logo o raio de pesquisa para veres todas as atividades.
+  useEffect(() => {
+    if (!isAdmin || radiusKm === ADMIN_RADIUS_KM) return;
+    setRadiusKm(ADMIN_RADIUS_KM);
+    void loadActivities(center.lat, center.lng, ADMIN_RADIUS_KM);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
+
   async function handleJoin(activity: Activity) {
     if (joining) return;
     setJoining(true);
@@ -388,39 +404,43 @@ export default function MapWebScreen() {
       </APIProvider>
 
       <View style={styles.topOverlay}>
-        <View style={styles.radiusRow}>
-          {([5, 10, 20, 50] as const).map((option, i, arr) => {
-            const active = radiusKm === option;
-            return (
-              <Pressable
-                key={option}
-                onPress={() => { setRadiusKm(option); void loadActivities(center.lat, center.lng, option); }}
-                style={[
-                  styles.radiusButton,
-                  active && styles.radiusButtonActive,
-                  i === 0 && styles.radiusButtonFirst,
-                  i === arr.length - 1 && styles.radiusButtonLast,
-                ]}
-              >
-                <ThemedText style={[styles.radiusText, active && styles.radiusTextActive]}>
-                  {option} km
-                </ThemedText>
-              </Pressable>
-            );
-          })}
-        </View>
+        {!isAdmin && (
+          <View style={styles.radiusRow}>
+            {([5, 10, 20, 50] as const).map((option, i, arr) => {
+              const active = radiusKm === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => { setRadiusKm(option); void loadActivities(center.lat, center.lng, option); }}
+                  style={[
+                    styles.radiusButton,
+                    active && styles.radiusButtonActive,
+                    i === 0 && styles.radiusButtonFirst,
+                    i === arr.length - 1 && styles.radiusButtonLast,
+                  ]}
+                >
+                  <ThemedText style={[styles.radiusText, active && styles.radiusTextActive]}>
+                    {option} km
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
-        <Pressable
-          onPress={() => void loadActivities(center.lat, center.lng, radiusKm)}
-          style={styles.searchButton}
-        >
-          {loading
-            ? <Ionicons name="refresh" size={14} color="#12100e" style={{ marginRight: 6 }} />
-            : <Ionicons name="refresh-outline" size={14} color="#12100e" style={{ marginRight: 6 }} />}
-          <ThemedText style={styles.searchButtonText}>
-            {error ? 'Tentar de novo' : 'Pesquisar nesta área'}
-          </ThemedText>
-        </Pressable>
+        {!isAdmin && (
+          <Pressable
+            onPress={() => void loadActivities(center.lat, center.lng, radiusKm)}
+            style={styles.searchButton}
+          >
+            {loading
+              ? <Ionicons name="refresh" size={14} color="#12100e" style={{ marginRight: 6 }} />
+              : <Ionicons name="refresh-outline" size={14} color="#12100e" style={{ marginRight: 6 }} />}
+            <ThemedText style={styles.searchButtonText}>
+              {error ? 'Tentar de novo' : 'Pesquisar nesta área'}
+            </ThemedText>
+          </Pressable>
+        )}
       </View>
 
       <Pressable

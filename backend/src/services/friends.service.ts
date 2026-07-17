@@ -18,46 +18,64 @@ export class FriendsService {
       throw new Error("Não podes adicionar-te a ti próprio");
     }
 
-    const requesterDoc = await db.collection("users").doc(requesterId).get();
-    if (!requesterDoc.exists) throw new Error("Utilizador não encontrado");
+    const requesterName = await db.runTransaction(async (tx) => {
+      const requesterRef = db.collection("users").doc(requesterId);
+      const addresseeRef = db.collection("users").doc(addresseeId);
 
-    const addresseeDoc = await db.collection("users").doc(addresseeId).get();
-    if (!addresseeDoc.exists) throw new Error("Utilizador não encontrado");
-    if (addresseeDoc.data()!.status !== "active") {
-      throw new Error("Não é possível adicionar este utilizador");
-    }
+      const [requesterDoc, addresseeDoc, existingRequest, reverseRequest] = await Promise.all([
+        tx.get(requesterRef),
+        tx.get(addresseeRef),
+        tx.get(
+          this.requestsRef
+            .where("requesterId", "==", requesterId)
+            .where("addresseeId", "==", addresseeId)
+        ),
+        tx.get(
+          this.requestsRef
+            .where("requesterId", "==", addresseeId)
+            .where("addresseeId", "==", requesterId)
+        ),
+      ]);
 
-    const requester = requesterDoc.data()!;
-    if (((requester.friends ?? []) as string[]).includes(addresseeId)) {
-      throw new Error("Já são amigos");
-    }
+      if (!requesterDoc.exists) throw new Error("Utilizador não encontrado");
+      if (!addresseeDoc.exists) throw new Error("Utilizador não encontrado");
+      if (addresseeDoc.data()!.status !== "active") {
+        throw new Error("Não é possível adicionar este utilizador");
+      }
 
-    const existingRequest = await this.requestsRef
-      .where("requesterId", "==", requesterId)
-      .where("addresseeId", "==", addresseeId)
-      .get();
+      const requester = requesterDoc.data()!;
+      if (((requester.friends ?? []) as string[]).includes(addresseeId)) {
+        throw new Error("Já são amigos");
+      }
 
-    if (!existingRequest.empty) {
-      throw new Error("Já enviaste um pedido a este utilizador");
-    }
+      if (!existingRequest.empty) {
+        throw new Error("Já enviaste um pedido a este utilizador");
+      }
 
-    const reverseRequest = await this.requestsRef
-      .where("requesterId", "==", addresseeId)
-      .where("addresseeId", "==", requesterId)
-      .get();
+      if (!reverseRequest.empty) {
+        throw new Error("Este utilizador já te enviou um pedido");
+      }
 
-    if (!reverseRequest.empty) {
-      throw new Error("Este utilizador já te enviou um pedido");
-    }
+      const ref = this.requestsRef.doc();
+      tx.set(ref, createFriendRequestObject(ref.id, requesterId, addresseeId));
 
-    const ref = this.requestsRef.doc();
-    await ref.set(createFriendRequestObject(ref.id, requesterId, addresseeId));
+      return requester.name as string;
+    });
 
     await notificationsService.createNotification(
       addresseeId,
       "friend_request",
-      `${requester.name} enviou-te um pedido de amizade.`
+      `${requesterName} enviou-te um pedido de amizade.`
     );
+  }
+
+  async cancelRequest(requesterId: string, addresseeId: string): Promise<void> {
+    const snap = await this.requestsRef
+      .where("requesterId", "==", requesterId)
+      .where("addresseeId", "==", addresseeId)
+      .get();
+    if (snap.empty) throw new Error("Pedido não encontrado");
+    await snap.docs[0].ref.delete();
   }
 
   async getPendingRequests(userId: string): Promise<FriendRequestDto[]> {
@@ -65,29 +83,29 @@ export class FriendsService {
       .where("addresseeId", "==", userId)
       .get();
 
-    const results: FriendRequestDto[] = [];
+    const results = await Promise.all(
+      snapshot.docs.map(async (doc): Promise<FriendRequestDto | null> => {
+        const request = doc.data() as FriendRequest;
 
-    for (const doc of snapshot.docs) {
-      const request = doc.data() as FriendRequest;
+        const requesterDoc = await db.collection("users").doc(request.requesterId).get();
+        if (!requesterDoc.exists) return null;
 
-      const requesterDoc = await db.collection("users").doc(request.requesterId).get();
-      if (!requesterDoc.exists) continue;
+        const requester = requesterDoc.data()!;
+        return {
+          requestId: doc.id,
+          from: {
+            id: requesterDoc.id,
+            name: requester.name,
+            avatarUrl: requester.avatarUrl,
+          },
+          createdAt: request.createdAt instanceof Date
+            ? request.createdAt.toISOString()
+            : (request.createdAt as any).toDate().toISOString(),
+        };
+      })
+    );
 
-      const requester = requesterDoc.data()!;
-      results.push({
-        requestId: doc.id,
-        from: {
-          id: requesterDoc.id,
-          name: requester.name,
-          avatarUrl: requester.avatarUrl,
-        },
-        createdAt: request.createdAt instanceof Date
-          ? request.createdAt.toISOString()
-          : (request.createdAt as any).toDate().toISOString(),
-      });
-    }
-
-    return results;
+    return results.filter((r): r is FriendRequestDto => r !== null);
   }
 
   async acceptRequest(requestId: string, userId: string): Promise<void> {
@@ -142,24 +160,25 @@ export class FriendsService {
     if (!userDoc.exists) throw new Error("Utilizador não encontrado");
 
     const friendIds: string[] = userDoc.data()!.friends ?? [];
-    const results: FriendDto[] = [];
 
-    for (const friendId of friendIds) {
-      const friendDoc = await db.collection("users").doc(friendId).get();
-      if (!friendDoc.exists) continue;
+    const results = await Promise.all(
+      friendIds.map(async (friendId): Promise<FriendDto | null> => {
+        const friendDoc = await db.collection("users").doc(friendId).get();
+        if (!friendDoc.exists) return null;
 
-      const friend = friendDoc.data()!;
-      results.push({
-        userId: friendId,
-        user: {
-          id: friendId,
-          name: friend.name,
-          avatarUrl: friend.avatarUrl,
-        },
-      });
-    }
+        const friend = friendDoc.data()!;
+        return {
+          userId: friendId,
+          user: {
+            id: friendId,
+            name: friend.name,
+            avatarUrl: friend.avatarUrl,
+          },
+        };
+      })
+    );
 
-    return results;
+    return results.filter((r): r is FriendDto => r !== null);
   }
 }
 
