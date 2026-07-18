@@ -15,6 +15,7 @@ import { joinActivity, listNearbyActivities } from '@/services/activities';
 import { useAuth } from '@/contexts/auth-context';
 import { useTranslation } from '@/i18n';
 import { listSports } from '@/services/sports';
+import { getCurrentUserLocation } from '@/services/user-location';
 import { Activity } from '@/types/activity';
 import { SportIcon } from '@/utils/sport-icon';
 
@@ -102,20 +103,6 @@ function UserLocationDot({ position }: { position: { lat: number; lng: number } 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, position?.lat, position?.lng]);
   return null;
-}
-
-function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation not available'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      reject,
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  });
 }
 
 function ActivityPinMarker({
@@ -271,7 +258,7 @@ export default function MapWebScreen() {
 
   async function refreshUserLocation(shouldSnap = false) {
     try {
-      const loc = await getBrowserLocation();
+      const loc = await getCurrentUserLocation();
       setUserLocation(loc);
       if (shouldSnap) {
         setCenter(loc);

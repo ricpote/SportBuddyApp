@@ -1,12 +1,12 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTranslation } from '@/i18n';
 import { listNearbyActivities } from '@/services/activities';
+import { getCurrentUserLocation } from '@/services/user-location';
 import { Activity } from '@/types/activity';
 
 const DEFAULT_REGION: Region = {
@@ -46,25 +46,22 @@ export default function ActivitiesMapScreen() {
   }
 
   const loadUserLocation = useCallback(async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
+    try {
+      const currentLocation = await getCurrentUserLocation();
 
-    if (permission.status !== 'granted') {
+      const userRegion: Region = {
+        latitude: currentLocation.lat,
+        longitude: currentLocation.lng,
+        latitudeDelta: 0.08,
+        longitudeDelta: 0.08,
+      };
+
+      setRegion(userRegion);
+      await loadActivities(userRegion.latitude, userRegion.longitude, radiusKm);
+    } catch {
       setError(t('map.error.locationDenied'));
       setLoading(false);
-      return;
     }
-
-    const currentLocation = await Location.getCurrentPositionAsync({});
-
-    const userRegion: Region = {
-      latitude: currentLocation.coords.latitude,
-      longitude: currentLocation.coords.longitude,
-      latitudeDelta: 0.08,
-      longitudeDelta: 0.08,
-    };
-
-    setRegion(userRegion);
-    await loadActivities(userRegion.latitude, userRegion.longitude, radiusKm);
   }, [radiusKm]);
 
   useFocusEffect(

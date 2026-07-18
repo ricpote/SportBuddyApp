@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useTranslation } from '@/i18n';
 import { listActivities, listNearbyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
+import { getCurrentUserLocation } from '@/services/user-location';
 import { Activity } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 import { relativeDate } from '@/utils/date';
@@ -159,17 +160,6 @@ export default function ExploreScreen() {
     return () => clearTimeout(t);
   }, [radiusKm]);
 
-  async function getUserLocation(): Promise<{ lat: number; lng: number } | null> {
-    return new Promise((resolve) => {
-      if (!navigator?.geolocation) { resolve(null); return; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-      );
-    });
-  }
-
   const load = useCallback(async () => {
     try {
       setError(null);
@@ -180,7 +170,7 @@ export default function ExploreScreen() {
       } else if (isWide) {
         let loc = locationRef.current;
         if (!loc) {
-          loc = await getUserLocation();
+          loc = await getCurrentUserLocation().catch(() => null);
           if (loc) {
             locationRef.current = loc;
             setUserLocation(loc);
@@ -191,7 +181,7 @@ export default function ExploreScreen() {
       } else if (scopeFilter === 'nearby') {
         let loc = locationRef.current;
         if (!loc) {
-          loc = await getUserLocation();
+          loc = await getCurrentUserLocation().catch(() => null);
           if (loc) {
             locationRef.current = loc;
             setUserLocation(loc);
