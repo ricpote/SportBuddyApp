@@ -7,6 +7,7 @@ const home: LanguageDictionaries = {
     'home.weather.goodForPlaying': ' · good for playing',
     'home.weather.difficultConditions': ' · difficult conditions',
     'home.weather.notRecommended': ' · not recommended',
+    'home.weather.uv': 'UV {value}',
 
     'home.friendsActivity': 'Friends Activity',
     'home.feed.joined': 'joined ',
@@ -17,6 +18,8 @@ const home: LanguageDictionaries = {
     'home.subtitle': 'Ready for your next activity?',
 
     'home.nextActivityLabel': 'YOUR NEXT ACTIVITY',
+    'home.showAll': 'Show all',
+    'home.showLess': 'Show less',
     'home.startsIn': 'STARTS IN',
     'home.confirmed': 'Confirmed',
     'home.spotsLeft': '{count} spots left',
@@ -59,6 +62,7 @@ const home: LanguageDictionaries = {
     'home.weather.goodForPlaying': ' · bom para jogar',
     'home.weather.difficultConditions': ' · condições difíceis',
     'home.weather.notRecommended': ' · não recomendado',
+    'home.weather.uv': 'UV {value}',
 
     'home.friendsActivity': 'Atividade dos Amigos',
     'home.feed.joined': 'entrou em ',
@@ -69,6 +73,8 @@ const home: LanguageDictionaries = {
     'home.subtitle': 'Pronto para a tua próxima atividade?',
 
     'home.nextActivityLabel': 'A TUA PRÓXIMA ATIVIDADE',
+    'home.showAll': 'Ver todas',
+    'home.showLess': 'Ver menos',
     'home.startsIn': 'COMEÇA EM',
     'home.confirmed': 'Confirmado',
     'home.spotsLeft': '{count} vagas restantes',
