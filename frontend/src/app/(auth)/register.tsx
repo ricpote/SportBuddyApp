@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 
 const BG = '#0a0a0b';
 const ORANGE = '#e8823f';
@@ -18,6 +19,7 @@ type AccountType = 'personal' | 'organization';
 
 export default function RegisterScreen() {
   const { signUp, signUpOrganization } = useAuth();
+  const { t } = useTranslation();
 
   const [accountType, setAccountType] = useState<AccountType>('personal');
 
@@ -41,17 +43,17 @@ export default function RegisterScreen() {
 
     if (accountType === 'organization') {
       if (!orgName.trim() || !nif.trim() || !responsibleName.trim() || !orgEmail.trim() || !orgPassword) {
-        setError('Preenche todos os campos');
+        setError(t('auth.register.fillAllFields'));
         return;
       }
 
       if (!/^\d{9}$/.test(nif.trim())) {
-        setError('O NIF deve ter 9 dígitos');
+        setError(t('auth.register.nifInvalid'));
         return;
       }
 
       if (orgPassword.length < 6) {
-        setError('A palavra-passe tem de ter pelo menos 6 caracteres');
+        setError(t('auth.register.passwordTooShort'));
         return;
       }
 
@@ -59,7 +61,7 @@ export default function RegisterScreen() {
       try {
         await signUpOrganization(orgName.trim(), nif.trim(), responsibleName.trim(), orgEmail.trim(), orgPassword);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Não foi possível criar a conta empresa');
+        setError(err instanceof Error ? t(err.message) : t('auth.register.genericOrgError'));
       } finally {
         setSubmitting(false);
       }
@@ -67,12 +69,12 @@ export default function RegisterScreen() {
     }
 
     if (!name.trim() || !email.trim() || !password) {
-      setError('Preenche todos os campos');
+      setError(t('auth.register.fillAllFields'));
       return;
     }
 
     if (password.length < 6) {
-      setError('A palavra-passe tem de ter pelo menos 6 caracteres');
+      setError(t('auth.register.passwordTooShort'));
       return;
     }
 
@@ -80,7 +82,7 @@ export default function RegisterScreen() {
     try {
       await signUp(name.trim(), email.trim(), password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível criar a conta');
+      setError(err instanceof Error ? t(err.message) : t('auth.register.genericError'));
     } finally {
       setSubmitting(false);
     }
@@ -114,21 +116,21 @@ export default function RegisterScreen() {
               resizeMode="contain"
             />
             <ThemedText type="title" style={styles.title}>SportBuddy</ThemedText>
-            <ThemedText style={styles.subtitle}>Cria a tua conta</ThemedText>
+            <ThemedText style={styles.subtitle}>{t('auth.register.subtitle')}</ThemedText>
 
             <View style={styles.toggleRow}>
               <Pressable
                 style={[styles.toggleBtn, accountType === 'personal' && styles.toggleBtnActive]}
                 onPress={() => setAccountType('personal')}>
                 <ThemedText style={[styles.toggleText, accountType === 'personal' && styles.toggleTextActive]}>
-                  Pessoal
+                  {t('auth.register.personalTab')}
                 </ThemedText>
               </Pressable>
               <Pressable
                 style={[styles.toggleBtn, accountType === 'organization' && styles.toggleBtnActive]}
                 onPress={() => setAccountType('organization')}>
                 <ThemedText style={[styles.toggleText, accountType === 'organization' && styles.toggleTextActive]}>
-                  Empresa
+                  {t('auth.register.organizationTab')}
                 </ThemedText>
               </Pressable>
             </View>
@@ -140,7 +142,7 @@ export default function RegisterScreen() {
                     <Ionicons name="person-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Nome"
+                      placeholder={t('auth.register.namePlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       autoCapitalize="words"
                       autoComplete="name"
@@ -153,7 +155,7 @@ export default function RegisterScreen() {
                     <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Email"
+                      placeholder={t('auth.register.emailPlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       autoCapitalize="none"
                       keyboardType="email-address"
@@ -167,7 +169,7 @@ export default function RegisterScreen() {
                     <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Palavra-passe"
+                      placeholder={t('auth.register.passwordPlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       secureTextEntry={!showPassword}
                       autoComplete="password-new"
@@ -185,7 +187,7 @@ export default function RegisterScreen() {
                     <Ionicons name="business-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Nome da organização"
+                      placeholder={t('auth.register.orgNamePlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       autoCapitalize="words"
                       value={orgName}
@@ -198,7 +200,7 @@ export default function RegisterScreen() {
                       <Ionicons name="card-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                       <TextInput
                         style={[styles.input, { outline: 'none' } as any]}
-                        placeholder="NIF"
+                        placeholder={t('auth.register.nifPlaceholder')}
                         placeholderTextColor={TEXT_SEC}
                         keyboardType="number-pad"
                         maxLength={9}
@@ -210,7 +212,7 @@ export default function RegisterScreen() {
                       <Ionicons name="person-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                       <TextInput
                         style={[styles.input, { outline: 'none' } as any]}
-                        placeholder="Responsável"
+                        placeholder={t('auth.register.responsiblePlaceholder')}
                         placeholderTextColor={TEXT_SEC}
                         autoCapitalize="words"
                         value={responsibleName}
@@ -223,7 +225,7 @@ export default function RegisterScreen() {
                     <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Email da empresa"
+                      placeholder={t('auth.register.orgEmailPlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       autoCapitalize="none"
                       keyboardType="email-address"
@@ -237,7 +239,7 @@ export default function RegisterScreen() {
                     <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                     <TextInput
                       style={[styles.input, { outline: 'none' } as any]}
-                      placeholder="Palavra-passe"
+                      placeholder={t('auth.register.passwordPlaceholder')}
                       placeholderTextColor={TEXT_SEC}
                       secureTextEntry={!showOrgPassword}
                       autoComplete="password-new"
@@ -259,18 +261,18 @@ export default function RegisterScreen() {
                 onPress={handleSubmit}>
                 <ThemedText style={styles.buttonText} type="smallBold">
                   {submitting
-                    ? 'A criar conta...'
+                    ? t('auth.register.submitting')
                     : accountType === 'organization'
-                      ? 'Criar conta empresa'
-                      : 'Criar conta'}
+                      ? t('auth.register.submitOrganization')
+                      : t('auth.register.submit')}
                 </ThemedText>
               </Pressable>
 
               <Link href="/login" asChild>
                 <Pressable style={styles.linkPressable}>
                   <ThemedText style={styles.linkText}>
-                    Já tens conta?{' '}
-                    <ThemedText style={styles.linkHighlight}>Inicia sessão</ThemedText>
+                    {t('auth.register.hasAccount')}{' '}
+                    <ThemedText style={styles.linkHighlight}>{t('auth.register.loginLink')}</ThemedText>
                   </ThemedText>
                 </Pressable>
               </Link>
@@ -279,7 +281,7 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <ThemedText style={styles.footerText}>© 2026 SportBuddy · Termos · Privacidade</ThemedText>
+          <ThemedText style={styles.footerText}>{t('auth.footer')}</ThemedText>
         </View>
       </SafeAreaView>
     </View>

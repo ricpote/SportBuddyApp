@@ -18,6 +18,7 @@ import { Activity } from '@/types/activity';
 import { Friend } from '@/types/friend';
 import { Conversation } from '@/types/message';
 import { relativeDate } from '@/utils/date';
+import { useTranslation } from '@/i18n';
 
 type ChatTab = 'friends' | 'activities';
 
@@ -42,6 +43,7 @@ function sportIconName(name = ''): any {
 
 export default function ChatsScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { checkUnread, checkUnreadConversations, unreadIds = [], unreadConversationIds = [] } = useChatBadge();
   const [tab, setTab] = useState<ChatTab>('activities');
@@ -119,7 +121,7 @@ export default function ChatsScreen() {
       setNewChatMode(false);
       router.push({ pathname: '/direct-chat/[id]', params: { id: conversationId, name: friendName, avatarUrl: friendAvatarUrl, userId: friendId } });
     } catch (e) {
-      setNewChatError(e instanceof Error ? e.message : 'Erro ao abrir conversa');
+      setNewChatError(e instanceof Error ? e.message : t('chat.list.openConversationError'));
     } finally {
       setOpening(null);
     }
@@ -147,11 +149,12 @@ export default function ChatsScreen() {
       ? relativeDate(activity.lastMessageAt)
       : relativeDate(activity.date);
     const count = activity.participantsList.length;
+    const participantsLabel = t(count === 1 ? 'chat.participants.one' : 'chat.participants.other', { count });
     const subtitle = activity.lastMessage
       ? `${activity.lastMessageSender ?? ''}: ${activity.lastMessage}`
       : isPast
-        ? `${activity.location.name} · ${count} participante${count !== 1 ? 's' : ''}`
-        : `${count} participante${count !== 1 ? 's' : ''}`;
+        ? `${activity.location.name} · ${participantsLabel}`
+        : participantsLabel;
 
     return (
       <Link key={activity.id} href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
@@ -166,7 +169,7 @@ export default function ChatsScreen() {
                   <ThemedText style={styles.rowTitle} numberOfLines={1}>{activity.title}</ThemedText>
                   {isPast && (
                     <View style={styles.terminadaChip}>
-                      <ThemedText style={styles.terminadaText}>TERMINADA</ThemedText>
+                      <ThemedText style={styles.terminadaText}>{t('chat.list.endedBadge')}</ThemedText>
                     </View>
                   )}
                 </View>
@@ -211,7 +214,7 @@ export default function ChatsScreen() {
               <View style={styles.rowBottom}>
                 {conversation.lastMessage ? (
                   <ThemedText style={styles.rowSub} numberOfLines={1}>
-                    {conversation.lastMessageSenderId === uid ? 'Tu: ' : ''}{conversation.lastMessage}
+                    {conversation.lastMessageSenderId === uid ? t('chat.list.youPrefix') : ''}{conversation.lastMessage}
                   </ThemedText>
                 ) : (
                   <View style={{ flex: 1 }} />
@@ -261,13 +264,13 @@ export default function ChatsScreen() {
             <Pressable onPress={() => setNewChatMode(false)} hitSlop={12}>
               <Ionicons name="arrow-back" size={24} color="#e8823f" />
             </Pressable>
-            <ThemedText type="title" style={styles.pageTitle}>Nova conversa</ThemedText>
+            <ThemedText type="title" style={styles.pageTitle}>{t('chat.list.newChatTitle')}</ThemedText>
           </View>
           {newChatError && <ThemedText type="small" style={styles.errorText}>{newChatError}</ThemedText>}
-          {friends === null && <ThemedText style={styles.emptyText}>A carregar amigos...</ThemedText>}
+          {friends === null && <ThemedText style={styles.emptyText}>{t('chat.list.loadingFriends')}</ThemedText>}
           {friends !== null && friends.length === 0 && (
             <ThemedText style={styles.emptyText}>
-              Ainda não tens amigos. Adiciona amigos para poderes conversar!
+              {t('chat.list.noFriendsYet')}
             </ThemedText>
           )}
           {(friends ?? []).map(renderFriendPickerRow)}
@@ -284,7 +287,7 @@ export default function ChatsScreen() {
       <View style={styles.container}>
 
         <View style={styles.headerRow}>
-          <ThemedText type="title" style={styles.pageTitle}>Chats</ThemedText>
+          <ThemedText type="title" style={styles.pageTitle}>{t('chat.list.title')}</ThemedText>
           {tab === 'friends' && (
             <Pressable onPress={enterNewChat} style={({ pressed }) => [styles.composeBtn, pressed && styles.pressed]} hitSlop={8}>
               <Ionicons name="create-outline" size={20} color="#1a1005" />
@@ -296,7 +299,7 @@ export default function ChatsScreen() {
           <Ionicons name="search" size={16} color="#8f8b85" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Procurar conversa"
+            placeholder={t('chat.list.searchPlaceholder')}
             placeholderTextColor="#8f8b85"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -312,13 +315,13 @@ export default function ChatsScreen() {
         <View style={styles.tabsRow}>
           <Pressable onPress={() => setTab('activities')} style={styles.tabBtn}>
             <ThemedText style={[styles.tabText, tab === 'activities' && styles.tabTextActive]}>
-              Atividades{activities !== null ? ` ${allChats.length}` : ''}
+              {t('chat.list.tabActivities')}{activities !== null ? ` ${allChats.length}` : ''}
             </ThemedText>
             {tab === 'activities' && <View style={styles.tabUnderline} />}
           </Pressable>
           <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
             <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
-              Amigos{conversations !== null ? ` ${conversations.length}` : ''}
+              {t('chat.list.tabFriends')}{conversations !== null ? ` ${conversations.length}` : ''}
             </ThemedText>
             {tab === 'friends' && <View style={styles.tabUnderline} />}
           </Pressable>
@@ -326,10 +329,10 @@ export default function ChatsScreen() {
 
         {tab === 'friends' && (
           <>
-            {conversations === null && <ThemedText style={styles.emptyText}>A carregar...</ThemedText>}
+            {conversations === null && <ThemedText style={styles.emptyText}>{t('chat.list.loading')}</ThemedText>}
             {conversations !== null && filteredConversations.length === 0 && (
               <ThemedText style={styles.emptyText}>
-                {q ? 'Sem resultados.' : 'Ainda não tens conversas. Toca no ✏ para começares uma!'}
+                {q ? t('chat.list.noResults') : t('chat.list.noConversationsYet')}
               </ThemedText>
             )}
             {filteredConversations.map(renderConversationRow)}
@@ -338,10 +341,10 @@ export default function ChatsScreen() {
 
         {tab === 'activities' && (
           <>
-            {activities === null && <ThemedText style={styles.emptyText}>A carregar...</ThemedText>}
+            {activities === null && <ThemedText style={styles.emptyText}>{t('chat.list.loading')}</ThemedText>}
             {activities !== null && allChats.length === 0 && (
               <ThemedText style={styles.emptyText}>
-                Ainda não participas em nenhuma atividade. Junta-te a uma para poder conversar!
+                {t('chat.list.noActivitiesYet')}
               </ThemedText>
             )}
 
@@ -349,7 +352,7 @@ export default function ChatsScreen() {
               <>
                 <View style={styles.sectionHeader}>
                   <View style={[styles.sectionDot, { backgroundColor: '#9ccd6b' }]} />
-                  <ThemedText style={[styles.sectionLabel, { color: '#9ccd6b' }]}>A DECORRER</ThemedText>
+                  <ThemedText style={[styles.sectionLabel, { color: '#9ccd6b' }]}>{t('chat.list.sectionOngoing')}</ThemedText>
                 </View>
                 {filteredActiveChats.map(renderActivityRow)}
               </>
@@ -359,13 +362,13 @@ export default function ChatsScreen() {
               <>
                 <View style={[styles.sectionHeader, filteredActiveChats.length > 0 && { marginTop: Spacing.three }]}>
                   <View style={[styles.sectionDot, { backgroundColor: '#8f8b85' }]} />
-                  <ThemedText style={styles.sectionLabel}>TERMINADAS</ThemedText>
+                  <ThemedText style={styles.sectionLabel}>{t('chat.list.sectionEnded')}</ThemedText>
                 </View>
                 {filteredPastChats.map(renderActivityRow)}
                 <View style={styles.infoBanner}>
                   <Ionicons name="trophy-outline" size={18} color="#e8823f" style={{ marginTop: 1 }} />
                   <ThemedText style={styles.infoBannerText}>
-                    Não te esqueças de votar no <ThemedText style={styles.infoBannerLink}>MVP</ThemedText> das atividades terminadas.
+                    {t('chat.list.mvpBannerBefore')} <ThemedText style={styles.infoBannerLink}>{t('chat.list.mvpLabel')}</ThemedText> {t('chat.list.mvpBannerAfter')}
                   </ThemedText>
                 </View>
               </>

@@ -7,19 +7,21 @@ import { ThemedText } from './themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
+import { useTranslation } from '@/i18n';
 
 const NAV_ITEMS = [
-  { href: '/',                 icon: 'home-outline',        label: 'Home'     },
-  { href: '/explore',          icon: 'search-outline',      label: 'Discover' },
-  { href: '/create-activity',  icon: 'add-outline',         label: 'Create'   },
-  { href: '/chats',            icon: 'chatbubbles-outline', label: 'Chats'    },
-  { href: '/map',              icon: 'map-outline',         label: 'Map'      },
+  { href: '/',                 icon: 'home-outline',        labelKey: 'nav.home'     },
+  { href: '/explore',          icon: 'search-outline',      labelKey: 'nav.discover' },
+  { href: '/create-activity',  icon: 'add-outline',         labelKey: 'nav.create'   },
+  { href: '/chats',            icon: 'chatbubbles-outline', labelKey: 'nav.chats'    },
+  { href: '/map',              icon: 'map-outline',         labelKey: 'nav.map'      },
 ] as const;
 
 export function WebSidebar() {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const { unreadCount } = useChatBadge();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.sidebar}>
@@ -32,7 +34,7 @@ export function WebSidebar() {
           />
           <View>
             <ThemedText type="smallBold" style={styles.brandName}>SportBuddy</ThemedText>
-            <ThemedText style={styles.brandSlogan}>Connect & Play</ThemedText>
+            <ThemedText style={styles.brandSlogan}>{t('nav.brandSlogan')}</ThemedText>
           </View>
         </View>
       </Link>
@@ -59,7 +61,7 @@ export function WebSidebar() {
                     )}
                   </View>
                   <ThemedText type="smallBold" style={[styles.label, active && styles.labelActive]}>
-                    {item.label}
+                    {t(item.labelKey)}
                   </ThemedText>
                   {active && <View style={styles.dot} />}
                 </View>
@@ -81,7 +83,7 @@ export function WebSidebar() {
                   />
                 </View>
                 <ThemedText type="smallBold" style={[styles.label, pathname.startsWith('/admin') && styles.labelActive]}>
-                  Admin
+                  {t('nav.admin')}
                 </ThemedText>
                 {pathname.startsWith('/admin') && <View style={styles.dot} />}
               </View>
@@ -100,7 +102,7 @@ export function WebSidebar() {
                 <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
                   {profile?.name ?? ''}
                 </ThemedText>
-                <ThemedText style={styles.footerHint}>View profile</ThemedText>
+                <ThemedText style={styles.footerHint}>{t('nav.viewProfile')}</ThemedText>
               </View>
             </View>
           </Pressable>

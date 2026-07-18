@@ -10,6 +10,7 @@ import { Friend, FriendRequest, FriendUser } from '@/types/friend';
 import { openConversation } from '@/services/conversations';
 import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend, sendFriendRequest } from '@/services/friends';
 import { searchUsers } from '@/services/users';
+import { useTranslation } from '@/i18n';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -31,6 +32,7 @@ function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl?: string })
 
 export default function FriendsScreen() {
   const { user: me } = useAuth();
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export default function FriendsScreen() {
         })
         .catch(() => {
           setResults([]);
-          setSearchError('Não foi possível pesquisar. Tenta de novo.');
+          setSearchError(t('profile.friends.searchError'));
         })
         .finally(() => setSearching(false));
     }, SEARCH_DEBOUNCE_MS);
@@ -127,7 +129,7 @@ export default function FriendsScreen() {
       if (message === 'Já enviaste um pedido a este utilizador' || message === 'Já são amigos') {
         setSentIds((prev) => [...prev, user.id]);
       } else {
-        setSearchError(message || 'Erro ao enviar pedido');
+        setSearchError(message || t('profile.addFriend.genericError'));
       }
     }
   }
@@ -153,14 +155,14 @@ export default function FriendsScreen() {
             <Pressable onPress={exitAddMode} hitSlop={8}>
               <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
             </Pressable>
-            <ThemedText style={styles.addHeaderTitle}>Adicionar amigo</ThemedText>
+            <ThemedText style={styles.addHeaderTitle}>{t('profile.friends.addFriendTitle')}</ThemedText>
           </View>
 
           <View style={styles.searchBox}>
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Procurar pelo nome..."
+              placeholder={t('profile.friends.searchPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={addQuery}
               onChangeText={setAddQuery}
@@ -179,16 +181,16 @@ export default function FriendsScreen() {
 
           {results === null ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Escreve um nome para procurar.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.friends.typeToSearch')}</ThemedText>
             </View>
           ) : results.length === 0 && !searching ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.friends.noUsersFound')}</ThemedText>
             </View>
           ) : (
             <>
               <ThemedText style={styles.sectionTitle}>
-                Resultados{searching ? '...' : ` (${results.length})`}
+                {searching ? t('profile.friends.resultsSearching') : t('profile.friends.resultsCount', { count: results.length })}
               </ThemedText>
               {results.map((u) => {
                 const isFriend = friendIds.includes(u.id);
@@ -232,7 +234,7 @@ export default function FriendsScreen() {
 
         {requests.length > 0 && (
           <>
-            <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile.friends.requestsCount', { count: requests.length })}</ThemedText>
             {requests.map((req) => (
               <View key={req.requestId} style={styles.row}>
                 <Pressable
@@ -255,7 +257,7 @@ export default function FriendsScreen() {
         )}
 
         <View style={styles.friendsHeader}>
-          <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('profile.friends.friendsCount', { count: friends.length })}</ThemedText>
           <Pressable style={styles.addFriendBtn} onPress={() => setAddMode(true)} hitSlop={8}>
             <Ionicons name="person-add-outline" size={18} color="#e8823f" />
           </Pressable>
@@ -266,7 +268,7 @@ export default function FriendsScreen() {
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Filtrar amigos..."
+              placeholder={t('profile.friends.filterPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={friendFilter}
               onChangeText={setFriendFilter}
@@ -286,8 +288,8 @@ export default function FriendsScreen() {
             <Ionicons name="people-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
             <ThemedText style={styles.emptyText}>
               {friends.length === 0
-                ? 'Ainda não tens amigos. Usa o + para adicionar.'
-                : 'Nenhum amigo encontrado.'}
+                ? t('profile.friends.noFriendsYet')
+                : t('profile.friends.noFriendsFound')}
             </ThemedText>
           </View>
         ) : (

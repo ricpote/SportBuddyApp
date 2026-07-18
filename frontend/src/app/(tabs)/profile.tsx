@@ -21,6 +21,8 @@ import { Activity } from '@/types/activity';
 import { UserStats } from '@/types/user';
 import { relativeDate } from '@/utils/date';
 import { compressImageDataUrl } from '@/utils/image';
+import { useTranslation } from '@/i18n';
+import { translateBadge } from '@/utils/translate-badge';
 
 const STATUS_COLOR: Record<Activity['status'], string> = {
   open: '#9ccd6b',
@@ -29,18 +31,13 @@ const STATUS_COLOR: Record<Activity['status'], string> = {
   completed: '#8f8b85',
 };
 
-const STATUS_LABEL: Record<Activity['status'], string> = {
-  open: 'Aberta',
-  full: 'Completa',
-  cancelled: 'Cancelada',
-  completed: 'Terminada',
-};
+const MONTH_KEYS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
-function memberSince(ts?: string): string {
+function memberSince(ts: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!ts) return '';
   const d = new Date(ts);
-  const m = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()];
-  return `${m} ${d.getFullYear()}`;
+  const monthKey = MONTH_KEYS[d.getMonth()];
+  return `${t(`profile.month.${monthKey}`)} ${d.getFullYear()}`;
 }
 
 function locName(loc?: string | { name?: string }): string | null {
@@ -61,7 +58,15 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { refresh: refreshBadge } = usePendingWaitlist();
+  const { t, language } = useTranslation();
   const isWide = width >= 700;
+
+  const STATUS_LABEL: Record<Activity['status'], string> = {
+    open: t('profile.status.open'),
+    full: t('profile.status.full'),
+    cancelled: t('profile.status.cancelled'),
+    completed: t('profile.status.completed'),
+  };
 
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
@@ -139,7 +144,7 @@ export default function ProfileScreen() {
     .sort((a, b) => b.pct - a.pct)
     .find(b => b.pct > 0 && b.pct < 1);
 
-  const memberSinceStr = memberSince(profile?.createdAt);
+  const memberSinceStr = memberSince(profile?.createdAt, t);
   const locationStr = locName(profile?.location);
 
   const handlePickImage = async () => {
@@ -171,7 +176,7 @@ export default function ProfileScreen() {
       await setDisplayedBadge(badge.isDisplayed ? null : badge.id);
       await getMyBadges().then(setEarnedBadges);
     } catch {
-      Alert.alert('Erro', 'Não foi possível atualizar o badge.');
+      Alert.alert(t('profile.alert.errorTitle'), t('profile.badges.updateError'));
     } finally {
       setUpdatingBadgeId(null);
     }
@@ -214,7 +219,7 @@ export default function ProfileScreen() {
                 <ThemedText type="small" style={styles.metaText}>{profile?.email ?? user?.email}</ThemedText>
               ) : null}
               {memberSinceStr ? (
-                <ThemedText type="small" style={styles.metaText}>Membro desde {memberSinceStr}</ThemedText>
+                <ThemedText type="small" style={styles.metaText}>{t('profile.memberSince', { date: memberSinceStr })}</ThemedText>
               ) : null}
             </View>
 
@@ -226,7 +231,7 @@ export default function ProfileScreen() {
             ) : null}
 
             {uploadingAvatar ? (
-              <ThemedText type="small" style={styles.uploadingText}>A guardar...</ThemedText>
+              <ThemedText type="small" style={styles.uploadingText}>{t('profile.avatar.saving')}</ThemedText>
             ) : null}
 
             {profile?.sports && profile.sports.length > 0 && (
@@ -247,11 +252,11 @@ export default function ProfileScreen() {
 
             <View style={styles.statsList}>
               {[
-                { label: 'Participadas', value: profile?.stats.activitiesJoined ?? 0, accent: false, href: null },
-                { label: 'Organizadas',  value: profile?.stats.activitiesCreated ?? 0, accent: false, href: null },
-                { label: 'MVP',          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false, href: null },
-                { label: 'Amigos',       value: friendCount,                            accent: false, href: '/friends' },
-                { label: 'A seguir',     value: profile?.following?.length ?? 0,        accent: false, href: '/following' },
+                { label: t('profile.stats.joined'), value: profile?.stats.activitiesJoined ?? 0, accent: false, href: null },
+                { label: t('profile.stats.organized'),  value: profile?.stats.activitiesCreated ?? 0, accent: false, href: null },
+                { label: t('profile.stats.mvp'),          value: profile?.stats.mvpVotesReceived ?? 0,  accent: false, href: null },
+                { label: t('profile.stats.friends'),       value: friendCount,                            accent: false, href: '/friends' },
+                { label: t('profile.stats.following'),     value: profile?.following?.length ?? 0,        accent: false, href: '/following' },
               ].map(({ label, value, accent, href }) => (
                 <Pressable key={label} style={({ pressed }) => [styles.statRow, pressed && href && styles.pressed]} onPress={() => href && router.push(href as any)}>
                   <ThemedText type="small" style={styles.statLabel}>{label}</ThemedText>
@@ -267,9 +272,9 @@ export default function ProfileScreen() {
                 <View style={styles.divider} />
                 <View style={styles.nextBadgeBox}>
                   <View style={styles.nextBadgeRow}>
-                    <ThemedText type="small" style={styles.nextBadgeLabel}>Próxima: </ThemedText>
+                    <ThemedText type="small" style={styles.nextBadgeLabel}>{t('profile.badge.next')}</ThemedText>
                     <ThemedText type="smallBold" style={styles.nextBadgeName} numberOfLines={1}>
-                      {nextBadge.name}
+                      {translateBadge(nextBadge, language).name}
                     </ThemedText>
                     <ThemedText type="small" style={styles.nextBadgeCount}>
                       {' '}{nextBadge.current}/{nextBadge.threshold}
@@ -291,7 +296,7 @@ export default function ProfileScreen() {
               style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
               onPress={signOut}>
               <Ionicons name="log-out-outline" size={16} color="#eb8f84" />
-              <ThemedText type="smallBold" style={styles.logoutText}>Terminar sessão</ThemedText>
+              <ThemedText type="smallBold" style={styles.logoutText}>{t('profile.logout')}</ThemedText>
             </Pressable>
           </View>
 
@@ -302,7 +307,7 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionTitleRow}>
-                    <ThemedText type="subtitle" style={styles.sectionTitle}>A gerir</ThemedText>
+                    <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.managing.title')}</ThemedText>
                     <ThemedText type="subtitle" style={styles.sectionCount}> {managedActivities.length}</ThemedText>
                   </View>
                 </View>
@@ -328,19 +333,19 @@ export default function ProfileScreen() {
                               </ThemedText>
                               <ThemedText type="small" style={styles.actMeta}>
                                 {pendingCount > 0
-                                  ? `${pendingCount} pedido${pendingCount > 1 ? 's' : ''} pendente${pendingCount > 1 ? 's' : ''}`
-                                  : `${participantCount} / ${activity.maxParticipants} inscritos`}
+                                  ? t(pendingCount > 1 ? 'profile.pendingRequests.plural' : 'profile.pendingRequests.singular', { count: pendingCount })
+                                  : t('profile.participants', { current: participantCount, max: activity.maxParticipants })}
                               </ThemedText>
                             </View>
                             {pendingCount > 0 ? (
                               <View style={[styles.statusChip, { backgroundColor: 'rgba(232,130,63,0.15)' }]}>
                                 <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>
-                                  {pendingCount} pedido{pendingCount > 1 ? 's' : ''}
+                                  {t(pendingCount > 1 ? 'profile.pendingChip.plural' : 'profile.pendingChip.singular', { count: pendingCount })}
                                 </ThemedText>
                               </View>
                             ) : (
                               <View style={[styles.statusChip, { backgroundColor: 'rgba(156,205,107,0.15)' }]}>
-                                <ThemedText style={[styles.statusText, { color: '#9ccd6b' }]}>Aberta</ThemedText>
+                                <ThemedText style={[styles.statusText, { color: '#9ccd6b' }]}>{t('profile.status.open')}</ThemedText>
                               </View>
                             )}
                             <Ionicons name="settings-outline" size={18} color="#8f8b85" />
@@ -355,18 +360,18 @@ export default function ProfileScreen() {
                   <Pressable
                     style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
                     onPress={() => setManagedLimit(l => l + 5)}>
-                    <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
+                    <ThemedText type="small" style={styles.showAllText}>{t('profile.viewMore')}</ThemedText>
                   </Pressable>
                 )}
               </>
             )}
 
             <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>Badges</ThemedText>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.badges.title')}</ThemedText>
               <Pressable
                 style={({ pressed }) => [styles.verTodasBtn, pressed && styles.pressed]}
                 onPress={() => router.push('/badges')}>
-                <ThemedText type="small" style={styles.verTodasText}>Ver todas ›</ThemedText>
+                <ThemedText type="small" style={styles.verTodasText}>{t('profile.badges.viewAll')}</ThemedText>
               </Pressable>
             </View>
 
@@ -378,16 +383,16 @@ export default function ProfileScreen() {
                     style={({ pressed }) => [styles.badgeCell, pressed && styles.pressed]}
                     onPress={() => handleBadgeTap(badge)}>
                     <BadgeIcon badgeId={badge.id} icon={badge.icon} size={100} />
-                    <ThemedText style={styles.badgeName} numberOfLines={2}>{badge.name}</ThemedText>
+                    <ThemedText style={styles.badgeName} numberOfLines={2}>{translateBadge(badge, language).name}</ThemedText>
                   </Pressable>
                 ))}
               </View>
             ) : (
-              <ThemedText type="small" style={styles.emptyText}>Ainda sem badges.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.badges.empty')}</ThemedText>
             )}
 
             <View style={styles.historicHeader}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.history.title')}</ThemedText>
               <View style={styles.filterRow}>
                 {(['active', 'past'] as const).map(f => (
                   <Pressable key={f} onPress={() => { setActivityFilter(activityFilter === f ? 'all' : f); setActivityLimit(5); }}>
@@ -395,7 +400,7 @@ export default function ProfileScreen() {
                       <ThemedText
                         type="small"
                         style={[styles.filterText, activityFilter === f && styles.filterTextOn]}>
-                        {f === 'active' ? 'Ativas' : 'Passadas'}
+                        {f === 'active' ? t('profile.filter.active') : t('profile.filter.past')}
                       </ThemedText>
                     </View>
                   </Pressable>
@@ -404,10 +409,10 @@ export default function ProfileScreen() {
             </View>
 
             {activities === null && (
-              <ThemedText type="small" style={styles.emptyText}>A carregar...</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.loading')}</ThemedText>
             )}
             {activities !== null && filteredActivities.length === 0 && (
-              <ThemedText type="small" style={styles.emptyText}>Sem atividades.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.activities.empty')}</ThemedText>
             )}
 
             <View style={styles.actList}>
@@ -450,7 +455,7 @@ export default function ProfileScreen() {
               <Pressable
                 style={({ pressed }) => [styles.showAllBtn, pressed && styles.pressed]}
                 onPress={() => setActivityLimit(l => l + 5)}>
-                <ThemedText type="small" style={styles.showAllText}>Ver mais</ThemedText>
+                <ThemedText type="small" style={styles.showAllText}>{t('profile.viewMore')}</ThemedText>
               </Pressable>
             )}
           </View>

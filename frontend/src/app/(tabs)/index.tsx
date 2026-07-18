@@ -23,6 +23,7 @@ import { relativeDate } from '@/utils/date';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
 import { getWeatherInfo, getUvColor, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
 import * as Location from 'expo-location';
+import { useTranslation } from '@/i18n';
 
 // const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
 //   beginner: 'Beginner',
@@ -54,6 +55,7 @@ function getInitials(name: string): string {
 }
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { user, profile } = useAuth();
   const { unreadCount: chatUnread } = useChatBadge();
   const { width: screenWidth } = useWindowDimensions();
@@ -116,7 +118,7 @@ export default function HomeScreen() {
 
   function countdown(iso: string): string {
     const diff = new Date(iso).getTime() - Date.now();
-    if (diff <= 0) return 'Now';
+    if (diff <= 0) return t('home.now');
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
@@ -131,9 +133,9 @@ export default function HomeScreen() {
       .map((id) => friendNameById.get(id))
       .filter((name): name is string => !!name);
     if (names.length === 0) return '';
-    if (names.length === 1) return `${names[0]} is joining`;
-    if (names.length === 2) return `${names[0]} and ${names[1]} are joining`;
-    return `${names[0]} and ${names.length - 1} more are joining`;
+    if (names.length === 1) return t('home.friendJoining', { name: names[0] });
+    if (names.length === 2) return t('home.friendsJoining2', { name1: names[0], name2: names[1] });
+    return t('home.friendsJoiningMore', { name: names[0], count: names.length - 1 });
   }
 
 
@@ -153,15 +155,15 @@ export default function HomeScreen() {
         const { icon, category, label } = getWeatherInfo(today.weatherCode);
         const iconColor = WEATHER_CATEGORY_COLORS[category];
         const sportHint =
-          category === 'clear' || category === 'partly-cloud' ? ' · ideal para jogar'
-          : category === 'cloud' ? ' · bom para jogar'
-          : category === 'drizzle' || category === 'rain' ? ' · condições difíceis'
-          : category === 'storm' ? ' · não recomendado'
+          category === 'clear' || category === 'partly-cloud' ? t('home.weather.idealForPlaying')
+          : category === 'cloud' ? t('home.weather.goodForPlaying')
+          : category === 'drizzle' || category === 'rain' ? t('home.weather.difficultConditions')
+          : category === 'storm' ? t('home.weather.notRecommended')
           : '';
         return (
           <View style={styles.compactWeather}>
             <View style={styles.compactWeatherHeader}>
-              <ThemedText style={styles.compactWeatherTitle}>Weather</ThemedText>
+              <ThemedText style={styles.compactWeatherTitle}>{t('home.weather.title')}</ThemedText>
               {locationName && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                   <Ionicons name="location-outline" size={11} color="#8f8b85" />
@@ -186,7 +188,7 @@ export default function HomeScreen() {
                   <View style={styles.compactUv}>
                     <Ionicons name="sunny-outline" size={13} color={getUvColor(today.uvIndex)} />
                     <ThemedText style={[styles.compactUvText, { color: getUvColor(today.uvIndex) }]}>
-                      UV {Math.round(today.uvIndex)}
+                      {t('home.weather.uv', { value: Math.round(today.uvIndex) })}
                     </ThemedText>
                   </View>
                 )}
@@ -213,7 +215,7 @@ export default function HomeScreen() {
 
       {friendFeed.length > 0 && (
         <View style={styles.sidebarSection}>
-          <ThemedText type="subtitle" style={styles.sidebarTitle}>Friends Activity</ThemedText>
+          <ThemedText type="subtitle" style={styles.sidebarTitle}>{t('home.friendsActivity')}</ThemedText>
           {friendFeed.slice(0, 6).map((item, i) => (
             <Pressable
               key={`feed-${i}`}
@@ -226,9 +228,9 @@ export default function HomeScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.feedSidebarText} numberOfLines={2}>
                   <ThemedText style={styles.feedSidebarName}>{item.userName} </ThemedText>
-                  {item.type === 'joined' && 'joined '}
-                  {item.type === 'created' && 'organised '}
-                  {item.type === 'mvp' && 'won MVP in '}
+                  {item.type === 'joined' && t('home.feed.joined')}
+                  {item.type === 'created' && t('home.feed.organised')}
+                  {item.type === 'mvp' && t('home.feed.wonMvpIn')}
                   <ThemedText style={styles.feedSidebarActivity}>{item.activityTitle}</ThemedText>
                 </ThemedText>
                 <ThemedText style={styles.feedTime}>{relativeDate(item.timestamp)}</ThemedText>
@@ -259,10 +261,10 @@ export default function HomeScreen() {
                 )}
                 <View>
                   <ThemedText type="subtitle" style={styles.profileName}>
-                    Hey, {firstName} 👋
+                    {t('home.greeting', { name: firstName })}
                   </ThemedText>
                   <ThemedText style={styles.greetingText}>
-                    Ready for your next activity?
+                    {t('home.subtitle')}
                   </ThemedText>
                 </View>
               </View>
@@ -302,14 +304,14 @@ export default function HomeScreen() {
               {nextActivity && (
                 <View style={styles.nextSection}>
                   <View style={styles.nextSectionHeader}>
-                    <ThemedText style={styles.nextSectionLabel}>YOUR NEXT ACTIVITY</ThemedText>
+                    <ThemedText style={styles.nextSectionLabel}>{t('home.nextActivityLabel')}</ThemedText>
                     {otherUpcomingActivities.length > 0 && (
                       <Pressable
                         onPress={() => setShowAllActivities((v) => !v)}
                         style={({ pressed }) => [styles.seeAllToggle, pressed && styles.pressed]}
                       >
                         <ThemedText style={styles.seeAllSmall}>
-                          {showAllActivities ? 'Show less' : 'Show all'}
+                          {showAllActivities ? t('home.showLess') : t('home.showAll')}
                         </ThemedText>
                         <Ionicons
                           name={showAllActivities ? 'chevron-up' : 'chevron-down'}
@@ -324,7 +326,7 @@ export default function HomeScreen() {
                         <View style={styles.nextSportCircle}>
                           <SportIcon sportName={sportNameById.get(nextActivity.sportId)} size={28} color="#e8823f" />
                         </View>
-                        <ThemedText style={styles.nextComecaLabel}>STARTS IN</ThemedText>
+                        <ThemedText style={styles.nextComecaLabel}>{t('home.startsIn')}</ThemedText>
                         <ThemedText style={styles.nextCountdown}>{countdown(nextActivity.date)}</ThemedText>
                       </View>
 
@@ -335,12 +337,12 @@ export default function HomeScreen() {
                           </ThemedText>
                           {nextActivity.status === 'full' ? (
                             <View style={styles.confirmedBadge}>
-                              <ThemedText style={styles.confirmedText}>Confirmed</ThemedText>
+                              <ThemedText style={styles.confirmedText}>{t('home.confirmed')}</ThemedText>
                             </View>
                           ) : (
                             <View style={[styles.confirmedBadge, { backgroundColor: 'rgba(232,130,63,0.12)', borderColor: 'rgba(232,130,63,0.3)' }]}>
                               <ThemedText style={[styles.confirmedText, { color: '#e8823f' }]}>
-                                {nextActivity.maxParticipants - nextActivity.participantsList.length} spots left
+                                {t('home.spotsLeft', { count: nextActivity.maxParticipants - nextActivity.participantsList.length })}
                               </ThemedText>
                             </View>
                           )}
@@ -352,7 +354,7 @@ export default function HomeScreen() {
                             {(() => {
                               const d = new Date(nextActivity.date);
                               const isToday = d.toDateString() === new Date().toDateString();
-                              return `${isToday ? 'Today' : formatDate(nextActivity.date)} · ${formatTime(nextActivity.date)}`;
+                              return `${isToday ? t('home.today') : formatDate(nextActivity.date)} · ${formatTime(nextActivity.date)}`;
                             })()}
                           </ThemedText>
                           <Ionicons name="location-outline" size={13} color="#c9c5bf" style={{ marginLeft: 6 }} />
@@ -368,14 +370,14 @@ export default function HomeScreen() {
                             onPress={() => router.push({ pathname: '/activity/[id]', params: { id: nextActivity.id } })}
                             style={styles.nextBtn}
                           >
-                            <Text style={styles.nextBtnText}>View activity</Text>
+                            <Text style={styles.nextBtnText}>{t('home.viewActivity')}</Text>
                           </Pressable>
                           <Pressable
                             onPress={() => router.push({ pathname: '/chat/[id]', params: { id: nextActivity.id } })}
                             style={styles.nextBtnGhost}
                           >
                             <Ionicons name="chatbubble-outline" size={14} color="#8f8b85" />
-                            <ThemedText style={styles.nextBtnGhostText}>Chat</ThemedText>
+                            <ThemedText style={styles.nextBtnGhostText}>{t('home.chat')}</ThemedText>
                           </Pressable>
                         </View>
                       </View>
@@ -402,7 +404,7 @@ export default function HomeScreen() {
                                 <View style={styles.miniInfoRow}>
                                   <Ionicons name="calendar-outline" size={11} color="#8f8b85" />
                                   <ThemedText style={styles.miniInfoText}>
-                                    {isToday ? 'Today' : formatDate(activity.date)} · {formatTime(activity.date)}
+                                    {isToday ? t('home.today') : formatDate(activity.date)} · {formatTime(activity.date)}
                                   </ThemedText>
                                   <Ionicons name="location-outline" size={11} color="#8f8b85" style={{ marginLeft: 6 }} />
                                   <ThemedText style={styles.miniInfoText} numberOfLines={1}>
@@ -423,11 +425,11 @@ export default function HomeScreen() {
               {/* RECOMENDADO PARA TI */}
               <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeader}>
-                  <ThemedText type="subtitle" style={styles.sectionTitle}>Recommended for you</ThemedText>
+                  <ThemedText type="subtitle" style={styles.sectionTitle}>{t('home.recommended')}</ThemedText>
                   {recommended.length > 0 && (
                     <Link href="/explore" asChild>
                       <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                        <ThemedText style={styles.seeAll}>See all</ThemedText>
+                        <ThemedText style={styles.seeAll}>{t('home.seeAll')}</ThemedText>
                       </Pressable>
                     </Link>
                   )}
@@ -435,14 +437,14 @@ export default function HomeScreen() {
 
                 {recommended.length === 0 ? (
                   <View style={styles.recEmpty}>
-                    <ThemedText style={styles.recEmptyTitle}>No recommendations yet</ThemedText>
+                    <ThemedText style={styles.recEmptyTitle}>{t('home.noRecommendationsTitle')}</ThemedText>
                     <ThemedText style={styles.recEmptyText}>
-                      Join activities and add your sports to your profile to get better suggestions.
+                      {t('home.noRecommendationsText')}
                     </ThemedText>
                     <Link href="/explore" asChild>
                       <Pressable style={({ pressed }) => pressed && styles.pressed}>
                         <View style={styles.recEmptyBtn}>
-                          <Text style={styles.recEmptyBtnText}>Explore activities  →</Text>
+                          <Text style={styles.recEmptyBtnText}>{t('home.exploreActivities')}</Text>
                         </View>
                       </Pressable>
                     </Link>
@@ -452,7 +454,7 @@ export default function HomeScreen() {
                     {recommended.map((activity) => {
                       const spotsLeft = activity.maxParticipants - activity.participantsList.length;
                       const isAlmostFull = spotsLeft <= 3 && spotsLeft > 0 && activity.status === 'open';
-                      const statusLabel = isAlmostFull ? 'Almost full' : activity.status === 'full' ? 'Full' : 'Open';
+                      const statusLabel = isAlmostFull ? t('home.almostFull') : activity.status === 'full' ? t('home.full') : t('home.open');
                       const statusColor = isAlmostFull ? '#e8823f' : activity.status === 'full' ? '#8f8b85' : '#4ade80';
                       const goingLabel = friendsGoingLabel(activity);
 

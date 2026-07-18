@@ -11,6 +11,8 @@ import { getBadgeCatalog, getMyBadges } from '@/services/badges';
 import { Badge, UserBadge } from '@/types/badge';
 import { useAuth } from '@/contexts/auth-context';
 import { UserStats } from '@/types/user';
+import { useTranslation } from '@/i18n';
+import { translateBadge } from '@/utils/translate-badge';
 
 function badgeProgress(b: Badge, stats: UserStats): number {
   if (b.criteriaType === 'activitiesJoined') return stats.activitiesJoined;
@@ -20,6 +22,7 @@ function badgeProgress(b: Badge, stats: UserStats): number {
 
 export default function BadgesScreen() {
   const { profile } = useAuth();
+  const { t, language } = useTranslation();
   const insets = useSafeAreaInsets();
   const [earnedBadges, setEarnedBadges] = useState<UserBadge[] | null>(null);
   const [catalog, setCatalog] = useState<Badge[] | null>(null);
@@ -63,53 +66,59 @@ export default function BadgesScreen() {
       style={styles.container}
       contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + Spacing.four }]}>
 
-      <ThemedText type="smallBold" style={styles.sectionTitle}>Conquistadas</ThemedText>
+      <ThemedText type="smallBold" style={styles.sectionTitle}>{t('profile.badges.earned')}</ThemedText>
       {earnedWithIcon.length === 0
-        ? <ThemedText type="small" style={styles.empty}>Ainda não conquistaste nenhum badge.</ThemedText>
+        ? <ThemedText type="small" style={styles.empty}>{t('profile.badges.noneEarned')}</ThemedText>
         : (
           <View style={styles.grid}>
-            {earnedWithIcon.map(badge => (
-              <View key={badge.id} style={styles.cell}>
-                <View style={styles.imageWrap}>
-                  <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
+            {earnedWithIcon.map(badge => {
+              const translated = translateBadge(badge, language);
+              return (
+                <View key={badge.id} style={styles.cell}>
+                  <View style={styles.imageWrap}>
+                    <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
+                  </View>
+                  <ThemedText style={styles.badgeName} numberOfLines={2}>{translated.name}</ThemedText>
+                  <ThemedText style={styles.badgeDesc} numberOfLines={2}>{translated.description}</ThemedText>
                 </View>
-                <ThemedText style={styles.badgeName} numberOfLines={2}>{badge.name}</ThemedText>
-                <ThemedText style={styles.badgeDesc} numberOfLines={2}>{badge.description}</ThemedText>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )
       }
 
       <View style={styles.divider} />
 
-      <ThemedText type="smallBold" style={styles.sectionTitle}>Bloqueadas</ThemedText>
+      <ThemedText type="smallBold" style={styles.sectionTitle}>{t('profile.badges.locked')}</ThemedText>
       {lockedWithProgress.length === 0
-        ? <ThemedText type="small" style={styles.empty}>Já conquistaste todos os badges!</ThemedText>
+        ? <ThemedText type="small" style={styles.empty}>{t('profile.badges.allEarned')}</ThemedText>
         : (
           <View style={styles.grid}>
-            {lockedWithProgress.map(badge => (
-              <View key={badge.id} style={styles.cell}>
-                <View style={styles.imageWrap}>
-                  <View style={{ opacity: 0.3 }}>
-                    <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
-                  </View>
-                  <View style={styles.lockOverlay}>
-                    <Ionicons name="lock-closed" size={20} color="#8f8b85" />
-                  </View>
-                </View>
-                <ThemedText style={styles.badgeName} numberOfLines={2}>{badge.name}</ThemedText>
-                <ThemedText style={styles.badgeDesc} numberOfLines={2}>{badge.description}</ThemedText>
-                {badge.current > 0 && (
-                  <View style={styles.progressWrap}>
-                    <View style={styles.progressTrack}>
-                      <View style={[styles.progressFill, { width: `${Math.min(badge.pct * 100, 100)}%` as any }]} />
+            {lockedWithProgress.map(badge => {
+              const translated = translateBadge(badge, language);
+              return (
+                <View key={badge.id} style={styles.cell}>
+                  <View style={styles.imageWrap}>
+                    <View style={{ opacity: 0.3 }}>
+                      <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
                     </View>
-                    <ThemedText style={styles.progressText}>{badge.current}/{badge.threshold}</ThemedText>
+                    <View style={styles.lockOverlay}>
+                      <Ionicons name="lock-closed" size={20} color="#8f8b85" />
+                    </View>
                   </View>
-                )}
-              </View>
-            ))}
+                  <ThemedText style={styles.badgeName} numberOfLines={2}>{translated.name}</ThemedText>
+                  <ThemedText style={styles.badgeDesc} numberOfLines={2}>{translated.description}</ThemedText>
+                  {badge.current > 0 && (
+                    <View style={styles.progressWrap}>
+                      <View style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: `${Math.min(badge.pct * 100, 100)}%` as any }]} />
+                      </View>
+                      <ThemedText style={styles.progressText}>{badge.current}/{badge.threshold}</ThemedText>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )
       }

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useTranslation } from '@/i18n';
 
 export type PickedLocation = {
   name: string;
@@ -90,6 +91,7 @@ function MapPin() {
 }
 
 function LocationPickerMap({ value, onChange }: LocationPickerProps) {
+  const { t } = useTranslation();
   const map = useMap();
   const geocodingLibrary = useMapsLibrary('geocoding');
   const geocoder = geocodingLibrary ? new geocodingLibrary.Geocoder() : null;
@@ -137,7 +139,7 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
     onChange({
       // Sem nome de referência (comum fora de Portugal, onde o Google tem
       // menos detalhe), mostra a morada em vez de um texto genérico.
-      name: pickLocationName(firstResult) || firstResult?.formatted_address || 'Local selecionado',
+      name: pickLocationName(firstResult) || firstResult?.formatted_address || t('activity.locationPicker.defaultName'),
       address: firstResult?.formatted_address || `${lat}, ${lng}`,
       lat,
       lng,
@@ -180,13 +182,13 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Pesquisar morada ou local"
+          placeholder={t('activity.locationPicker.searchPlaceholder')}
           placeholderTextColor="#8f8b85"
           style={styles.input}
           onSubmitEditing={searchAddress}
         />
         <Pressable onPress={searchAddress} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <ThemedText style={styles.buttonText}>Pesquisar</ThemedText>
+          <ThemedText style={styles.buttonText}>{t('activity.locationPicker.searchButton')}</ThemedText>
         </Pressable>
       </View>
 
@@ -225,11 +227,11 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
       <View style={styles.selectedBox}>
         <Ionicons name="location-outline" size={18} color="#e8823f" />
         <View style={{ flex: 1 }}>
-          <ThemedText style={styles.selectedTitle}>Local selecionado</ThemedText>
+          <ThemedText style={styles.selectedTitle}>{t('activity.locationPicker.defaultName')}</ThemedText>
           <ThemedText style={styles.selectedAddress}>
             {locating
-              ? 'A localizar-te...'
-              : value.address || 'Nenhum local selecionado — clica no mapa ou pesquisa acima'}
+              ? t('activity.locationPicker.locating')
+              : value.address || t('activity.locationPicker.noSelection')}
           </ThemedText>
         </View>
       </View>
@@ -238,13 +240,14 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
 }
 
 export default function LocationPicker(props: LocationPickerProps) {
+  const { t } = useTranslation();
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY;
 
   if (!apiKey) {
     return (
       <View style={styles.selectedBox}>
         <ThemedText style={styles.selectedAddress}>
-          Falta EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY no .env
+          {t('activity.locationPicker.missingApiKey')}
         </ThemedText>
       </View>
     );

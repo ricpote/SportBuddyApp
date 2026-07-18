@@ -8,6 +8,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { getUserProfile, followUser, unfollowUser, searchUsers } from '@/services/users';
 import { PublicUser } from '@/types/user';
+import { useTranslation } from '@/i18n';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -22,6 +23,7 @@ function AvatarCircle({ avatarUrl }: { avatarUrl?: string }) {
 
 export default function FollowingScreen() {
   const { profile, refreshProfile } = useAuth();
+  const { t } = useTranslation();
 
   const [companies, setCompanies] = useState<PublicUser[] | null>(null);
   const [nameFilter, setNameFilter] = useState('');
@@ -99,14 +101,14 @@ export default function FollowingScreen() {
             <Pressable onPress={() => { setDiscoverMode(false); setDiscoverQuery(''); setDiscoverResults(null); }} hitSlop={8}>
               <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
             </Pressable>
-            <ThemedText style={styles.discoverHeaderTitle}>Procurar empresas</ThemedText>
+            <ThemedText style={styles.discoverHeaderTitle}>{t('profile.following.searchCompanies')}</ThemedText>
           </View>
 
           <View style={styles.searchBox}>
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Procurar empresa..."
+              placeholder={t('profile.following.searchPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={discoverQuery}
               onChangeText={setDiscoverQuery}
@@ -123,16 +125,16 @@ export default function FollowingScreen() {
 
           {discoverResults === null ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Escreve o nome de uma empresa para procurar.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.following.typeToSearch')}</ThemedText>
             </View>
           ) : discoverResults.length === 0 && !searching ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Nenhuma empresa encontrada.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.following.noCompaniesFound')}</ThemedText>
             </View>
           ) : (
             <>
               <ThemedText style={styles.sectionTitle}>
-                Resultados{searching ? '...' : ` (${discoverResults.length})`}
+                {searching ? t('profile.friends.resultsSearching') : t('profile.friends.resultsCount', { count: discoverResults.length })}
               </ThemedText>
               {discoverResults.map(company => {
                 const isFollowing = followingIds.has(company.id) || company.isFollowing;
@@ -152,7 +154,7 @@ export default function FollowingScreen() {
                       onPress={() => isFollowing ? handleUnfollow(company.id) : handleFollow(company.id)}
                       disabled={actionId === company.id}>
                       <ThemedText style={isFollowing ? styles.followingText : styles.followText}>
-                        {actionId === company.id ? '...' : isFollowing ? 'A seguir' : 'Seguir'}
+                        {actionId === company.id ? t('profile.following.busy') : isFollowing ? t('profile.user.following') : t('profile.user.follow')}
                       </ThemedText>
                     </Pressable>
                   </View>
@@ -169,7 +171,7 @@ export default function FollowingScreen() {
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
         <View style={styles.listHeader}>
-          <ThemedText style={styles.sectionTitle}>A seguir ({companies?.length ?? 0})</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('profile.following.followingCount', { count: companies?.length ?? 0 })}</ThemedText>
           <Pressable style={styles.discoverBtn} onPress={() => setDiscoverMode(true)} hitSlop={8}>
             <Ionicons name="search-outline" size={18} color="#e8823f" />
           </Pressable>
@@ -180,7 +182,7 @@ export default function FollowingScreen() {
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Filtrar empresas..."
+              placeholder={t('profile.following.filterPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={nameFilter}
               onChangeText={setNameFilter}
@@ -196,14 +198,14 @@ export default function FollowingScreen() {
         )}
 
         {companies === null ? (
-          <ThemedText style={styles.emptyText}>A carregar...</ThemedText>
+          <ThemedText style={styles.emptyText}>{t('profile.loading')}</ThemedText>
         ) : filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="business-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
             <ThemedText style={styles.emptyText}>
               {companies.length === 0
-                ? 'Ainda não segues nenhuma empresa. Usa o ícone de pesquisa para descobrir.'
-                : 'Nenhuma empresa encontrada.'}
+                ? t('profile.following.noCompaniesYet')
+                : t('profile.following.noCompaniesFound')}
             </ThemedText>
           </View>
         ) : (
@@ -223,7 +225,7 @@ export default function FollowingScreen() {
                 onPress={() => handleUnfollow(company.id)}
                 disabled={actionId === company.id}>
                 <ThemedText style={styles.unfollowText}>
-                  {actionId === company.id ? '...' : 'Deixar de seguir'}
+                  {actionId === company.id ? t('profile.following.busy') : t('profile.following.unfollow')}
                 </ThemedText>
               </Pressable>
             </View>

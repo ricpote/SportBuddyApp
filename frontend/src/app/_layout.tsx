@@ -5,10 +5,13 @@ import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600Sem
 import { Platform, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
+import { LanguageProvider } from '@/contexts/language-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
 import { WebSidebar } from '@/components/web-sidebar';
+import { useTranslation } from '@/i18n';
 
 // 1. Criamos o nosso tema personalizado "Dark Premium"
 const SportBuddyTheme = {
@@ -27,6 +30,7 @@ const SportBuddyTheme = {
 function RootNavigator() {
   const { user, initializing, signingUp } = useAuth();
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   if (initializing) {
@@ -52,44 +56,44 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="create-activity"
-          options={{ headerShown: true, title: 'Nova atividade', presentation: 'modal' }}
+          options={{ headerShown: true, title: t('layout.newActivity'), presentation: 'modal' }}
         />
-        <Stack.Screen name="activity/[id]" options={{ headerShown: true, title: 'Atividade' }} />
+        <Stack.Screen name="activity/[id]" options={{ headerShown: true, title: t('layout.activity') }} />
         <Stack.Screen
           name="edit-activity/[id]"
-          options={{ headerShown: true, title: 'Editar atividade', presentation: 'modal' }}
+          options={{ headerShown: true, title: t('layout.editActivity'), presentation: 'modal' }}
         />
         <Stack.Screen
           name="edit-profile"
-          options={{ headerShown: true, title: 'Editar perfil', presentation: 'modal' }}
+          options={{ headerShown: true, title: t('layout.editProfile'), presentation: 'modal' }}
         />
         <Stack.Screen
           name="chat/[id]"
-          options={{ headerShown: true, title: 'Chat' }}
+          options={{ headerShown: true, title: t('layout.chat') }}
         />
         <Stack.Screen
           name="direct-chat/[id]"
-          options={{ headerShown: true, title: 'Chat' }}
+          options={{ headerShown: true, title: t('layout.chat') }}
         />
         <Stack.Screen
           name="user/[id]"
-          options={{ headerShown: true, title: 'Perfil' }}
+          options={{ headerShown: true, title: t('layout.profile') }}
         />
         <Stack.Screen
           name="notifications"
-          options={{ headerShown: true, title: 'Notificações' }}
+          options={{ headerShown: true, title: t('layout.notifications') }}
         />
         <Stack.Screen
           name="friends"
-          options={{ headerShown: true, title: 'Amigos' }}
+          options={{ headerShown: true, title: t('layout.friends') }}
         />
         <Stack.Screen
           name="following"
-          options={{ headerShown: true, title: 'A seguir' }}
+          options={{ headerShown: true, title: t('layout.following') }}
         />
         <Stack.Screen
           name="badges"
-          options={{ headerShown: true, title: 'Badges', presentation: 'modal' }}
+          options={{ headerShown: true, title: t('layout.badges'), presentation: 'modal' }}
         />
       </Stack.Protected>
       <Stack.Protected guard={!authedUser}>
@@ -97,6 +101,7 @@ function RootNavigator() {
       </Stack.Protected>
     </Stack>
       </View>
+      <LanguageSwitcher />
     </View>
   );
 }
@@ -116,13 +121,15 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={SportBuddyTheme}>
       <AnimatedSplashOverlay />
-      <AuthProvider>
-        <PendingWaitlistProvider>
-          <ChatBadgeProvider>
-            <RootNavigator />
-          </ChatBadgeProvider>
-        </PendingWaitlistProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <PendingWaitlistProvider>
+            <ChatBadgeProvider>
+              <RootNavigator />
+            </ChatBadgeProvider>
+          </PendingWaitlistProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
