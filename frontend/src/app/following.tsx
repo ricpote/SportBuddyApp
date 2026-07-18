@@ -48,8 +48,8 @@ export default function FollowingScreen() {
   useEffect(() => {
     if (!discoverMode) return;
     const trimmed = discoverQuery.trim();
-    if (trimmed.length < 1) { setDiscoverResults(null); setSearching(false); return; }
-    setSearching(true);
+    if (trimmed.length < 1) { queueMicrotask(() => { setDiscoverResults(null); setSearching(false); }); return; }
+    queueMicrotask(() => setSearching(true));
     const timer = setTimeout(async () => {
       try {
         const users = await searchUsers(trimmed);

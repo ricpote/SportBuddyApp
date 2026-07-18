@@ -1,7 +1,7 @@
-import { Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PortugalFlag, UnitedKingdomFlag } from '@/components/flags';
-import { BottomTabInset } from '@/constants/theme';
 import { useLanguage } from '@/contexts/language-context';
 import type { Language } from '@/i18n/types';
 
@@ -12,13 +12,14 @@ const LABELS: Record<Language, string> = {
 
 export function LanguageSwitcher() {
   const { language, toggleLanguage } = useLanguage();
+  const insets = useSafeAreaInsets();
   const label = LABELS[language];
 
   return (
     <Pressable
       onPress={toggleLanguage}
       hitSlop={8}
-      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.container, { top: insets.top + 12 }, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={`${label === 'PT' ? 'Mudar' : 'Switch'} idioma / language: ${label}`}>
       {language === 'pt' ? <PortugalFlag size={20} /> : <UnitedKingdomFlag size={20} />}
@@ -31,7 +32,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: 16,
-    bottom: Platform.OS === 'web' ? 16 : BottomTabInset + 12,
     zIndex: 999,
     elevation: 8,
     flexDirection: 'row',

@@ -113,7 +113,7 @@ function LocationPickerMap({ value, onChange }: LocationPickerProps) {
     }
 
     didAutoLocate.current = true;
-    setLocating(true);
+    queueMicrotask(() => setLocating(true));
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;

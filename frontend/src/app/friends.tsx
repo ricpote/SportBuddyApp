@@ -50,12 +50,14 @@ export default function FriendsScreen() {
     if (!addMode) return;
     const trimmed = addQuery.trim();
     if (trimmed.length < 1) {
-      setResults(null);
-      setSearching(false);
-      setSearchError(null);
+      queueMicrotask(() => {
+        setResults(null);
+        setSearching(false);
+        setSearchError(null);
+      });
       return;
     }
-    setSearching(true);
+    queueMicrotask(() => setSearching(true));
     const timer = setTimeout(() => {
       searchUsers(trimmed)
         .then((users) => {

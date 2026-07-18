@@ -90,7 +90,9 @@ export default function DirectChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
-  handleSendRef.current = handleSend;
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

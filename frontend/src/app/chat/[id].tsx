@@ -26,6 +26,7 @@ import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 import { PublicUser } from '@/types/user';
 import { relativeDate } from '@/utils/date';
+import { useNow } from '@/hooks/use-now';
 import { useTranslation } from '@/i18n';
 
 const POLL_INTERVAL_MS = 4000;
@@ -75,11 +76,12 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const handleSendRef = useRef<() => void>(() => {});
 
+  const now = useNow(60000);
   const isCompleted = activity?.status === 'completed';
   const hasVoted = !!(uid && activity?.mvpVotes && uid in activity.mvpVotes);
   const votedForId = uid && activity?.mvpVotes ? activity.mvpVotes[uid] : null;
   const votingClosed = !!activity?.votingClosedAt ||
-    (isCompleted && !!activity?.updatedAt && Date.now() - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
+    (isCompleted && !!activity?.updatedAt && now - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
 
   useEffect(() => {
     if (!id) return;
@@ -132,7 +134,9 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
-  handleSendRef.current = handleSend;
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

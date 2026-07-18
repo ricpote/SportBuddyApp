@@ -27,7 +27,7 @@ export function PendingWaitlistProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    refresh();
+    queueMicrotask(refresh);
   }, [refresh]);
 
   return (

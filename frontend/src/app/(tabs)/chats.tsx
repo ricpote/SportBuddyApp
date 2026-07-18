@@ -407,6 +407,7 @@ const styles = StyleSheet.create({
   composeBtn: {
     width: 40,
     height: 40,
+    marginRight: 64,
     borderRadius: 12,
     backgroundColor: '#e8823f',
     alignItems: 'center',

@@ -22,8 +22,12 @@ import { SportIcon } from '@/utils/sport-icon';
 import { relativeDate } from '@/utils/date';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
 import { getWeatherInfo, getUvColor, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
+import { haversineKm } from '@/utils/distance';
+import { useNow } from '@/hooks/use-now';
 import * as Location from 'expo-location';
 import { useTranslation } from '@/i18n';
+
+const RECOMMENDED_RADIUS_KM = 50;
 
 // const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
 //   beginner: 'Beginner',
@@ -61,6 +65,7 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= 900;
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
+  const now = useNow(1000);
 
   // const [activities, setActivities] = useState<Activity[]>([]);
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
@@ -72,6 +77,7 @@ export default function HomeScreen() {
   const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,6 +100,7 @@ export default function HomeScreen() {
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
           }
         } catch {}
+        setUserCoords(coords);
         try {
           const data = await getWeeklyForecast(coords.latitude, coords.longitude);
           setForecast(data.forecast);
@@ -108,7 +115,7 @@ export default function HomeScreen() {
   const myUpcomingActivities = myActivities
     .filter((a) =>
       (a.status === 'open' || a.status === 'full') &&
-      new Date(a.date).getTime() > Date.now() &&
+      new Date(a.date).getTime() > now &&
       a.participantsList.includes(user?.uid ?? '')
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -117,7 +124,7 @@ export default function HomeScreen() {
   const otherUpcomingActivities = myUpcomingActivities.slice(1);
 
   function countdown(iso: string): string {
-    const diff = new Date(iso).getTime() - Date.now();
+    const diff = new Date(iso).getTime() - now;
     if (diff <= 0) return t('home.now');
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
@@ -144,9 +151,11 @@ export default function HomeScreen() {
   //   .filter((a) => activeFilter === ALL_FILTER || sportNameById.get(a.sportId) === activeFilter)
   //   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const recommended = friendsActivities.filter(
-    (a) => isUpcoming(a) && !a.participantsList.includes(user?.uid ?? '')
-  );
+  const recommended = friendsActivities.filter((a) => {
+    if (!isUpcoming(a) || a.participantsList.includes(user?.uid ?? '')) return false;
+    if (!userCoords) return true;
+    return haversineKm(userCoords.latitude, userCoords.longitude, a.location.lat, a.location.lng) <= RECOMMENDED_RADIUS_KM;
+  });
 
   const sidebarContent = (
     <View style={styles.sidebarInner}>
@@ -548,7 +557,7 @@ const styles = StyleSheet.create({
   mainColumn: { flex: 3, overflow: 'hidden' },
 
   // Header
-  header: { paddingHorizontal: Spacing.four, marginBottom: Spacing.four },
+  header: { paddingHorizontal: Spacing.four, paddingRight: Spacing.four + 80, marginBottom: Spacing.four },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   profilePic: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#111012' },

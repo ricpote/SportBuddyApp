@@ -71,6 +71,8 @@ function weekendRange(now: Date): { start: Date; end: Date } {
 }
 
 function DistanceSlider({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const [trackWidth, setTrackWidth] = useState(0);
+
   // Em web usamos o <input type="range"> nativo do browser: arrasta de forma
   // fiável (o nosso responder-based drag perdia o rasto do cursor sobre o
   // thumb/fill) e já dispara onChange em contínuo durante o arrasto.
@@ -92,7 +94,6 @@ function DistanceSlider({ value, min, max, onChange }: { value: number; min: num
     );
   }
 
-  const [trackWidth, setTrackWidth] = useState(0);
   const pct = trackWidth > 0 ? Math.min(1, Math.max(0, (value - min) / (max - min))) : 0;
 
   function updateFromX(x: number) {
@@ -481,7 +482,7 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <ThemedText type="title" style={styles.pageTitle}>{t('explore.header.title')}</ThemedText>
         <Link href="/create-activity" asChild>
-          <Pressable style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.8 }]}>
+          <Pressable style={({ pressed }) => [styles.newBtn, !isWide && styles.newBtnClearance, pressed && { opacity: 0.8 }]}>
             <Ionicons name="add" size={18} color="#1a1005" style={{ marginRight: 4 }} />
             <ThemedText style={styles.newBtnText}>{t('explore.header.newButton')}</ThemedText>
           </Pressable>
@@ -647,6 +648,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#e8823f', paddingVertical: 9, paddingHorizontal: 16, borderRadius: 20,
   },
+  newBtnClearance: { marginRight: 64 },
   newBtnText: { color: '#1a1005', fontWeight: '700', fontSize: 14 },
 
   searchBar: {

@@ -302,8 +302,10 @@ export default function MapWebScreen() {
   // admin, alarga logo o raio de pesquisa para veres todas as atividades.
   useEffect(() => {
     if (!isAdmin || radiusKm === ADMIN_RADIUS_KM) return;
-    setRadiusKm(ADMIN_RADIUS_KM);
-    void loadActivities(center.lat, center.lng, ADMIN_RADIUS_KM);
+    queueMicrotask(() => {
+      setRadiusKm(ADMIN_RADIUS_KM);
+      void loadActivities(center.lat, center.lng, ADMIN_RADIUS_KM);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
