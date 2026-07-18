@@ -17,6 +17,7 @@ import {
   getMyBadges,
   getUserBadges,
   getMutualFriends,
+  getFollowers,
   followOrganization,
   unfollowOrganization,
 } from "../controllers/users.controller";
@@ -38,6 +39,7 @@ router.get("/search", authMiddleware, searchUsers);
 router.get("/:userId", authMiddleware, getUserProfile);
 router.get("/:userId/badges", authMiddleware, getUserBadges);
 router.get("/:userId/mutual-friends", authMiddleware, getMutualFriends);
+router.get("/:userId/followers", authMiddleware, getFollowers);
 router.post("/:userId/follow", authMiddleware, followOrganization);
 router.delete("/:userId/follow", authMiddleware, unfollowOrganization);
 

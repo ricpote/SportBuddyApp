@@ -13,7 +13,9 @@ export type NotificationType =
   | "mvp_result"
   | "friend_request"
   | "friend_request_accepted"
-  | "badge_earned";
+  | "badge_earned"
+  | "new_activity_from_followed"
+  | "activity_rating_open";
 
 export type Notification = {
   id: string;

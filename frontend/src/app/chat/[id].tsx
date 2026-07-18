@@ -74,6 +74,7 @@ export default function ChatScreen() {
   const handleSendRef = useRef<() => void>(() => {});
 
   const isCompleted = activity?.status === 'completed';
+  const isCreator = !!uid && activity?.createdBy === uid;
   const hasVoted = !!(uid && activity?.mvpVotes && uid in activity.mvpVotes);
   const votedForId = uid && activity?.mvpVotes ? activity.mvpVotes[uid] : null;
   const votingClosed = !!activity?.votingClosedAt ||
@@ -94,10 +95,11 @@ export default function ChatScreen() {
             .then((s) => setSportName(s.name))
             .catch(() => {});
         }
-        Promise.allSettled(a.participantsList.map((pid) => getUserProfile(pid))).then((results) => {
+        const allIds = [...new Set([...a.participantsList, a.createdBy])];
+        Promise.allSettled(allIds.map((pid) => getUserProfile(pid))).then((results) => {
           const map = new Map<string, PublicUser>();
           results.forEach((r, i) => {
-            if (r.status === 'fulfilled') map.set(a.participantsList[i], r.value);
+            if (r.status === 'fulfilled') map.set(allIds[i], r.value);
           });
           setProfiles(map);
         });
@@ -329,7 +331,12 @@ export default function ChatScreen() {
 
             {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
 
-            {isCompleted ? (
+            {isCompleted && isCreator ? (
+              <View style={[styles.readOnlyRow, { paddingBottom: insets.bottom + 16, paddingTop: 12, justifyContent: 'center' }]}>
+                <Ionicons name="lock-closed-outline" size={14} color="#8f8b85" />
+                <ThemedText style={styles.readOnlyText}>Já não é possível enviar mensagens</ThemedText>
+              </View>
+            ) : isCompleted ? (
               <View style={[styles.votingSection, { paddingBottom: insets.bottom + 12 }]}>
                 <View style={styles.votingHeader}>
                   <View style={styles.trophyWrap}>
@@ -378,6 +385,11 @@ export default function ChatScreen() {
                     Conversa em modo leitura
                   </ThemedText>
                 </View>
+              </View>
+            ) : activity?.createdByVerified && !isCreator ? (
+              <View style={[styles.readOnlyRow, { paddingBottom: insets.bottom + 16, paddingTop: 12, justifyContent: 'center' }]}>
+                <Ionicons name="lock-closed-outline" size={14} color="#8f8b85" />
+                <ThemedText style={styles.readOnlyText}>Só o organizador pode enviar mensagens</ThemedText>
               </View>
             ) : (
               <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>

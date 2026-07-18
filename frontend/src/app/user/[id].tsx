@@ -426,12 +426,31 @@ export default function UserProfileScreen() {
                   { label: 'SEGUIDORES', value: followersCount },
                   { label: 'EVENTOS', value: profile.stats.activitiesCreated },
                   { label: 'AVALIAÇÃO', value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—' },
-                ].map(({ label, value }, i) => (
-                  <View key={label} style={[styles.orgStatBox, i > 0 && styles.orgStatBoxDivider]}>
-                    <ThemedText style={styles.orgStatValue}>{value}</ThemedText>
-                    <ThemedText style={styles.orgStatLabel}>{label}</ThemedText>
-                  </View>
-                ))}
+                ].map(({ label, value }, i) => {
+                  const isOwner = me?.uid === id;
+                  const isFollowersBox = label === 'SEGUIDORES';
+                  const inner = (
+                    <>
+                      <ThemedText style={styles.orgStatValue}>{value}</ThemedText>
+                      <ThemedText style={styles.orgStatLabel}>{label}</ThemedText>
+                    </>
+                  );
+                  if (isFollowersBox && isOwner) {
+                    return (
+                      <Pressable
+                        key={label}
+                        style={({ pressed }) => [styles.orgStatBox, i > 0 && styles.orgStatBoxDivider, pressed && styles.pressed]}
+                        onPress={() => router.push({ pathname: '/followers/[id]', params: { id } })}>
+                        {inner}
+                      </Pressable>
+                    );
+                  }
+                  return (
+                    <View key={label} style={[styles.orgStatBox, i > 0 && styles.orgStatBoxDivider]}>
+                      {inner}
+                    </View>
+                  );
+                })}
               </View>
             </View>
 

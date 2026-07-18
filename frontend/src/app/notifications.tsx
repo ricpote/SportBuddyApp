@@ -23,8 +23,8 @@ const FILTER_TYPES: Record<Exclude<FilterTab, 'all'>, NotificationType[]> = {
   requests:   ['activity_join_request', 'friend_request'],
   activities: ['activity_joined', 'activity_left', 'activity_full', 'waitlist_admitted',
                'participant_removed', 'activity_cancelled', 'activity_reminder',
-               'activity_auto_cancelled', 'mvp_voting_open', 'mvp_result'],
-  social:     ['new_message', 'friend_request_accepted', 'badge_earned'],
+               'activity_auto_cancelled', 'mvp_voting_open', 'mvp_result', 'activity_rating_open'],
+  social:     ['new_message', 'friend_request_accepted', 'badge_earned', 'new_activity_from_followed'],
 };
 
 const TYPE_META: Record<NotificationType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
@@ -43,6 +43,8 @@ const TYPE_META: Record<NotificationType, { icon: keyof typeof Ionicons.glyphMap
   friend_request:          { icon: 'person-add-outline',          color: '#e8823f' },
   friend_request_accepted: { icon: 'people-outline',              color: '#c9c5bf' },
   badge_earned:            { icon: 'ribbon-outline',              color: '#e8823f' },
+  new_activity_from_followed: { icon: 'calendar-outline',        color: '#e8823f' },
+  activity_rating_open:       { icon: 'star-outline',            color: '#e8823f' },
 };
 
 function getTimeGroup(iso: string): 'today' | 'yesterday' | 'older' {
@@ -330,13 +332,12 @@ const styles = StyleSheet.create({
   filterScrollContent: { paddingHorizontal: Spacing.four, gap: Spacing.two },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#111012',
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20, backgroundColor: 'transparent',
   },
-  chipActive: { backgroundColor: 'rgba(232,130,63,0.12)', borderColor: 'rgba(232,130,63,0.4)' },
-  chipText: { color: '#8f8b85', fontSize: 14, fontWeight: '600' },
-  chipTextActive: { color: '#e8823f' },
+  chipActive: { backgroundColor: '#e8823f' },
+  chipText: { color: '#8f8b85', fontSize: 13 },
+  chipTextActive: { color: '#000', fontFamily: 'HankenGrotesk_700Bold' },
   chipBadge: {
     backgroundColor: '#e8823f', borderRadius: 10,
     minWidth: 18, height: 18, paddingHorizontal: 4,

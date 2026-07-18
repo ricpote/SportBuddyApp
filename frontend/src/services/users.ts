@@ -62,3 +62,7 @@ export function deleteUser(userId: string): Promise<{ message: string }> {
 export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
   return api.patch<AdminUser>(`/api/users/${userId}/role`, { role });
 }
+
+export function getFollowers(userId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+  return api.get(`/api/users/${userId}/followers`);
+}

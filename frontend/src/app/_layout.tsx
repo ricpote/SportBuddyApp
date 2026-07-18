@@ -88,6 +88,10 @@ function RootNavigator() {
           options={{ headerShown: true, title: 'A seguir' }}
         />
         <Stack.Screen
+          name="followers/[id]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="badges"
           options={{ headerShown: true, title: 'Badges', presentation: 'modal' }}
         />

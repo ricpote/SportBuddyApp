@@ -54,8 +54,12 @@ export default function MyEvents() {
     useCallback(() => {
       if (!user?.uid) return;
       setLoading(true);
-      listActivities({ createdBy: user.uid })
-        .then(setActivities)
+      Promise.all([
+        listActivities({ createdBy: user.uid }),
+        listActivities({ createdBy: user.uid, status: 'completed' }),
+        listActivities({ createdBy: user.uid, status: 'cancelled' }),
+      ])
+        .then(([active, completed, cancelled]) => setActivities([...active, ...completed, ...cancelled]))
         .finally(() => setLoading(false));
     }, [user?.uid]),
   );

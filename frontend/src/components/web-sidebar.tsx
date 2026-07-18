@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, usePathname } from 'expo-router';
+import { Link, usePathname, useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AvatarCircle } from './avatar-circle';
@@ -21,7 +21,6 @@ const PARTNER_NAV_ITEMS = [
   { href: '/my-events',        icon: 'calendar-outline',       label: 'Os meus eventos' },
   { href: '/create-activity',  icon: 'add-circle-outline',     label: 'Criar evento'    },
   { href: '/chats',            icon: 'chatbubbles-outline',    label: 'Mensagens'       },
-  { href: '/profile',          icon: 'business-outline',       label: 'Página da marca' },
 ] as const;
 
 export function WebSidebar() {
@@ -29,6 +28,7 @@ export function WebSidebar() {
   const { profile, signOut } = useAuth();
   const { unreadCount } = useChatBadge();
 
+  const router = useRouter();
   const isPartner = profile?.role === 'partner';
   const navItems = isPartner ? PARTNER_NAV_ITEMS : USER_NAV_ITEMS;
 
@@ -105,19 +105,17 @@ export function WebSidebar() {
 
       {/* Perfil no rodapé: clicar vai para o perfil, o ícone à direita faz logout */}
       <View style={styles.footer}>
-        <Link href="/profile" asChild>
-          <Pressable style={({ pressed }) => [{ flex: 1, minWidth: 0 }, pressed && styles.pressed]}>
-            <View style={[styles.footerProfile, pathname.startsWith('/profile') && styles.itemActive]}>
-              <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
-              <View style={styles.footerText}>
-                <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
-                  {profile?.name ?? ''}
-                </ThemedText>
-                <ThemedText style={styles.footerHint}>View profile</ThemedText>
-              </View>
-            </View>
-          </Pressable>
-        </Link>
+        <Pressable
+          style={({ pressed }) => [styles.footerProfile, (pathname.startsWith('/profile') || (isPartner && profile?.id && pathname.startsWith(`/user/${profile.id}`))) && styles.itemActive, pressed && styles.pressed]}
+          onPress={() => router.push('/profile')}>
+          <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
+          <View style={styles.footerText}>
+            <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
+              {(profile?.name ?? '').length > 14 ? (profile!.name.slice(0, 14) + '…') : (profile?.name ?? '')}
+            </ThemedText>
+            <ThemedText style={styles.footerHint}>View profile</ThemedText>
+          </View>
+        </Pressable>
         <Pressable
           onPress={signOut}
           style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
@@ -184,17 +182,20 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
   },
   footerProfile: {
+    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 10,
     paddingLeft: 14,
     paddingRight: 12,
+    marginRight: 8,
     borderRadius: 12,
     overflow: 'hidden',
   },
   footerText: { flex: 1, minWidth: 0 },
-  footerName: { color: '#f4f2ef', fontSize: 14 },
+  footerName: { color: '#f4f2ef', fontSize: 12 },
   footerHint: { color: '#8f8b85', fontSize: 12 },
   logoutBtn: {
     width: 36,

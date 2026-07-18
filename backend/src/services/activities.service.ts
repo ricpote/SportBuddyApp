@@ -90,6 +90,18 @@ export class ActivitiesService {
 
     await docRef.set(activity);
 
+    if (creator.role === "partner") {
+      const followerIds: string[] = (await db.collection("users").doc(createdBy).get()).data()?.followers ?? [];
+      if (followerIds.length > 0) {
+        notificationsService.createNotificationForMany(
+          followerIds,
+          "new_activity_from_followed",
+          `${creator.name} criou uma nova atividade: "${data.title}".`,
+          docRef.id
+        ).catch(() => {});
+      }
+    }
+
     return activity;
   }
 
@@ -144,6 +156,15 @@ export class ActivitiesService {
         usersService.incrementStat(result.activity.createdBy, "activitiesCreated", 1),
         ...participants.map(id => usersService.incrementStat(id, "activitiesJoined", 1)),
       ]);
+
+      if (result.activity.createdByVerified && participants.length > 0) {
+        notificationsService.createNotificationForMany(
+          participants,
+          "activity_rating_open",
+          `A atividade "${result.activity.title}" terminou. Avalia a experiência!`,
+          result.activity.id
+        ).catch(() => {});
+      }
     }
 
     return result.activity;
@@ -151,10 +172,14 @@ export class ActivitiesService {
 
   async listActivities(filters: ListActivitiesFilters = {}): Promise<Activity[]> {
     const statusFilter = filters.status ? [filters.status] : ["open", "full"];
+    const isPastQuery = filters.status === "completed" || filters.status === "cancelled";
 
     let query: FirebaseFirestore.Query = this.activitiesRef
-      .where("status", "in", statusFilter)
-      .where("date", ">", new Date());
+      .where("status", "in", statusFilter);
+
+    if (!isPastQuery) {
+      query = query.where("date", ">", new Date());
+    }
 
     if (filters.sportId) {
       query = query.where("sportId", "==", filters.sportId);
