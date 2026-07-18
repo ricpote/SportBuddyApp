@@ -23,6 +23,7 @@ export type Notification = {
   type: NotificationType;
   message: string;
   activityId?: string;
+  relatedUserId?: string;
   read: boolean;
   createdAt: Date;
 };
@@ -32,7 +33,8 @@ export function createNotificationObject(
   userId: string,
   type: NotificationType,
   message: string,
-  activityId?: string
+  activityId?: string,
+  relatedUserId?: string
 ): Notification {
   return {
     id,
@@ -40,6 +42,7 @@ export function createNotificationObject(
     type,
     message,
     ...(activityId !== undefined ? { activityId } : {}),
+    ...(relatedUserId !== undefined ? { relatedUserId } : {}),
     read: false,
     createdAt: new Date(),
   };

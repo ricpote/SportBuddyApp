@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 
 const BG = '#0a0a0b';
 const ORANGE = '#e8823f';
@@ -16,6 +17,7 @@ const ERROR = '#eb8f84';
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle } = useAuth();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +32,7 @@ export default function LoginScreen() {
     try {
       await signIn(email.trim(), password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível iniciar sessão');
+      setError(err instanceof Error ? t(err.message) : t('auth.login.genericError'));
     } finally {
       setSubmitting(false);
     }
@@ -43,7 +45,7 @@ export default function LoginScreen() {
       await signInWithGoogle();
     } catch (err: any) {
       if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
-        setError(err instanceof Error ? err.message : 'Não foi possível entrar com Google');
+        setError(err instanceof Error ? t(err.message) : t('auth.login.googleError'));
       }
     } finally {
       setGoogleSubmitting(false);
@@ -78,14 +80,14 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
             <ThemedText type="title" style={styles.title}>SportBuddy</ThemedText>
-            <ThemedText style={styles.subtitle}>Inicia sessão para continuar</ThemedText>
+            <ThemedText style={styles.subtitle}>{t('auth.login.subtitle')}</ThemedText>
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Ionicons name="mail-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { outline: 'none' } as any]}
-                  placeholder="Email"
+                  placeholder={t('auth.login.emailPlaceholder')}
                   placeholderTextColor={TEXT_SEC}
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -99,7 +101,7 @@ export default function LoginScreen() {
                 <Ionicons name="lock-closed-outline" size={20} color={TEXT_SEC} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { outline: 'none' } as any]}
-                  placeholder="Palavra-passe"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   placeholderTextColor={TEXT_SEC}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
@@ -118,13 +120,13 @@ export default function LoginScreen() {
                 disabled={submitting || googleSubmitting}
                 onPress={handleSubmit}>
                 <ThemedText style={styles.buttonText} type="smallBold">
-                  {submitting ? 'A entrar...' : 'Entrar'}
+                  {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
                 </ThemedText>
               </Pressable>
 
               <View style={styles.separator}>
                 <View style={styles.separatorLine} />
-                <ThemedText style={styles.separatorText}>ou</ThemedText>
+                <ThemedText style={styles.separatorText}>{t('auth.login.or')}</ThemedText>
                 <View style={styles.separatorLine} />
               </View>
 
@@ -134,15 +136,15 @@ export default function LoginScreen() {
                 onPress={handleGoogle}>
                 <Ionicons name="logo-google" size={20} color={BG} style={{ marginRight: 8 }} />
                 <ThemedText style={styles.googleButtonText} type="smallBold">
-                  {googleSubmitting ? 'A entrar...' : 'Continuar com Google'}
+                  {googleSubmitting ? t('auth.login.googleSubmitting') : t('auth.login.google')}
                 </ThemedText>
               </Pressable>
 
               <Link href="/register" asChild>
                 <Pressable style={styles.linkPressable}>
                   <ThemedText style={styles.linkText}>
-                    Não tens conta?{' '}
-                    <ThemedText style={styles.linkHighlight}>Regista-te</ThemedText>
+                    {t('auth.login.noAccount')}{' '}
+                    <ThemedText style={styles.linkHighlight}>{t('auth.login.registerLink')}</ThemedText>
                   </ThemedText>
                 </Pressable>
               </Link>
@@ -151,7 +153,7 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <ThemedText style={styles.footerText}>© 2026 SportBuddy · Termos · Privacidade</ThemedText>
+          <ThemedText style={styles.footerText}>{t('auth.footer')}</ThemedText>
         </View>
       </SafeAreaView>
     </View>

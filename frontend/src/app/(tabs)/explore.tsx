@@ -1,6 +1,7 @@
 import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ImageBackground,
   Modal,
   Platform,
   Pressable,
@@ -15,10 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { listActivities, listNearbyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
+import { getCurrentUserLocation } from '@/services/user-location';
 import { Activity } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 import { relativeDate } from '@/utils/date';
@@ -28,9 +32,9 @@ const NEARBY_RADIUS_KM = 50;
 const MIN_RADIUS_KM = 1;
 
 const STATUS_CONFIG: Partial<Record<Activity['status'], { label: string; color: string }>> = {
-  open:      { label: 'Open',  color: '#9ccd6b' },
-  full:      { label: 'Full',  color: '#8f8b85' },
-  completed: { label: 'Ended', color: '#8f8b85' },
+  open:      { label: 'explore.status.open',  color: '#9ccd6b' },
+  full:      { label: 'explore.status.full',  color: '#8f8b85' },
+  completed: { label: 'explore.status.completed', color: '#8f8b85' },
 };
 
 const AVATAR_COLORS = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
@@ -67,6 +71,8 @@ function weekendRange(now: Date): { start: Date; end: Date } {
 }
 
 function DistanceSlider({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const [trackWidth, setTrackWidth] = useState(0);
+
   // Em web usamos o <input type="range"> nativo do browser: arrasta de forma
   // fiável (o nosso responder-based drag perdia o rasto do cursor sobre o
   // thumb/fill) e já dispara onChange em contínuo durante o arrasto.
@@ -88,7 +94,6 @@ function DistanceSlider({ value, min, max, onChange }: { value: number; min: num
     );
   }
 
-  const [trackWidth, setTrackWidth] = useState(0);
   const pct = trackWidth > 0 ? Math.min(1, Math.max(0, (value - min) / (max - min))) : 0;
 
   function updateFromX(x: number) {
@@ -119,6 +124,7 @@ type DateFilter = 'upcoming' | 'today' | 'weekend';
 
 export default function ExploreScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
@@ -155,17 +161,6 @@ export default function ExploreScreen() {
     return () => clearTimeout(t);
   }, [radiusKm]);
 
-  async function getUserLocation(): Promise<{ lat: number; lng: number } | null> {
-    return new Promise((resolve) => {
-      if (!navigator?.geolocation) { resolve(null); return; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-      );
-    });
-  }
-
   const load = useCallback(async () => {
     try {
       setError(null);
@@ -176,7 +171,7 @@ export default function ExploreScreen() {
       } else if (isWide) {
         let loc = locationRef.current;
         if (!loc) {
-          loc = await getUserLocation();
+          loc = await getCurrentUserLocation().catch(() => null);
           if (loc) {
             locationRef.current = loc;
             setUserLocation(loc);
@@ -187,7 +182,7 @@ export default function ExploreScreen() {
       } else if (scopeFilter === 'nearby') {
         let loc = locationRef.current;
         if (!loc) {
-          loc = await getUserLocation();
+          loc = await getCurrentUserLocation().catch(() => null);
           if (loc) {
             locationRef.current = loc;
             setUserLocation(loc);
@@ -200,7 +195,7 @@ export default function ExploreScreen() {
       }
       setActivities(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load activities');
+      setError(err instanceof Error ? err.message : t('explore.error.loadFailed'));
     }
   }, [scopeFilter, isWide, committedRadiusKm, verifiedOnly, organizerId]);
 
@@ -271,40 +266,61 @@ export default function ExploreScreen() {
     const shown = activity.participantsList.slice(0, maxAvatars);
     const extra = activity.participantsList.length - maxAvatars;
 
+    const image = sportImages[activity.sportId];
+    const badges = (
+      <>
+        {isWaitlisted ? (
+          <View style={[styles.statusBadge, styles.waitlistBadge]}>
+            <ThemedText style={[styles.statusText, styles.waitlistText]}>{t('explore.card.waitlist')}</ThemedText>
+          </View>
+        ) : isPrivate ? (
+          <View style={[styles.statusBadge, styles.privateBadge]}>
+            <Ionicons name="lock-closed" size={10} color="#8f8b85" />
+            <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>{t('explore.card.private')}</ThemedText>
+          </View>
+        ) : (
+          <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
+            <ThemedText style={[styles.statusText, { color: status.color }]}>
+              {t(status.label)}
+            </ThemedText>
+          </View>
+        )}
+        {isAlmostFull && (
+          <View style={[styles.statusBadge, { backgroundColor: '#e8823f22' }]}>
+            <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>{t('explore.card.almostFull')}</ThemedText>
+          </View>
+        )}
+      </>
+    );
+
     return (
       <Link key={activity.id} href={{ pathname: '/activity/[id]', params: { id: activity.id } }} asChild>
         <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
         <View style={styles.card}>
 
-          {/* TOP ROW: icon + title + badges */}
+          {/* IMAGEM: foto do desporto como fundo; sem foto fica o ícone a solo */}
+          {image ? (
+            <ImageBackground source={image} resizeMode="cover" style={styles.cardImage}>
+              <View style={styles.cardImageOverlay} />
+              <View style={styles.cardImageTopRow}>
+                <View style={styles.cardImageSportChip}>
+                  <SportIcon sportName={sportName} size={13} color="#f4f2ef" />
+                  <ThemedText style={styles.cardImageSportText}>{sportName}</ThemedText>
+                </View>
+                <View style={styles.badgeStack}>{badges}</View>
+              </View>
+            </ImageBackground>
+          ) : (
+            <View style={styles.cardImageFallback}>
+              <SportIcon sportName={sportName} size={28} color="#e8823f" />
+            </View>
+          )}
+
+          <View style={styles.cardBody}>
+          {/* TOP ROW: title + badges (só quando não há imagem) */}
           <View style={styles.cardTop}>
-            <View style={styles.sportIconBox}>
-              <SportIcon sportName={sportName} size={22} color="#1a1005" />
-            </View>
             <ThemedText style={styles.cardTitle} numberOfLines={1}>{activity.title}</ThemedText>
-            <View style={styles.badgeStack}>
-              {isWaitlisted ? (
-                <View style={[styles.statusBadge, styles.waitlistBadge]}>
-                  <ThemedText style={[styles.statusText, styles.waitlistText]}>Waitlist</ThemedText>
-                </View>
-              ) : isPrivate ? (
-                <View style={[styles.statusBadge, styles.privateBadge]}>
-                  <Ionicons name="lock-closed" size={10} color="#8f8b85" />
-                  <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>Private</ThemedText>
-                </View>
-              ) : (
-                <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
-                  <ThemedText style={[styles.statusText, { color: status.color }]}>
-                    {status.label}
-                  </ThemedText>
-                </View>
-              )}
-              {isAlmostFull && (
-                <View style={[styles.statusBadge, { backgroundColor: '#e8823f22' }]}>
-                  <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>Almost full</ThemedText>
-                </View>
-              )}
-            </View>
+            {!image && <View style={styles.badgeStack}>{badges}</View>}
           </View>
 
           {activity.createdByName && (
@@ -346,7 +362,7 @@ export default function ExploreScreen() {
                 </View>
               )}
               <ThemedText style={styles.participantCount}>
-                {activity.participantsList.length} of {activity.maxParticipants}
+                {t('explore.card.participantsCount', { count: activity.participantsList.length, max: activity.maxParticipants })}
               </ThemedText>
             </View>
             <View style={styles.progressTrack}>
@@ -355,6 +371,7 @@ export default function ExploreScreen() {
                 backgroundColor: '#e8823f',
               }]} />
             </View>
+          </View>
           </View>
 
         </View>
@@ -366,14 +383,14 @@ export default function ExploreScreen() {
   function renderFiltersPanel() {
     return (
       <View style={styles.filtersPanel}>
-        <ThemedText style={styles.filtersPanelTitle}>Filtros</ThemedText>
+        <ThemedText style={styles.filtersPanelTitle}>{t('explore.filters.title')}</ThemedText>
 
-        <ThemedText style={styles.filterSectionLabel}>QUANDO</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.whenLabel')}</ThemedText>
         <View style={styles.filterSectionStack}>
           {([
-            { key: 'upcoming', label: 'Próximas' },
-            { key: 'today', label: 'Hoje' },
-            { key: 'weekend', label: 'Este fim de semana' },
+            { key: 'upcoming', label: t('explore.filters.upcoming') },
+            { key: 'today', label: t('explore.filters.today') },
+            { key: 'weekend', label: t('explore.filters.weekend') },
           ] as { key: DateFilter; label: string }[]).map(({ key, label }) => (
             <Pressable key={key} onPress={() => setDateFilter(key)}>
               <View style={[styles.filterRowChip, dateFilter === key && styles.filterRowChipActive]}>
@@ -385,7 +402,7 @@ export default function ExploreScreen() {
           ))}
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>TIPO</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.typeLabel')}</ThemedText>
         <View style={styles.filterRowInline}>
           {(['team', 'individual'] as SportCategory[]).map((cat) => (
             <Pressable
@@ -403,20 +420,20 @@ export default function ExploreScreen() {
               }}>
               <View style={[styles.filterChipSmall, catFilter === cat && styles.filterRowChipActive]}>
                 <ThemedText style={[styles.filterRowChipText, catFilter === cat && styles.filterRowChipTextActive]}>
-                  {cat === 'team' ? 'Equipa' : 'Individual'}
+                  {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
                 </ThemedText>
               </View>
             </Pressable>
           ))}
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>DISTÂNCIA</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.distanceLabel')}</ThemedText>
         <View style={styles.distanceRow}>
           <DistanceSlider value={radiusKm} min={MIN_RADIUS_KM} max={NEARBY_RADIUS_KM} onChange={setRadiusKm} />
-          <ThemedText style={styles.distanceValue}>{radiusKm} km</ThemedText>
+          <ThemedText style={styles.distanceValue}>{t('explore.filters.radiusValue', { value: radiusKm })}</ThemedText>
         </View>
 
-        <ThemedText style={styles.filterSectionLabel}>MODALIDADE</ThemedText>
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.sportLabel')}</ThemedText>
         <View style={styles.filterSectionStack}>
           <Pressable onPress={() => setSportFilterSet(new Set())}>
             <View style={styles.checkboxRow}>
@@ -425,7 +442,7 @@ export default function ExploreScreen() {
                 size={18}
                 color={sportFilterSet.size === 0 ? '#e8823f' : '#8f8b85'}
               />
-              <ThemedText style={styles.checkboxLabel}>Todas</ThemedText>
+              <ThemedText style={styles.checkboxLabel}>{t('explore.filters.all')}</ThemedText>
             </View>
           </Pressable>
           {visibleSports.map((sport) => {
@@ -448,12 +465,12 @@ export default function ExploreScreen() {
           <View style={styles.checkboxRow}>
             <Ionicons name={verifiedOnly ? 'checkbox' : 'square-outline'} size={18} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
             <Ionicons name="checkmark-circle-outline" size={14} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
-            <ThemedText style={styles.checkboxLabel}>Só empresas</ThemedText>
+            <ThemedText style={styles.checkboxLabel}>{t('explore.filters.verifiedOnly')}</ThemedText>
           </View>
         </Pressable>
         {verifiedOnly && (
           <ThemedText style={styles.filtersHint}>
-            Com o filtro ativo, só aparecem eventos de contas verificadas.
+            {t('explore.filters.verifiedHint')}
           </ThemedText>
         )}
       </View>
@@ -463,11 +480,11 @@ export default function ExploreScreen() {
   const headerAndSearch = (
     <>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.pageTitle}>Explore</ThemedText>
+        <ThemedText type="title" style={styles.pageTitle}>{t('explore.header.title')}</ThemedText>
         <Link href="/create-activity" asChild>
-          <Pressable style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.8 }]}>
+          <Pressable style={({ pressed }) => [styles.newBtn, !isWide && styles.newBtnClearance, pressed && { opacity: 0.8 }]}>
             <Ionicons name="add" size={18} color="#1a1005" style={{ marginRight: 4 }} />
-            <ThemedText style={styles.newBtnText}>New</ThemedText>
+            <ThemedText style={styles.newBtnText}>{t('explore.header.newButton')}</ThemedText>
           </Pressable>
         </Link>
       </View>
@@ -476,7 +493,7 @@ export default function ExploreScreen() {
         <Ionicons name="search-outline" size={18} color="#8f8b85" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search activity..."
+          placeholder={t('explore.search.placeholder')}
           placeholderTextColor="#8f8b85"
           value={searchText}
           onChangeText={setSearchText}
@@ -494,15 +511,15 @@ export default function ExploreScreen() {
     <>
       {activities !== null && !error && (
         <ThemedText style={styles.sectionLabel}>
-          {visibleActivities.length} {isWide ? 'ACTIVITIES' : scopeFilter === 'nearby' ? 'ACTIVITIES NEAR YOU' : 'ACTIVITIES'}
+          {visibleActivities.length} {isWide ? t('explore.list.activities') : scopeFilter === 'nearby' ? t('explore.list.activitiesNearYou') : t('explore.list.activities')}
         </ThemedText>
       )}
 
       {error && <ThemedText style={styles.errorText}>{error}</ThemedText>}
-      {activities === null && !error && <ThemedText style={styles.emptyText}>Loading activities...</ThemedText>}
+      {activities === null && !error && <ThemedText style={styles.emptyText}>{t('explore.list.loading')}</ThemedText>}
       {activities !== null && visibleActivities.length === 0 && (
         <ThemedText style={styles.emptyText}>
-          {activities.length === 0 ? 'No activities yet. Create the first one!' : 'No activities match your filters.'}
+          {activities.length === 0 ? t('explore.list.emptyNone') : t('explore.list.emptyFiltered')}
         </ThemedText>
       )}
 
@@ -538,11 +555,11 @@ export default function ExploreScreen() {
           {/* FILTER ROW (mobile) */}
           <View style={styles.filterRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChips}>
-              {(['nearby', 'all'] as ScopeFilter[]).map((t) => (
-                <Pressable key={t} onPress={() => setScopeFilter(t)}>
-                  <View style={[styles.chip, scopeFilter === t && styles.chipActive]}>
-                    <ThemedText style={[styles.chipText, scopeFilter === t && styles.chipTextActive]}>
-                      {t === 'nearby' ? 'Nearby' : 'All'}
+              {(['nearby', 'all'] as ScopeFilter[]).map((scope) => (
+                <Pressable key={scope} onPress={() => setScopeFilter(scope)}>
+                  <View style={[styles.chip, scopeFilter === scope && styles.chipActive]}>
+                    <ThemedText style={[styles.chipText, scopeFilter === scope && styles.chipTextActive]}>
+                      {scope === 'nearby' ? t('explore.scope.nearby') : t('explore.scope.all')}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -555,7 +572,7 @@ export default function ExploreScreen() {
                 }}>
                   <View style={[styles.chip, catFilter === cat && styles.chipActive]}>
                     <ThemedText style={[styles.chipText, catFilter === cat && styles.chipTextActive]}>
-                      {cat === 'team' ? 'Team' : 'Individual'}
+                      {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -565,7 +582,7 @@ export default function ExploreScreen() {
             <Pressable onPress={() => setSportModalOpen(true)} style={styles.sportDropdown}>
               <Ionicons name="options-outline" size={14} color="#c9c5bf" style={{ marginRight: 5 }} />
               <ThemedText style={styles.sportDropdownText} numberOfLines={1}>
-                {selectedSport ? selectedSport.name : 'All sports'}
+                {selectedSport ? selectedSport.name : t('explore.sport.allSports')}
               </ThemedText>
               <Ionicons name="chevron-down" size={12} color="#8f8b85" style={{ marginLeft: 3 }} />
             </Pressable>
@@ -579,12 +596,12 @@ export default function ExploreScreen() {
       <Modal visible={sportModalOpen} transparent animationType="fade" onRequestClose={() => setSportModalOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setSportModalOpen(false)}>
           <View style={styles.modalSheet}>
-            <ThemedText style={styles.modalTitle}>Sport</ThemedText>
+            <ThemedText style={styles.modalTitle}>{t('explore.sport.modalTitle')}</ThemedText>
             <Pressable
               style={[styles.modalOption, !sportFilter && styles.modalOptionActive]}
               onPress={() => { setSportFilter(null); setSportModalOpen(false); }}>
               <ThemedText style={[styles.modalOptionText, !sportFilter && styles.modalOptionTextActive]}>
-                All sports
+                {t('explore.sport.allSports')}
               </ThemedText>
               {!sportFilter && <Ionicons name="checkmark" size={16} color="#e8823f" />}
             </Pressable>
@@ -631,6 +648,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#e8823f', paddingVertical: 9, paddingHorizontal: 16, borderRadius: 20,
   },
+  newBtnClearance: { marginRight: 64 },
   newBtnText: { color: '#1a1005', fontWeight: '700', fontSize: 14 },
 
   searchBar: {
@@ -666,14 +684,31 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.two },
 
   card: {
-    backgroundColor: '#0f0e12', borderRadius: 16, padding: 16, gap: 10,
+    backgroundColor: '#0f0e12', borderRadius: 16, overflow: 'hidden',
   },
 
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sportIconBox: {
-    width: 40, height: 40, borderRadius: 10,
-    backgroundColor: '#e8823f', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  cardImage: { height: 120, justifyContent: 'flex-start' },
+  cardImageOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(10,10,11,0.35)',
   },
+  cardImageTopRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    padding: 10,
+  },
+  cardImageSportChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(10,10,11,0.55)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  cardImageSportText: { color: '#f4f2ef', fontSize: 11, fontWeight: '700' },
+  cardImageFallback: {
+    height: 120, backgroundColor: 'rgba(232,130,63,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  cardBody: { padding: 16, gap: 10 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardTitle: { flex: 1, color: '#f4f2ef', fontSize: 15, fontWeight: '700' },
   badgeStack: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexShrink: 0 },

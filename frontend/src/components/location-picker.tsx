@@ -1,6 +1,7 @@
 ﻿import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { useTranslation } from '@/i18n';
 
 export type PickedLocation = {
   name: string;
@@ -15,6 +16,8 @@ type LocationPickerProps = {
 };
 
 export default function LocationPicker({ value, onChange }: LocationPickerProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.wrapper}>
       <TextInput
@@ -22,17 +25,17 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
         onChangeText={(address) => {
           onChange({
             ...value,
-            name: address || 'Local selecionado',
+            name: address || t('activity.locationPicker.defaultName'),
             address,
           });
         }}
-        placeholder="Escreve a morada da atividade"
+        placeholder={t('activity.locationPicker.placeholder')}
         placeholderTextColor="#8f8b85"
         style={styles.input}
       />
 
       <ThemedText style={styles.helpText}>
-        O mapa interativo está disponível na versão web. Esta versão mobile é temporária.
+        {t('activity.locationPicker.mobileHint')}
       </ThemedText>
     </View>
   );

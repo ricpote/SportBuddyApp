@@ -13,8 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { joinActivity, listNearbyActivities } from '@/services/activities';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { listSports } from '@/services/sports';
+import { getCurrentUserLocation } from '@/services/user-location';
 import { Activity } from '@/types/activity';
+import { SportIcon } from '@/utils/sport-icon';
 
 const DEFAULT_CENTER = { lat: 38.7223, lng: -9.1393 };
 const mapId = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_MAP_ID;
@@ -37,7 +40,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatActivityDate(date: Date | string): string {
+function formatActivityDate(date: Date | string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const d = new Date(date);
   const today = new Date();
   const isToday = d.toDateString() === today.toDateString();
@@ -45,7 +48,7 @@ function formatActivityDate(date: Date | string): string {
   const m = d.getMinutes();
   const time = m === 0 ? `${h}h` : `${h}h${m.toString().padStart(2, '0')}`;
   return isToday
-    ? `hoje ${time}`
+    ? t('map.date.today', { time })
     : d.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' }) + ` ${time}`;
 }
 
@@ -54,23 +57,11 @@ function formatDist(km: number): string {
 }
 
 const STATUS_INFO: Record<string, { label: string; color: string }> = {
-  open: { label: 'Aberta', color: '#9ccd6b' },
-  full: { label: 'Cheia', color: '#e8823f' },
-  cancelled: { label: 'Cancelada', color: '#eb8f84' },
-  completed: { label: 'Terminada', color: '#8f8b85' },
+  open: { label: 'map.status.open', color: '#9ccd6b' },
+  full: { label: 'map.status.full', color: '#e8823f' },
+  cancelled: { label: 'map.status.cancelled', color: '#eb8f84' },
+  completed: { label: 'map.status.completed', color: '#8f8b85' },
 };
-
-function sportIconName(name = ''): any {
-  const n = name.toLowerCase();
-  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
-  if (n.includes('basket')) return 'basketball-outline';
-  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
-  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
-  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
-  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
-  if (n.includes('golf')) return 'golf-outline';
-  return 'fitness-outline';
-}
 
 function UserLocationController({
   location,
@@ -89,6 +80,7 @@ function UserLocationController({
 
 function UserLocationDot({ position }: { position: { lat: number; lng: number } | null }) {
   const map = useMap();
+  const { t } = useTranslation();
   useEffect(() => {
     const AdvancedMarkerElement = (window as any).google?.maps?.marker?.AdvancedMarkerElement;
     if (!map || !position || !AdvancedMarkerElement) return;
@@ -103,7 +95,7 @@ function UserLocationDot({ position }: { position: { lat: number; lng: number } 
       map,
       position,
       content: dot,
-      title: 'A tua localização',
+      title: t('map.myLocationTitle'),
       zIndex: 100,
     });
     return () => { marker.map = null; };
@@ -111,20 +103,6 @@ function UserLocationDot({ position }: { position: { lat: number; lng: number } 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, position?.lat, position?.lng]);
   return null;
-}
-
-function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation not available'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      reject,
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  });
 }
 
 function ActivityPinMarker({
@@ -171,7 +149,7 @@ function ActivityPinMarker({
         borderWidth: 1.5,
         borderColor: selected ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
       }}>
-        <Ionicons name={sportIconName(sportName)} size={22} color={iconColor} />
+        <SportIcon sportName={sportName} size={22} color={iconColor} />
       </View>
     </View>
   );
@@ -190,6 +168,7 @@ function JoinButton({
   onJoin: () => void;
   onNavigate: () => void;
 }) {
+  const { t } = useTranslation();
   const isParticipant = activity.participantsList.includes(uid);
   const isInWaitlist = activity.waitlist?.includes(uid) ?? false;
   const isInactive = activity.status === 'cancelled' || activity.status === 'completed';
@@ -199,7 +178,7 @@ function JoinButton({
   if (isParticipant) {
     return (
       <Pressable style={styles.joinButton} onPress={onNavigate}>
-        <ThemedText style={styles.joinText}>Ver</ThemedText>
+        <ThemedText style={styles.joinText}>{t('map.join.view')}</ThemedText>
       </Pressable>
     );
   }
@@ -207,7 +186,7 @@ function JoinButton({
   if (isInWaitlist) {
     return (
       <View style={[styles.joinButton, { backgroundColor: '#2a2a2e' }]}>
-        <ThemedText style={[styles.joinText, { color: '#8f8b85' }]}>Pedido enviado</ThemedText>
+        <ThemedText style={[styles.joinText, { color: '#8f8b85' }]}>{t('map.join.requestSent')}</ThemedText>
       </View>
     );
   }
@@ -218,12 +197,13 @@ function JoinButton({
       onPress={onJoin}
       disabled={joining}
     >
-      <ThemedText style={styles.joinText}>{joining ? 'A entrar...' : 'Juntar-me'}</ThemedText>
+      <ThemedText style={styles.joinText}>{joining ? t('map.join.joining') : t('map.join.join')}</ThemedText>
     </Pressable>
   );
 }
 
 export default function MapWebScreen() {
+  const { t } = useTranslation();
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_API_KEY;
 
   const [center, setCenter] = useState(DEFAULT_CENTER);
@@ -270,7 +250,7 @@ export default function MapWebScreen() {
       const data = await listNearbyActivities({ lat, lng, radiusKm: radius });
       setActivities(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar atividades');
+      setError(err instanceof Error ? err.message : t('map.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -278,7 +258,7 @@ export default function MapWebScreen() {
 
   async function refreshUserLocation(shouldSnap = false) {
     try {
-      const loc = await getBrowserLocation();
+      const loc = await getCurrentUserLocation();
       setUserLocation(loc);
       if (shouldSnap) {
         setCenter(loc);
@@ -304,7 +284,7 @@ export default function MapWebScreen() {
         setActivities(data);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Erro ao carregar atividades');
+        setError(err instanceof Error ? err.message : t('map.error.loadFailed'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -322,8 +302,10 @@ export default function MapWebScreen() {
   // admin, alarga logo o raio de pesquisa para veres todas as atividades.
   useEffect(() => {
     if (!isAdmin || radiusKm === ADMIN_RADIUS_KM) return;
-    setRadiusKm(ADMIN_RADIUS_KM);
-    void loadActivities(center.lat, center.lng, ADMIN_RADIUS_KM);
+    queueMicrotask(() => {
+      setRadiusKm(ADMIN_RADIUS_KM);
+      void loadActivities(center.lat, center.lng, ADMIN_RADIUS_KM);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
@@ -343,7 +325,7 @@ export default function MapWebScreen() {
   if (!apiKey) {
     return (
       <View style={styles.emptyContainer}>
-        <ThemedText style={styles.title}>Google Maps API key em falta</ThemedText>
+        <ThemedText style={styles.title}>{t('map.missingApiKey')}</ThemedText>
       </View>
     );
   }
@@ -420,7 +402,7 @@ export default function MapWebScreen() {
                   ]}
                 >
                   <ThemedText style={[styles.radiusText, active && styles.radiusTextActive]}>
-                    {option} km
+                    {t('map.radius.value', { value: option })}
                   </ThemedText>
                 </Pressable>
               );
@@ -437,7 +419,7 @@ export default function MapWebScreen() {
               ? <Ionicons name="refresh" size={14} color="#12100e" style={{ marginRight: 6 }} />
               : <Ionicons name="refresh-outline" size={14} color="#12100e" style={{ marginRight: 6 }} />}
             <ThemedText style={styles.searchButtonText}>
-              {error ? 'Tentar de novo' : 'Pesquisar nesta área'}
+              {error ? t('map.retry') : t('map.search.button')}
             </ThemedText>
           </Pressable>
         )}
@@ -456,7 +438,7 @@ export default function MapWebScreen() {
           onPress={() => router.push({ pathname: '/activity/[id]', params: { id: selectedActivity.id } })}
         >
           <View style={styles.cardIconBox}>
-            <Ionicons name={sportIconName(selectedSportName)} size={24} color="#1a1005" />
+            <SportIcon sportName={selectedSportName} size={24} color="#1a1005" />
           </View>
 
           <View style={styles.cardContent}>
@@ -466,13 +448,13 @@ export default function MapWebScreen() {
               </ThemedText>
               <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
                 <ThemedText style={[styles.statusText, { color: status.color }]}>
-                  {status.label}
+                  {t(status.label)}
                 </ThemedText>
               </View>
             </View>
 
             <ThemedText style={styles.cardMeta} numberOfLines={1}>
-              {formatActivityDate(selectedActivity.date)}
+              {formatActivityDate(selectedActivity.date, t)}
               {selectedActivity.location.name ? ` · ${selectedActivity.location.name}` : ''}
               {distance ? ` · ${distance}` : ''}
             </ThemedText>
@@ -482,7 +464,7 @@ export default function MapWebScreen() {
                 <View key={i} style={[styles.participantDot, i > 0 && { marginLeft: -6 }]} />
               ))}
               <ThemedText style={styles.participantCount}>
-                {selectedActivity.participantsList.length} de {selectedActivity.maxParticipants} inscritos
+                {t('map.card.participants', { count: selectedActivity.participantsList.length, max: selectedActivity.maxParticipants })}
               </ThemedText>
             </View>
           </View>

@@ -14,6 +14,7 @@ import { ThemedText } from './themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
+import { useTranslation } from '@/i18n';
 
 export default function AppTabs() {
   const { width } = useWindowDimensions();
@@ -22,6 +23,7 @@ export default function AppTabs() {
   const { profile } = useAuth();
   const isPartner = profile?.role === 'partner';
   const showAdminTab = profile?.role === 'admin';
+  const { t } = useTranslation();
 
   const hidePartner = !isPartner || isDesktop;
   const hideUser = isPartner || isDesktop;
@@ -42,27 +44,27 @@ export default function AppTabs() {
 
           {/* Rotas normais */}
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home-outline" isDesktop={isDesktop} hidden={hideUser}>Home</TabButton>
+            <TabButton icon="home-outline" isDesktop={isDesktop} hidden={hideUser}>{t('nav.home')}</TabButton>
           </TabTrigger>
           <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton icon="search-outline" isDesktop={isDesktop} hidden={hideUser}>Discover</TabButton>
+            <TabButton icon="search-outline" isDesktop={isDesktop} hidden={hideUser}>{t('nav.discover')}</TabButton>
           </TabTrigger>
           <Link href="/create-activity" asChild>
-            <TabButton icon="add-outline" isDesktop={isDesktop} hidden={isPartner || isDesktop}>Create</TabButton>
+            <TabButton icon="add-outline" isDesktop={isDesktop} hidden={isPartner || isDesktop}>{t('nav.create')}</TabButton>
           </Link>
           <TabTrigger name="chats" href="/chats" asChild>
-            <TabButton icon="chatbubbles-outline" badge={unreadCount} isDesktop={isDesktop} hidden={isDesktop}>Chats</TabButton>
+            <TabButton icon="chatbubbles-outline" badge={unreadCount} isDesktop={isDesktop} hidden={isDesktop}>{t('nav.chats')}</TabButton>
           </TabTrigger>
           <TabTrigger name="map" href="/map" asChild>
-            <TabButton icon="map-outline" isDesktop={isDesktop} hidden={hideUser}>Map</TabButton>
+            <TabButton icon="map-outline" isDesktop={isDesktop} hidden={hideUser}>{t('nav.map')}</TabButton>
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton icon="person-outline" isDesktop={isDesktop} hidden={isDesktop}>Profile</TabButton>
+            <TabButton icon="person-outline" isDesktop={isDesktop} hidden={isDesktop}>{t('nav.profile')}</TabButton>
           </TabTrigger>
 
           {showAdminTab && (
             <TabTrigger name="admin" href={'/admin' as never} asChild>
-              <TabButton icon="shield-checkmark-outline" isDesktop={isDesktop}>Admin</TabButton>
+              <TabButton icon="shield-checkmark-outline" isDesktop={isDesktop}>{t('nav.admin')}</TabButton>
             </TabTrigger>
           )}
         </CustomTabList>
@@ -116,6 +118,8 @@ export function TabButton({ children, isFocused, icon, badge, isDesktop, hidden,
 type CustomTabListProps = TabListProps & { isDesktop: boolean };
 
 export function CustomTabList({ isDesktop, ...props }: CustomTabListProps) {
+  const { t } = useTranslation();
+
   return (
     <View
       {...props}
@@ -134,7 +138,7 @@ export function CustomTabList({ isDesktop, ...props }: CustomTabListProps) {
             />
             <View>
               <ThemedText type="smallBold" style={styles.brandText}>SportBuddy</ThemedText>
-              <ThemedText style={styles.brandSlogan}>Connect & Play</ThemedText>
+              <ThemedText style={styles.brandSlogan}>{t('nav.brandSlogan')}</ThemedText>
             </View>
           </View>
         </Link>

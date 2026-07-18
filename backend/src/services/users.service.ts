@@ -384,7 +384,10 @@ export class UsersService {
     return updatedUser;
   }
 
-  async searchUsers(query: string, requesterId: string): Promise<{ id: string; name: string; avatarUrl?: string }[]> {
+  async searchUsers(
+    query: string,
+    requesterId: string
+  ): Promise<{ id: string; name: string; avatarUrl?: string; role: UserRole; isFollowing: boolean }[]> {
     const q = query.trim().toLowerCase();
     if (!q) return [];
 
@@ -397,7 +400,13 @@ export class UsersService {
     return snapshot.docs
       .map((doc) => doc.data() as User)
       .filter((u) => u.id !== requesterId && u.status === "active")
-      .map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }));
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl,
+        role: u.role,
+        isFollowing: (u.followers ?? []).includes(requesterId),
+      }));
   }
 
   async addRatingToUser(userId: string, rating: number): Promise<void> {

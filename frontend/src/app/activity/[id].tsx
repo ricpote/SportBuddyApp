@@ -7,6 +7,7 @@ import { AvatarCircle } from '@/components/avatar-circle';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import {
   admitFromWaitlist,
   cancelActivity,
@@ -24,11 +25,11 @@ import { Activity } from '@/types/activity';
 import { Sport } from '@/types/sport';
 import { SportIcon } from '@/utils/sport-icon';
 
-const STATUS_LABELS: Record<Activity['status'], string> = {
-  open: 'Open',
-  full: 'Full',
-  cancelled: 'Cancelled',
-  completed: 'Ended',
+const STATUS_KEYS: Record<Activity['status'], string> = {
+  open: 'activity.view.status.open',
+  full: 'activity.view.status.full',
+  cancelled: 'activity.view.status.cancelled',
+  completed: 'activity.view.status.completed',
 };
 
 const STATUS_COLORS: Record<Activity['status'], string> = {
@@ -38,11 +39,11 @@ const STATUS_COLORS: Record<Activity['status'], string> = {
   completed: '#8f8b85',
 };
 
-const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
-  beginner: 'Iniciante',
-  intermediate: 'Intermédio',
-  advanced: 'Avançado',
-  competitive: 'Competitivo',
+const DIFFICULTY_KEYS: Record<Activity['difficultyLevel'], string> = {
+  beginner: 'activity.difficulty.beginner',
+  intermediate: 'activity.difficulty.intermediate',
+  advanced: 'activity.difficulty.advanced',
+  competitive: 'activity.difficulty.competitive',
 };
 
 type MiniProfile = { name: string; avatarUrl?: string };
@@ -50,6 +51,7 @@ type MiniProfile = { name: string; avatarUrl?: string };
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [activity, setActivity] = useState<Activity | null | undefined>(undefined);
   const [sport, setSport] = useState<Sport | null>(null);
@@ -99,7 +101,7 @@ export default function ActivityDetailScreen() {
   if (activity === undefined) {
     return (
       <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
-        <ThemedText style={{ color: '#8f8b85' }}>A carregar detalhes...</ThemedText>
+        <ThemedText style={{ color: '#8f8b85' }}>{t('activity.view.loadingDetails')}</ThemedText>
       </View>
     );
   }
@@ -108,7 +110,7 @@ export default function ActivityDetailScreen() {
     return (
       <View style={[styles.centered, { backgroundColor: '#0a0a0b' }]}>
         <Ionicons name="alert-circle-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
-        <ThemedText style={{ color: '#8f8b85' }}>Atividade não encontrada.</ThemedText>
+        <ThemedText style={{ color: '#8f8b85' }}>{t('activity.view.notFound')}</ThemedText>
       </View>
     );
   }
@@ -121,7 +123,7 @@ export default function ActivityDetailScreen() {
   const activityDate = new Date(activity.date);
   const freeSpots = Math.max(0, activity.maxParticipants - activity.participantsList.length);
   const fillPercent = Math.min(100, (activity.participantsList.length / activity.maxParticipants) * 100);
-  const organizerName = profiles.get(activity.createdBy)?.name ?? shortId(activity.createdBy);
+  const organizerName = profiles.get(activity.createdBy)?.name ?? shortId(activity.createdBy, t);
 
   const dateLabel = activityDate.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' });
   const timeLabel = activityDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
@@ -148,7 +150,7 @@ export default function ActivityDetailScreen() {
         await navigator.share({ title: activity!.title, url }).catch(() => {});
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(url);
-        setError('Link copiado para a área de transferência!');
+        setError(t('activity.view.linkCopied'));
         setTimeout(() => setError(null), 2500);
       }
     } else {
@@ -175,7 +177,7 @@ export default function ActivityDetailScreen() {
   }
 
   function handleJoin() {
-    return runAction(() => joinActivity(activity!.id), 'Não foi possível entrar na atividade');
+    return runAction(() => joinActivity(activity!.id), t('activity.view.error.join'));
   }
 
   function handleLeave() {
@@ -184,7 +186,7 @@ export default function ActivityDetailScreen() {
       return;
     }
     setConfirmingLeave(false);
-    return runAction(() => leaveActivity(activity!.id), 'Não foi possível sair da atividade');
+    return runAction(() => leaveActivity(activity!.id), t('activity.view.error.leave'));
   }
 
   function handleCancel() {
@@ -193,13 +195,13 @@ export default function ActivityDetailScreen() {
       return;
     }
     setConfirmingCancel(false);
-    return runAction(() => cancelActivity(activity!.id), 'Não foi possível cancelar a atividade');
+    return runAction(() => cancelActivity(activity!.id), t('activity.view.error.cancel'));
   }
 
   function handleRemoveParticipant(participantId: string) {
     return runAction(
       () => removeParticipant(activity!.id, participantId),
-      'Não foi possível remover o participante'
+      t('activity.view.error.removeParticipant')
     );
   }
 
@@ -207,7 +209,7 @@ export default function ActivityDetailScreen() {
     setConfirmingReject(null);
     return runAction(
       () => admitFromWaitlist(activity!.id, userId),
-      'Não foi possível admitir o utilizador'
+      t('activity.view.error.admit')
     );
   }
 
@@ -219,7 +221,7 @@ export default function ActivityDetailScreen() {
     setConfirmingReject(null);
     return runAction(
       () => rejectFromWaitlist(activity!.id, userId),
-      'Não foi possível rejeitar o utilizador'
+      t('activity.view.error.reject')
     );
   }
 
@@ -236,7 +238,7 @@ export default function ActivityDetailScreen() {
       const updated = await getActivity(activity!.id);
       setActivity(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível registar o voto');
+      setError(err instanceof Error ? err.message : t('activity.view.error.vote'));
     } finally {
       setSubmitting(false);
     }
@@ -250,7 +252,7 @@ export default function ActivityDetailScreen() {
       const updated = await getActivity(activity!.id);
       setActivity(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível registar a avaliação');
+      setError(err instanceof Error ? err.message : t('activity.view.error.rate'));
     } finally {
       setSubmitting(false);
     }
@@ -265,15 +267,15 @@ export default function ActivityDetailScreen() {
           style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
           onPress={() => goToUserProfile(pid, user?.uid)}>
           <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
-          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
-          {isOrganizer && <ThemedText style={styles.organizerTag}>· organizador</ThemedText>}
+          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid, t)}</ThemedText>
+          {isOrganizer && <ThemedText style={styles.organizerTag}>{t('activity.view.organizerTag')}</ThemedText>}
         </Pressable>
         {isCreator && !isOrganizer && canJoin && (
           <Pressable
             disabled={submitting}
             style={styles.removeButton}
             onPress={() => handleRemoveParticipant(pid)}>
-            <ThemedText style={styles.removeButtonText}>Remover</ThemedText>
+            <ThemedText style={styles.removeButtonText}>{t('activity.view.remove')}</ThemedText>
           </Pressable>
         )}
       </View>
@@ -282,7 +284,7 @@ export default function ActivityDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Activity' }} />
+      <Stack.Screen options={{ title: t('activity.view.screenTitle') }} />
 
       <ScrollView
         style={{ backgroundColor: '#0a0a0b' }}
@@ -304,18 +306,18 @@ export default function ActivityDetailScreen() {
                       {activity.requiresApproval ? (
                         <View style={[styles.statusPill, { borderColor: '#8f8b85' }]}>
                           <Ionicons name="lock-closed" size={10} color="#8f8b85" />
-                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>PRIVATE</ThemedText>
+                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>{t('activity.view.status.privatePill')}</ThemedText>
                         </View>
                       ) : (
                         <View style={[styles.statusPill, { borderColor: STATUS_COLORS['open'] }]}>
                           <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS['open'] }]} />
-                          <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS['open'] }]}>OPEN</ThemedText>
+                          <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS['open'] }]}>{t('activity.view.status.openPill')}</ThemedText>
                         </View>
                       )}
                       {activity.status === 'full' && (
                         <View style={[styles.statusPill, { borderColor: '#8f8b85' }]}>
                           <View style={[styles.statusDot, { backgroundColor: '#8f8b85' }]} />
-                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>FULL</ThemedText>
+                          <ThemedText style={[styles.statusPillText, { color: '#8f8b85' }]}>{t('activity.view.status.fullPill')}</ThemedText>
                         </View>
                       )}
                     </>
@@ -323,7 +325,7 @@ export default function ActivityDetailScreen() {
                     <View style={[styles.statusPill, { borderColor: STATUS_COLORS[activity.status] }]}>
                       <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[activity.status] }]} />
                       <ThemedText style={[styles.statusPillText, { color: STATUS_COLORS[activity.status] }]}>
-                        {STATUS_LABELS[activity.status].toUpperCase()}
+                        {t(STATUS_KEYS[activity.status]).toUpperCase()}
                       </ThemedText>
                     </View>
                   )}
@@ -345,8 +347,8 @@ export default function ActivityDetailScreen() {
             <View style={styles.infoDivider} />
             <View style={styles.infoCol}>
               <Ionicons name="speedometer-outline" size={18} color="#e8823f" />
-              <ThemedText style={styles.infoValue}>{DIFFICULTY_LABELS[activity.difficultyLevel]}</ThemedText>
-              <ThemedText style={styles.infoLabel}>Dificuldade</ThemedText>
+              <ThemedText style={styles.infoValue}>{t(DIFFICULTY_KEYS[activity.difficultyLevel])}</ThemedText>
+              <ThemedText style={styles.infoLabel}>{t('activity.view.difficultyLabel')}</ThemedText>
             </View>
             <View style={styles.infoDivider} />
             <View style={styles.infoCol}>
@@ -354,23 +356,22 @@ export default function ActivityDetailScreen() {
               <ThemedText style={styles.infoValue}>
                 {activity.participantsList.length} / {activity.maxParticipants}
               </ThemedText>
-              <ThemedText style={styles.infoLabel}>Vagas</ThemedText>
+              <ThemedText style={styles.infoLabel}>{t('activity.view.spotsLabel')}</ThemedText>
             </View>
           </View>
 
-          {/* PROGRESSO DAS VAGAS */}
           {canJoin && (
             <View style={styles.progressBlock}>
               <View style={styles.progressLabels}>
                 <ThemedText style={styles.progressLeft}>
                   {freeSpots > 0 ? (
-                    <>Ainda há <ThemedText style={styles.progressBold}>{freeSpots} vagas</ThemedText></>
+                    <>{t('activity.view.spotsPrefix')} <ThemedText style={styles.progressBold}>{t('activity.view.spotsCount', { count: freeSpots })}</ThemedText></>
                   ) : (
-                    'Atividade completa'
+                    t('activity.view.activityFull')
                   )}
                 </ThemedText>
                 <ThemedText style={styles.progressRight}>
-                  {activity.participantsList.length} de {activity.maxParticipants} preenchidas
+                  {t('activity.view.filledLabel', { count: activity.participantsList.length, max: activity.maxParticipants })}
                 </ThemedText>
               </View>
               <View style={styles.progressTrack}>
@@ -389,12 +390,12 @@ export default function ActivityDetailScreen() {
               size={44}
             />
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.organizerLabel}>ORGANIZADOR</ThemedText>
+              <ThemedText style={styles.organizerLabel}>{t('activity.view.organizerLabel')}</ThemedText>
               <View style={styles.organizerNameRow}>
                 <ThemedText style={styles.organizerName}>{organizerName}</ThemedText>
                 {isCreator && (
                   <View style={styles.youChip}>
-                    <ThemedText style={styles.youChipText}>és tu</ThemedText>
+                    <ThemedText style={styles.youChipText}>{t('activity.view.youChip')}</ThemedText>
                   </View>
                 )}
               </View>
@@ -424,19 +425,18 @@ export default function ActivityDetailScreen() {
                   onPress={openDirections}
                   style={({ pressed }) => [styles.directionsBtn, pressed && styles.pressed]}>
                   <Ionicons name="navigate-outline" size={14} color="#f4f2ef" />
-                  <ThemedText style={styles.directionsText}>Direções</ThemedText>
+                  <ThemedText style={styles.directionsText}>{t('activity.view.directions')}</ThemedText>
                 </Pressable>
               )}
             </View>
           </View>
 
-          {/* PARTICIPANTES */}
           <View style={styles.participantsHeader}>
             <ThemedText style={styles.sectionTitle}>
-              Participantes <ThemedText style={styles.sectionCount}>{activity.participantsList.length}</ThemedText>
+              {t('activity.view.participantsTitle')} <ThemedText style={styles.sectionCount}>{activity.participantsList.length}</ThemedText>
             </ThemedText>
             {freeSpots > 0 && canJoin && (
-              <ThemedText style={styles.freeSpotsText}>+ {freeSpots} lugares livres</ThemedText>
+              <ThemedText style={styles.freeSpotsText}>{t('activity.view.freeSpotsText', { count: freeSpots })}</ThemedText>
             )}
           </View>
 
@@ -449,18 +449,20 @@ export default function ActivityDetailScreen() {
                   <Ionicons name="person-add-outline" size={16} color="#6b6862" />
                 </View>
                 <ThemedText style={styles.emptySlotText}>
-                  {freeSpots} {freeSpots === 1 ? 'lugar à espera' : 'lugares à espera'} de jogadores
+                  {t('activity.view.waitingSlotsText', {
+                    count: freeSpots,
+                    unit: freeSpots === 1 ? t('activity.view.waitingSlotSingular') : t('activity.view.waitingSlotPlural'),
+                  })}
                 </ThemedText>
               </View>
             )}
           </View>
 
-          {/* LISTA DE ESPERA (organizador) */}
           {isCreator && canJoin && activity.waitlist.length > 0 && (
             <>
               <View style={styles.participantsHeader}>
                 <ThemedText style={styles.sectionTitle}>
-                  Lista de espera <ThemedText style={styles.sectionCount}>{activity.waitlist.length}</ThemedText>
+                  {t('activity.view.waitlistTitle')} <ThemedText style={styles.sectionCount}>{activity.waitlist.length}</ThemedText>
                 </ThemedText>
               </View>
               <View style={styles.participantsList}>
@@ -472,7 +474,7 @@ export default function ActivityDetailScreen() {
                         style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
                         onPress={() => goToUserProfile(userId, user?.uid)}>
                         <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
-                        <ThemedText style={styles.participantName}>{p?.name ?? shortId(userId)}</ThemedText>
+                        <ThemedText style={styles.participantName}>{p?.name ?? shortId(userId, t)}</ThemedText>
                       </Pressable>
                       {activity.status === 'open' && (
                         <View style={styles.waitlistActions}>
@@ -480,14 +482,14 @@ export default function ActivityDetailScreen() {
                             disabled={submitting}
                             style={styles.admitButton}
                             onPress={() => handleAdmit(userId)}>
-                            <ThemedText style={styles.admitButtonText}>Admitir</ThemedText>
+                            <ThemedText style={styles.admitButtonText}>{t('activity.view.admit')}</ThemedText>
                           </Pressable>
                           <Pressable
                             disabled={submitting}
                             style={styles.removeButton}
                             onPress={() => handleReject(userId)}>
                             <ThemedText style={styles.removeButtonText}>
-                              {confirmingReject === userId ? 'Confirmar' : 'Rejeitar'}
+                              {confirmingReject === userId ? t('activity.view.confirm') : t('activity.view.reject')}
                             </ThemedText>
                           </Pressable>
                         </View>
@@ -504,34 +506,34 @@ export default function ActivityDetailScreen() {
             <View style={styles.mvpCard}>
               <View style={styles.mvpHeader}>
                 <Ionicons name="trophy" size={20} color="#e8823f" />
-                <ThemedText style={styles.sectionTitle}>MVP da atividade</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t('activity.view.mvpTitle')}</ThemedText>
               </View>
 
               {votingClosed ? (
                 mvpWinners.length > 0 ? (
                   <View style={styles.winnerBox}>
                     <ThemedText style={styles.winnerLabel}>
-                      {mvpWinners.length === 1 ? 'Vencedor' : 'Empate entre'}
+                      {mvpWinners.length === 1 ? t('activity.view.mvpWinner') : t('activity.view.mvpTie')}
                     </ThemedText>
                     {mvpWinners.map((wid) => (
                       <View key={wid} style={styles.winnerRow}>
                         <Ionicons name="trophy" size={18} color="#e8823f" />
                         <ThemedText style={styles.winnerName}>
-                          {profiles.get(wid)?.name ?? shortId(wid)}
+                          {profiles.get(wid)?.name ?? shortId(wid, t)}
                         </ThemedText>
                       </View>
                     ))}
                   </View>
                 ) : (
-                  <ThemedText style={styles.emptyListText}>A votação terminou sem votos.</ThemedText>
+                  <ThemedText style={styles.emptyListText}>{t('activity.view.mvpNoVotes')}</ThemedText>
                 )
               ) : hasVoted ? (
                 <ThemedText style={styles.emptyListText}>
-                  Já votaste em {profiles.get(myVote!)?.name ?? shortId(myVote!)}. À espera dos restantes participantes.
+                  {t('activity.view.mvpAlreadyVoted', { name: profiles.get(myVote!)?.name ?? shortId(myVote!, t) })}
                 </ThemedText>
               ) : (
                 <>
-                  <ThemedText style={styles.voteHint}>Escolhe o melhor jogador da atividade:</ThemedText>
+                  <ThemedText style={styles.voteHint}>{t('activity.view.mvpChoose')}</ThemedText>
                   {otherParticipants.map((pid) => {
                     const p = profiles.get(pid);
                     return (
@@ -540,21 +542,21 @@ export default function ActivityDetailScreen() {
                           style={({ pressed }) => [styles.participantInfo, pressed && styles.pressed]}
                           onPress={() => goToUserProfile(pid, user?.uid)}>
                           <AvatarCircle name={p?.name ?? '?'} avatarUrl={p?.avatarUrl} size={36} />
-                          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid)}</ThemedText>
+                          <ThemedText style={styles.participantName}>{p?.name ?? shortId(pid, t)}</ThemedText>
                         </Pressable>
                         <Pressable
                           disabled={submitting}
                           style={styles.voteButton}
                           onPress={() => handleVoteMvp(pid)}>
                           <ThemedText style={styles.voteButtonText}>
-                            {confirmingVote === pid ? 'Confirmar' : 'Votar'}
+                            {confirmingVote === pid ? t('activity.view.confirm') : t('activity.view.mvpVote')}
                           </ThemedText>
                         </Pressable>
                       </View>
                     );
                   })}
                   {otherParticipants.length === 0 && (
-                    <ThemedText style={styles.emptyListText}>Não há outros participantes para votar.</ThemedText>
+                    <ThemedText style={styles.emptyListText}>{t('activity.view.mvpNoOthers')}</ThemedText>
                   )}
                 </>
               )}
@@ -566,16 +568,19 @@ export default function ActivityDetailScreen() {
             <View style={styles.mvpCard}>
               <View style={styles.mvpHeader}>
                 <Ionicons name="star" size={20} color="#e8823f" />
-                <ThemedText style={styles.sectionTitle}>Avaliar a atividade</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t('activity.view.rateTitle')}</ThemedText>
               </View>
 
               {myRating ? (
                 <ThemedText style={styles.emptyListText}>
-                  Já avaliaste esta atividade com {myRating} {myRating === 1 ? 'estrela' : 'estrelas'}. Obrigado!
+                  {t('activity.view.alreadyRated', {
+                    count: myRating,
+                    unit: myRating === 1 ? t('activity.view.starSingular') : t('activity.view.starPlural'),
+                  })}
                 </ThemedText>
               ) : (
                 <>
-                  <ThemedText style={styles.voteHint}>Como avalias esta atividade?</ThemedText>
+                  <ThemedText style={styles.voteHint}>{t('activity.view.rateQuestion')}</ThemedText>
                   <View style={styles.starsRow}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <Pressable
@@ -605,7 +610,7 @@ export default function ActivityDetailScreen() {
                     onPress={() => router.push({ pathname: '/chat/[id]', params: { id: activity.id } })}
                     style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
                     <Ionicons name="chatbubble-outline" size={18} color="#1a1005" />
-                    <ThemedText style={styles.chatButtonText}>Abrir chat</ThemedText>
+                    <ThemedText style={styles.chatButtonText}>{t('activity.view.chat')}</ThemedText>
                   </Pressable>
                 )}
 
@@ -614,7 +619,7 @@ export default function ActivityDetailScreen() {
                     onPress={() => router.push({ pathname: '/edit-activity/[id]', params: { id: activity.id } })}
                     style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
                     <Ionicons name="pencil-outline" size={16} color="#f4f2ef" />
-                    <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
+                    <ThemedText style={styles.secondaryButtonText}>{t('activity.view.editButton')}</ThemedText>
                   </Pressable>
                 )}
 
@@ -622,7 +627,7 @@ export default function ActivityDetailScreen() {
                   onPress={handleShare}
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
                   <Ionicons name="share-outline" size={16} color="#f4f2ef" />
-                  <ThemedText style={styles.secondaryButtonText}>Partilhar</ThemedText>
+                  <ThemedText style={styles.secondaryButtonText}>{t('activity.view.share')}</ThemedText>
                 </Pressable>
               </View>
 
@@ -634,7 +639,7 @@ export default function ActivityDetailScreen() {
                     style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}>
                     <Ionicons name="trash-outline" size={16} color="#eb8f84" />
                     <ThemedText style={styles.dangerButtonText}>
-                      {confirmingCancel ? 'Are you sure? Tap to confirm' : 'Cancel activity'}
+                      {confirmingCancel ? t('activity.view.confirmTap') : t('activity.view.cancelActivity')}
                     </ThemedText>
                   </Pressable>
                 ) : (
@@ -645,10 +650,10 @@ export default function ActivityDetailScreen() {
                     <Ionicons name="exit-outline" size={16} color="#eb8f84" />
                     <ThemedText style={styles.dangerButtonText}>
                       {confirmingLeave
-                        ? 'Are you sure? Tap to confirm'
+                        ? t('activity.view.confirmTap')
                         : isWaitlisted
-                          ? (activity.requiresApproval ? 'Cancel request' : 'Leave waitlist')
-                          : 'Leave activity'}
+                          ? (activity.requiresApproval ? t('activity.view.cancelRequest') : t('activity.view.leaveWaitlist'))
+                          : t('activity.view.leaveActivity')}
                     </ThemedText>
                   </Pressable>
                 )
@@ -679,18 +684,18 @@ export default function ActivityDetailScreen() {
                 style={({ pressed }) => [styles.chatButton, pressed && styles.pressed]}>
                 <Ionicons name="add" size={20} color="#1a1005" />
                 <ThemedText style={styles.chatButtonText}>
-                  {activity.requiresApproval ? 'Request to Join' : isFull ? 'Join Waitlist' : 'Join'}
+                  {activity.requiresApproval ? t('activity.view.requestToJoin') : isFull ? t('activity.view.joinWaitlist') : t('activity.view.join')}
                 </ThemedText>
               </Pressable>
               <Pressable
                 onPress={handleShare}
                 style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
                 <Ionicons name="share-outline" size={16} color="#f4f2ef" />
-                <ThemedText style={styles.secondaryButtonText}>Partilhar</ThemedText>
+                <ThemedText style={styles.secondaryButtonText}>{t('activity.view.share')}</ThemedText>
               </Pressable>
             </View>
           ) : (
-            <ThemedText style={styles.note}>Esta atividade já não aceita participantes.</ThemedText>
+            <ThemedText style={styles.note}>{t('activity.view.noLongerAccepting')}</ThemedText>
           )}
         </View>
       </ScrollView>
@@ -698,9 +703,8 @@ export default function ActivityDetailScreen() {
   );
 }
 
-// Fallback enquanto o nome carrega ou se o fetch falhar.
-function shortId(uid: string) {
-  return `Utilizador ${uid.slice(0, 6)}…`;
+function shortId(uid: string, t: (key: string, vars?: Record<string, string | number>) => string) {
+  return t('activity.view.unknownUser', { id: uid.slice(0, 6) });
 }
 
 function goToUserProfile(userId: string, currentUserId?: string) {

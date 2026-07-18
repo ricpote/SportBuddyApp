@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
 import { getDirectMessages, sendDirectMessage } from '@/services/conversations';
 import { DirectMessage } from '@/types/message';
+import { useTranslation } from '@/i18n';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -26,12 +27,12 @@ type ListItem =
   | { type: 'message'; data: DirectMessage }
   | { type: 'date'; id: string; label: string };
 
-function dateLabelFor(d: Date): string {
+function dateLabelFor(d: Date, t: (key: string) => string): string {
   const today = new Date();
   const yest = new Date(Date.now() - 86400000);
   const key = (x: Date) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
-  if (key(d) === key(today)) return 'Hoje';
-  if (key(d) === key(yest)) return 'Ontem';
+  if (key(d) === key(today)) return t('chat.direct.today');
+  if (key(d) === key(yest)) return t('chat.direct.yesterday');
   return d.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' });
 }
 
@@ -43,6 +44,7 @@ export default function DirectChatScreen() {
     userId?: string;
   }>();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const uid = user?.uid;
 
@@ -79,7 +81,7 @@ export default function DirectChatScreen() {
           }
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens.');
+          setError(err instanceof Error ? err.message : t('chat.direct.loadError'));
         });
     }
 
@@ -88,7 +90,9 @@ export default function DirectChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
-  handleSendRef.current = handleSend;
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -131,7 +135,7 @@ export default function DirectChatScreen() {
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       latestCountRef.current -= 1;
-      setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
+      setError(e instanceof Error ? e.message : t('chat.room.sendError'));
     } finally {
       setSending(false);
     }
@@ -144,7 +148,7 @@ export default function DirectChatScreen() {
     const d = new Date(m.createdAt);
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     if (key !== lastDateKey) {
-      items.push({ type: 'date', id: `date-${key}`, label: dateLabelFor(d) });
+      items.push({ type: 'date', id: `date-${key}`, label: dateLabelFor(d, t) });
       lastDateKey = key;
     }
     items.push({ type: 'message', data: m });
@@ -197,7 +201,7 @@ export default function DirectChatScreen() {
               <AvatarCircle name={name ?? '?'} avatarUrl={avatarUrl} size={36} />
               <View>
                 <ThemedText style={styles.headerName} numberOfLines={1}>
-                  {name ?? 'Chat'}
+                  {name ?? t('chat.direct.fallbackTitle')}
                 </ThemedText>
               </View>
             </Pressable>
@@ -218,7 +222,7 @@ export default function DirectChatScreen() {
               onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             >
               {items.length === 0 ? (
-                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
+                <ThemedText style={styles.empty}>{t('chat.room.emptyMessages')}</ThemedText>
               ) : (
                 items.map((item) => (
                   <View key={item.type === 'date' ? item.id : item.data.id}>
@@ -234,7 +238,7 @@ export default function DirectChatScreen() {
               <TextInput
                 ref={inputRef}
                 style={styles.input}
-                placeholder="Mensagem..."
+                placeholder={t('chat.room.messagePlaceholder')}
                 placeholderTextColor="#8f8b85"
                 value={text}
                 onChangeText={setText}

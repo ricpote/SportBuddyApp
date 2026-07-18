@@ -7,8 +7,11 @@ import { BadgeIcon } from '@/components/badge-icon';
 import { Spacing } from '@/constants/theme';
 import { getMyBadges, setDisplayedBadge } from '@/services/badges';
 import { UserBadge } from '@/types/badge';
+import { useTranslation } from '@/i18n';
+import { translateBadge } from '@/utils/translate-badge';
 
 export function BadgesSection() {
+  const { t, language } = useTranslation();
   const [badges, setBadges] = useState<UserBadge[] | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -31,7 +34,7 @@ export function BadgesSection() {
       await setDisplayedBadge(badge.isDisplayed ? null : badge.id);
       load();
     } catch (error) {
-      Alert.alert('Erro', error instanceof Error ? error.message : 'Não foi possível atualizar o badge.');
+      Alert.alert(t('profile.alert.errorTitle'), error instanceof Error ? error.message : t('profile.badges.updateError'));
     } finally {
       setUpdatingId(null);
     }
@@ -41,9 +44,9 @@ export function BadgesSection() {
 
   return (
     <View style={styles.container}>
-      <ThemedText type="subtitle" style={styles.title}>Badges</ThemedText>
+      <ThemedText type="subtitle" style={styles.title}>{t('profile.badges.title')}</ThemedText>
       <ThemedText type="small" style={styles.subtitle}>
-        Toca num badge para o afixar no teu perfil.
+        {t('profile.badges.tapHint')}
       </ThemedText>
 
       <View style={styles.grid}>
@@ -56,7 +59,7 @@ export function BadgesSection() {
               <BadgeIcon badgeId={badge.id} icon={badge.icon} size={72} />
             </View>
             <ThemedText type="small" style={styles.badgeName} numberOfLines={2}>
-              {badge.name}
+              {translateBadge(badge, language).name}
             </ThemedText>
           </Pressable>
         ))}

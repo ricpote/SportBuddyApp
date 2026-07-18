@@ -26,6 +26,8 @@ import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 import { PublicUser } from '@/types/user';
 import { relativeDate } from '@/utils/date';
+import { useNow } from '@/hooks/use-now';
+import { useTranslation } from '@/i18n';
 
 const POLL_INTERVAL_MS = 4000;
 
@@ -55,6 +57,7 @@ function sportIconName(name = ''): string {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const uid = user?.uid;
 
@@ -73,12 +76,13 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const handleSendRef = useRef<() => void>(() => {});
 
+  const now = useNow(60000);
   const isCompleted = activity?.status === 'completed';
   const isCreator = !!uid && activity?.createdBy === uid;
   const hasVoted = !!(uid && activity?.mvpVotes && uid in activity.mvpVotes);
   const votedForId = uid && activity?.mvpVotes ? activity.mvpVotes[uid] : null;
   const votingClosed = !!activity?.votingClosedAt ||
-    (isCompleted && !!activity?.updatedAt && Date.now() - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
+    (isCompleted && !!activity?.updatedAt && now - new Date(activity.updatedAt).getTime() > 24 * 60 * 60 * 1000);
 
   useEffect(() => {
     if (!id) return;
@@ -132,7 +136,9 @@ export default function ChatScreen() {
     return () => clearInterval(interval);
   }, [id, markRead]);
 
-  handleSendRef.current = handleSend;
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -175,7 +181,7 @@ export default function ChatScreen() {
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       latestCountRef.current -= 1;
-      setError(e instanceof Error ? e.message : 'Erro ao enviar mensagem.');
+      setError(e instanceof Error ? e.message : t('chat.room.sendError'));
     } finally {
       setSending(false);
     }
@@ -203,7 +209,10 @@ export default function ChatScreen() {
     items.push({
       type: 'system',
       id: 'created',
-      text: `${creator?.name ?? 'Alguém'} criou a atividade · ${relativeDate(activity.createdAt)}`,
+      text: t('chat.room.createdActivity', {
+        name: creator?.name ?? t('chat.room.someone'),
+        date: relativeDate(activity.createdAt),
+      }),
     });
   }
   let prevSenderId: string | null = null;
@@ -212,7 +221,7 @@ export default function ChatScreen() {
     prevSenderId = m.senderId;
   });
   if (isCompleted) {
-    items.push({ type: 'system', id: 'terminated', text: 'Atividade terminada', iconName: 'flag-outline' });
+    items.push({ type: 'system', id: 'terminated', text: t('chat.room.activityEnded'), iconName: 'flag-outline' });
   }
 
   function renderItem({ item }: { item: ListItem }) {
@@ -259,7 +268,7 @@ export default function ChatScreen() {
                 styles.senderName,
                 isOwn && { marginLeft: 0, marginRight: 4, textAlign: 'right' as const },
               ]}>
-              {isOwn ? 'Tu' : (profile?.name ?? '...')}
+              {isOwn ? t('chat.room.you') : (profile?.name ?? '...')}
             </ThemedText>
           )}
           <View style={[styles.bubbleInner, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
@@ -302,7 +311,7 @@ export default function ChatScreen() {
                     {activity.title}
                   </ThemedText>
                   <ThemedText style={styles.headerSub} numberOfLines={1}>
-                    {count} participante{count !== 1 ? 's' : ''} · {activity.location.name}
+                    {t(count === 1 ? 'chat.participants.one' : 'chat.participants.other', { count })} · {activity.location.name}
                   </ThemedText>
                 </View>
               </Pressable>
@@ -324,7 +333,7 @@ export default function ChatScreen() {
               renderItem={renderItem}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
-                <ThemedText style={styles.empty}>Sem mensagens ainda. Diz olá! 👋</ThemedText>
+                <ThemedText style={styles.empty}>{t('chat.room.emptyMessages')}</ThemedText>
               }
               onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             />
@@ -349,40 +358,40 @@ export default function ChatScreen() {
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.votingTitle}>
                       {hasVoted
-                        ? 'Voto registado!'
+                        ? t('chat.room.voteRegistered')
                         : votingClosed
-                          ? 'Votação encerrada'
-                          : 'Vota no MVP desta atividade'}
+                          ? t('chat.room.votingClosedTitle')
+                          : t('chat.room.voteCta')}
                     </ThemedText>
                     <ThemedText style={styles.votingSubtitle}>
                       {hasVoted
-                        ? `Votaste em ${profiles.get(votedForId!)?.name ?? 'alguém'}`
+                        ? t('chat.room.votedFor', { name: profiles.get(votedForId!)?.name ?? t('chat.room.someoneInline') })
                         : votingClosed
-                          ? 'O período de votação expirou'
-                          : 'A votação está aberta'}
+                          ? t('chat.room.votingExpired')
+                          : t('chat.room.votingOpen')}
                     </ThemedText>
                   </View>
                 </View>
                 {hasVoted ? (
                   <View style={styles.voteBtnDone}>
                     <Ionicons name="checkmark-circle-outline" size={16} color="#8f8b85" style={{ marginRight: 6 }} />
-                    <ThemedText style={styles.voteBtnDoneText}>Já votaste</ThemedText>
+                    <ThemedText style={styles.voteBtnDoneText}>{t('chat.room.alreadyVoted')}</ThemedText>
                   </View>
                 ) : votingClosed ? (
                   <View style={styles.voteBtnDone}>
-                    <ThemedText style={styles.voteBtnDoneText}>Voto indisponível</ThemedText>
+                    <ThemedText style={styles.voteBtnDoneText}>{t('chat.room.voteUnavailable')}</ThemedText>
                   </View>
                 ) : (
                   <Pressable
                     style={({ pressed }) => [styles.voteBtn, pressed && { opacity: 0.85 }]}
                     onPress={() => setVoteModalVisible(true)}>
-                    <ThemedText style={styles.voteBtnText}>Votar agora</ThemedText>
+                    <ThemedText style={styles.voteBtnText}>{t('chat.room.voteNow')}</ThemedText>
                   </Pressable>
                 )}
                 <View style={styles.readOnlyRow}>
                   <Ionicons name="lock-closed-outline" size={12} color="#8f8b85" />
                   <ThemedText style={styles.readOnlyText}>
-                    Conversa em modo leitura
+                    {t('chat.room.readOnlyMode')}
                   </ThemedText>
                 </View>
               </View>
@@ -395,7 +404,7 @@ export default function ChatScreen() {
               <View style={[styles.inputRow, { paddingBottom: insets.bottom + Spacing.two }]}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Mensagem..."
+                  placeholder={t('chat.room.messagePlaceholder')}
                   placeholderTextColor="#8f8b85"
                   value={text}
                   onChangeText={setText}
@@ -428,9 +437,9 @@ export default function ChatScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setVoteModalVisible(false)}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-            <ThemedText style={styles.modalTitle}>Vota no MVP</ThemedText>
+            <ThemedText style={styles.modalTitle}>{t('chat.room.voteModalTitle')}</ThemedText>
             <ThemedText style={styles.modalSubtitle}>
-              Escolhe o melhor jogador desta atividade
+              {t('chat.room.voteModalSubtitle')}
             </ThemedText>
             {activity?.participantsList
               .filter((pid) => pid !== uid)
@@ -456,7 +465,7 @@ export default function ChatScreen() {
             <Pressable
               style={styles.modalCancel}
               onPress={() => setVoteModalVisible(false)}>
-              <ThemedText style={styles.modalCancelText}>Cancelar</ThemedText>
+              <ThemedText style={styles.modalCancelText}>{t('chat.room.cancel')}</ThemedText>
             </Pressable>
           </View>
         </Pressable>

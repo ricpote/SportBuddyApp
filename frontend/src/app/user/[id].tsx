@@ -22,21 +22,22 @@ import { Activity } from '@/types/activity';
 import { PublicUser } from '@/types/user';
 import { relativeDate } from '@/utils/date';
 import { compressImageDataUrl } from '@/utils/image';
+import { useTranslation } from '@/i18n';
+import { translateBadge } from '@/utils/translate-badge';
 
 type FriendStatus = 'none' | 'sending' | 'sent' | 'received' | 'friends';
 
 const STATUS_COLOR: Record<Activity['status'], string> = {
   open: '#9ccd6b', full: '#e8823f', cancelled: '#eb8f84', completed: '#8f8b85',
 };
-const STATUS_LABEL: Record<Activity['status'], string> = {
-  open: 'Aberta', full: 'Quase cheia', cancelled: 'Cancelada', completed: 'Terminada',
-};
 
-function memberSince(ts?: string): string {
+const MONTH_KEYS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+function memberSince(ts: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!ts) return '';
   const d = new Date(ts);
-  const m = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()];
-  return `${m} ${d.getFullYear()}`;
+  const monthKey = MONTH_KEYS[d.getMonth()];
+  return `${t(`profile.month.${monthKey}`)} ${d.getFullYear()}`;
 }
 
 function locName(loc?: string | { name?: string }): string | null {
@@ -51,7 +52,15 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { t, language } = useTranslation();
   const isWide = width >= 700;
+
+  const STATUS_LABEL: Record<Activity['status'], string> = {
+    open: t('profile.userStatus.open'),
+    full: t('profile.userStatus.full'),
+    cancelled: t('profile.userStatus.cancelled'),
+    completed: t('profile.userStatus.completed'),
+  };
 
   const [profile, setProfile] = useState<PublicUser | null | undefined>(undefined);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('none');
@@ -132,7 +141,7 @@ export default function UserProfileScreen() {
       await sendFriendRequest(id);
       setFriendStatus('sent');
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Erro ao enviar pedido';
+      const message = e instanceof Error ? e.message : t('profile.addFriend.genericError');
       if (message === 'Já são amigos') setFriendStatus('friends');
       else if (message === 'Já enviaste um pedido a este utilizador') setFriendStatus('sent');
       else { setFriendStatus('none'); setFriendError(message); }
@@ -234,7 +243,7 @@ export default function UserProfileScreen() {
   if (profile === undefined) {
     return (
       <View style={styles.centered}>
-        <ThemedText type="small" style={{ color: '#8f8b85' }}>A carregar...</ThemedText>
+        <ThemedText type="small" style={{ color: '#8f8b85' }}>{t('profile.loading')}</ThemedText>
       </View>
     );
   }
@@ -242,14 +251,14 @@ export default function UserProfileScreen() {
   if (profile === null) {
     return (
       <View style={styles.centered}>
-        <ThemedText type="small" style={{ color: '#8f8b85' }}>Utilizador não encontrado.</ThemedText>
+        <ThemedText type="small" style={{ color: '#8f8b85' }}>{t('profile.user.notFound')}</ThemedText>
       </View>
     );
   }
 
   const isMe = me?.uid === id;
   const isOrg = profile.role === 'partner';
-  const memberSinceStr = memberSince(profile.createdAt);
+  const memberSinceStr = memberSince(profile.createdAt, t);
   const locationStr = locName(profile.location);
 
   function renderEventCard(activity: Activity) {
@@ -284,7 +293,7 @@ export default function UserProfileScreen() {
           ) : null}
         </View>
         <ThemedText style={styles.eventInscritos}>
-          {activity.participantsList.length} / {activity.maxParticipants} inscritos
+          {t('profile.participants', { current: activity.participantsList.length, max: activity.maxParticipants })}
         </ThemedText>
         <View style={styles.progressTrackSmall}>
           <View style={[styles.progressFillSmall, { width: `${Math.min(fill * 100, 100)}%` as any }]} />
@@ -377,7 +386,7 @@ export default function UserProfileScreen() {
                     </View>
                   )}
                   {uploadingLogo ? (
-                    <ThemedText type="small" style={styles.metaText}>A guardar logo...</ThemedText>
+                    <ThemedText type="small" style={styles.metaText}>{t('profile.user.savingLogo')}</ThemedText>
                   ) : null}
                 </View>
 
@@ -386,7 +395,7 @@ export default function UserProfileScreen() {
                     onPress={() => router.push('/edit-profile')}
                     style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, styles.editProfileBtn, pressed && styles.pressed]}>
                     <Ionicons name="create-outline" size={16} color="#c9c5bf" />
-                    <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>Editar perfil</ThemedText>
+                    <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.user.editProfile')}</ThemedText>
                   </Pressable>
                 )}
 
@@ -408,7 +417,7 @@ export default function UserProfileScreen() {
                         color={isFollowing ? '#c9c5bf' : '#0a0a0b'}
                       />
                       <ThemedText type="smallBold" style={{ color: isFollowing ? '#c9c5bf' : '#0a0a0b' }}>
-                        {isFollowing ? 'A seguir' : 'Seguir'}
+                        {isFollowing ? t('profile.user.following') : t('profile.user.follow')}
                       </ThemedText>
                     </Pressable>
                     <Pressable
@@ -423,19 +432,18 @@ export default function UserProfileScreen() {
 
               <View style={styles.orgStatsRow}>
                 {[
-                  { label: 'SEGUIDORES', value: followersCount },
-                  { label: 'EVENTOS', value: profile.stats.activitiesCreated },
-                  { label: 'AVALIAÇÃO', value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—' },
-                ].map(({ label, value }, i) => {
+                  { label: t('profile.user.stat.followers'), value: followersCount, isFollowers: true },
+                  { label: t('profile.user.stat.events'), value: profile.stats.activitiesCreated, isFollowers: false },
+                  { label: t('profile.user.stat.rating'), value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—', isFollowers: false },
+                ].map(({ label, value, isFollowers }, i) => {
                   const isOwner = me?.uid === id;
-                  const isFollowersBox = label === 'SEGUIDORES';
                   const inner = (
                     <>
                       <ThemedText style={styles.orgStatValue}>{value}</ThemedText>
                       <ThemedText style={styles.orgStatLabel}>{label}</ThemedText>
                     </>
                   );
-                  if (isFollowersBox && isOwner) {
+                  if (isFollowers && isOwner) {
                     return (
                       <Pressable
                         key={label}
@@ -455,20 +463,20 @@ export default function UserProfileScreen() {
             </View>
 
             <View style={styles.sectionHeaderRow}>
-              <ThemedText type="subtitle" style={styles.sectionTitle}>Próximos eventos</ThemedText>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.user.upcomingEvents')}</ThemedText>
               {upcomingActivities !== null && upcomingActivities.length > 4 && (
                 <Pressable onPress={() => router.push({ pathname: '/explore', params: { organizerId: id } })}>
                   <ThemedText type="small" style={{ color: '#e8823f' }}>
-                    Ver todos · {upcomingActivities.length}
+                    {t('profile.user.viewAllEvents', { count: upcomingActivities.length })}
                   </ThemedText>
                 </Pressable>
               )}
             </View>
             {upcomingActivities === null && (
-              <ThemedText type="small" style={styles.emptyText}>A carregar...</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.loading')}</ThemedText>
             )}
             {upcomingActivities !== null && upcomingActivities.length === 0 && (
-              <ThemedText type="small" style={styles.emptyText}>Sem eventos agendados.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.user.noEvents')}</ThemedText>
             )}
             {upcomingActivities !== null && upcomingActivities.length > 0 && (
               <View style={styles.eventsGrid}>
@@ -476,12 +484,12 @@ export default function UserProfileScreen() {
               </View>
             )}
 
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Histórico</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.history.title')}</ThemedText>
             {pastActivities === null && (
-              <ThemedText type="small" style={styles.emptyText}>A carregar...</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.loading')}</ThemedText>
             )}
             {pastActivities !== null && pastActivities.length === 0 && (
-              <ThemedText type="small" style={styles.emptyText}>Ainda sem atividades terminadas.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.user.noPastActivities')}</ThemedText>
             )}
             {pastActivities !== null && pastActivities.length > 0 && (
               <View style={styles.actList}>
@@ -524,7 +532,7 @@ export default function UserProfileScreen() {
             <View style={styles.nameBlock}>
               <ThemedText style={styles.name} numberOfLines={1}>{profile.name}</ThemedText>
               {memberSinceStr ? (
-                <ThemedText type="small" style={styles.metaText}>Membro desde {memberSinceStr}</ThemedText>
+                <ThemedText type="small" style={styles.metaText}>{t('profile.memberSince', { date: memberSinceStr })}</ThemedText>
               ) : null}
             </View>
 
@@ -541,7 +549,7 @@ export default function UserProfileScreen() {
                   <View style={[styles.actionBtn, styles.actionBtnNeutral, { justifyContent: 'space-between', paddingHorizontal: Spacing.three }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons name="checkmark-circle-outline" size={16} color="#8f8b85" />
-                      <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>Amigos</ThemedText>
+                      <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.stats.friends')}</ThemedText>
                     </View>
                     <Pressable onPress={handleRemoveFriend} hitSlop={8}>
                       <Ionicons name="person-remove-outline" size={16} color="#8f8b85" />
@@ -553,12 +561,12 @@ export default function UserProfileScreen() {
                       style={({ pressed }) => [styles.actionBtn, styles.actionBtnOrange, pressed && styles.pressed]}
                       onPress={handleAcceptRequest}>
                       <Ionicons name="checkmark-circle-outline" size={16} color="#0a0a0b" />
-                      <ThemedText type="smallBold" style={{ color: '#0a0a0b' }}>Aceitar pedido</ThemedText>
+                      <ThemedText type="smallBold" style={{ color: '#0a0a0b' }}>{t('profile.user.acceptRequest')}</ThemedText>
                     </Pressable>
                     <Pressable
                       style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, pressed && styles.pressed]}
                       onPress={handleRejectRequest}>
-                      <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>Rejeitar</ThemedText>
+                      <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.user.reject')}</ThemedText>
                     </Pressable>
                   </View>
                 ) : friendStatus === 'sent' ? (
@@ -566,7 +574,7 @@ export default function UserProfileScreen() {
                     style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, pressed && styles.pressed]}
                     onPress={handleCancelRequest}>
                     <Ionicons name="hourglass-outline" size={16} color="#8f8b85" />
-                    <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>Pedido enviado · Cancelar</ThemedText>
+                    <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.user.requestSentCancel')}</ThemedText>
                   </Pressable>
                 ) : (
                   <Pressable
@@ -575,7 +583,7 @@ export default function UserProfileScreen() {
                     disabled={friendStatus === 'sending'}>
                     <Ionicons name="person-add-outline" size={16} color="#0a0a0b" />
                     <ThemedText type="smallBold" style={{ color: '#0a0a0b' }}>
-                      {friendStatus === 'sending' ? 'A enviar...' : 'Adicionar amigo'}
+                      {friendStatus === 'sending' ? t('profile.user.sending') : t('profile.user.addFriend')}
                     </ThemedText>
                   </Pressable>
                 )}
@@ -586,7 +594,7 @@ export default function UserProfileScreen() {
                     onPress={handleMessage}
                     disabled={openingChat}>
                     <Ionicons name="chatbubble-outline" size={16} color="#0a0a0b" />
-                    <ThemedText type="smallBold" style={{ color: '#0a0a0b' }}>Mensagem</ThemedText>
+                    <ThemedText type="smallBold" style={{ color: '#0a0a0b' }}>{t('profile.user.message')}</ThemedText>
                   </Pressable>
                 )}
 
@@ -614,10 +622,10 @@ export default function UserProfileScreen() {
 
             <View style={styles.statsList}>
               {[
-                { label: 'Participadas', value: profile.stats.activitiesJoined },
-                { label: 'Organizadas',  value: profile.stats.activitiesCreated },
-                { label: 'MVP',          value: profile.stats.mvpVotesReceived },
-                { label: 'Amigos',       value: profile.friendCount ?? 0 },
+                { label: t('profile.stats.joined'), value: profile.stats.activitiesJoined },
+                { label: t('profile.stats.organized'),  value: profile.stats.activitiesCreated },
+                { label: t('profile.stats.mvp'),          value: profile.stats.mvpVotesReceived },
+                { label: t('profile.stats.friends'),       value: profile.friendCount ?? 0 },
               ].map(({ label, value }) => (
                 <View key={label} style={styles.statRow}>
                   <ThemedText type="small" style={styles.statLabel}>{label}</ThemedText>
@@ -631,8 +639,8 @@ export default function UserProfileScreen() {
                 <View style={styles.divider} />
                 <ThemedText type="small" style={styles.mutualLabel}>
                   {mutualFriends.length === 1
-                    ? '1 amigo em comum'
-                    : `${mutualFriends.length} amigos em comum`}
+                    ? t('profile.user.mutualFriend.singular')
+                    : t('profile.user.mutualFriend.plural', { count: mutualFriends.length })}
                 </ThemedText>
                 <View style={styles.mutualAvatars}>
                   {mutualFriends.map(f => (
@@ -654,26 +662,26 @@ export default function UserProfileScreen() {
           {/* ── RIGHT COLUMN ── */}
           <View style={[styles.rightCol, isWide && styles.rightColWide]}>
 
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Badges</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.badges.title')}</ThemedText>
             {displayedEarned.length > 0 ? (
               <View style={styles.badgeGrid}>
                 {displayedEarned.map(badge => (
                   <View key={badge.id} style={styles.badgeCell}>
                     <BadgeIcon badgeId={badge.id} icon={badge.icon} size={100} />
-                    <ThemedText style={styles.badgeName} numberOfLines={2}>{badge.name}</ThemedText>
+                    <ThemedText style={styles.badgeName} numberOfLines={2}>{translateBadge(badge, language).name}</ThemedText>
                   </View>
                 ))}
               </View>
             ) : (
-              <ThemedText type="small" style={styles.emptyText}>Sem badges.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.user.noBadges')}</ThemedText>
             )}
 
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Atividade recente</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.user.recentActivity')}</ThemedText>
             {activities === null && (
-              <ThemedText type="small" style={styles.emptyText}>A carregar...</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.loading')}</ThemedText>
             )}
             {activities !== null && activities.length === 0 && (
-              <ThemedText type="small" style={styles.emptyText}>Sem atividades.</ThemedText>
+              <ThemedText type="small" style={styles.emptyText}>{t('profile.activities.empty')}</ThemedText>
             )}
             {activities !== null && activities.length > 0 && (
               <View style={styles.actList}>

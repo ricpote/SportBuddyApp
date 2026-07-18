@@ -23,6 +23,7 @@ export type Notification = {
   type: NotificationType;
   message: string;
   activityId?: string;
+  relatedUserId?: string;
   read: boolean;
   createdAt: string;
 };

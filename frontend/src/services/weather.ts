@@ -93,6 +93,24 @@ export function findNearestIpmaLocation(latitude: number, longitude: number): Ip
   );
 }
 
+// O endpoint de UV só publica valores para as ~28 estações de referência
+// (uma por distrito/ilha), não para todas as cidades em IPMA_LOCATIONS. Se o
+// local escolhido não tiver dados de UV, usa a estação de referência da
+// mesma área de aviso e, na falta dessa, a estação com UV mais próxima.
+function findUvReferenceLocation(location: IpmaLocation, availableIds: Set<number>): IpmaLocation {
+  if (availableIds.has(location.globalIdLocal)) return location;
+
+  const sameArea = IPMA_LOCATIONS.find(
+    (l) => l.areaAviso === location.areaAviso && availableIds.has(l.globalIdLocal)
+  );
+  if (sameArea) return sameArea;
+
+  const withUv = IPMA_LOCATIONS.filter((l) => availableIds.has(l.globalIdLocal));
+  return withUv.reduce((nearest, candidate) =>
+    distanceKm(location, candidate) < distanceKm(location, nearest) ? candidate : nearest
+  );
+}
+
 async function fetchJson(url: string) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -179,7 +197,11 @@ export async function getWeeklyForecast(
     classWindSpeed: number;
   }[] = daily.data;
 
-  const uvByDate = buildUvByDate(uvData, location.globalIdLocal);
+  const availableUvIds = new Set<number>(
+    (uvData as { globalIdLocal: number }[]).map((entry) => entry.globalIdLocal)
+  );
+  const uvLocation = findUvReferenceLocation(location, availableUvIds);
+  const uvByDate = buildUvByDate(uvData, uvLocation.globalIdLocal);
   const warningByDate = buildWarningByDate(warnings, location.areaAviso, days.map((d) => d.forecastDate));
 
   const forecast: DailyForecast[] = days.map((day) => ({

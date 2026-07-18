@@ -38,17 +38,19 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  'auth/email-already-in-use': 'Este email já está registado.',
-  'auth/invalid-email': 'Email inválido.',
-  'auth/weak-password': 'A palavra-passe é demasiado fraca.',
+const AUTH_ERROR_KEYS: Record<string, string> = {
+  'auth/email-already-in-use': 'auth.error.emailInUse',
+  'auth/invalid-email': 'auth.error.invalidEmail',
+  'auth/weak-password': 'auth.error.weakPassword',
 };
 
+// Message is a translation key (see i18n/dictionaries/auth.ts) so callers can
+// resolve it through useTranslation(); falls back to a raw Error otherwise.
 function translateAuthError(err: unknown): Error {
   const code = (err as { code?: string } | null)?.code;
-  const message = code ? AUTH_ERROR_MESSAGES[code] : undefined;
-  if (message) return new Error(message);
-  return err instanceof Error ? err : new Error('Não foi possível criar a conta');
+  const key = code ? AUTH_ERROR_KEYS[code] : undefined;
+  if (key) return new Error(key);
+  return err instanceof Error ? err : new Error('auth.register.genericError');
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { Friend, FriendRequest, FriendUser } from '@/types/friend';
 import { openConversation } from '@/services/conversations';
 import { acceptFriendRequest, getFriends, getPendingRequests, rejectFriendRequest, removeFriend, sendFriendRequest } from '@/services/friends';
-import { searchUsers } from '@/services/users';
+import { followUser, searchUsers, unfollowUser } from '@/services/users';
+import { useTranslation } from '@/i18n';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -31,38 +32,46 @@ function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl?: string })
 
 export default function FriendsScreen() {
   const { user: me } = useAuth();
+  const { t } = useTranslation();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [friendFilter, setFriendFilter] = useState('');
 
-  const [addMode, setAddMode] = useState(false);
+  const [addMode, setAddMode] = useState(mode === 'search');
   const [addQuery, setAddQuery] = useState('');
   const [results, setResults] = useState<FriendUser[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [sentIds, setSentIds] = useState<string[]>([]);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [followBusyIds, setFollowBusyIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!addMode) return;
     const trimmed = addQuery.trim();
     if (trimmed.length < 1) {
-      setResults(null);
-      setSearching(false);
-      setSearchError(null);
+      queueMicrotask(() => {
+        setResults(null);
+        setSearching(false);
+        setSearchError(null);
+      });
       return;
     }
-    setSearching(true);
+    queueMicrotask(() => setSearching(true));
     const timer = setTimeout(() => {
       searchUsers(trimmed)
         .then((users) => {
-          setResults(users.filter((u) => u.id !== me?.uid));
+          const filtered = users.filter((u) => u.id !== me?.uid);
+          setResults(filtered);
+          setFollowingIds(filtered.filter((u) => u.isFollowing).map((u) => u.id));
           setSearchError(null);
         })
         .catch(() => {
           setResults([]);
-          setSearchError('Não foi possível pesquisar. Tenta de novo.');
+          setSearchError(t('profile.friends.searchError'));
         })
         .finally(() => setSearching(false));
     }, SEARCH_DEBOUNCE_MS);
@@ -127,8 +136,25 @@ export default function FriendsScreen() {
       if (message === 'Já enviaste um pedido a este utilizador' || message === 'Já são amigos') {
         setSentIds((prev) => [...prev, user.id]);
       } else {
-        setSearchError(message || 'Erro ao enviar pedido');
+        setSearchError(message || t('profile.addFriend.genericError'));
       }
+    }
+  }
+
+  async function handleToggleFollow(orgUser: FriendUser) {
+    if (followBusyIds.includes(orgUser.id)) return;
+    const isFollowing = followingIds.includes(orgUser.id);
+    setFollowBusyIds((prev) => [...prev, orgUser.id]);
+    try {
+      if (isFollowing) {
+        await unfollowUser(orgUser.id);
+        setFollowingIds((prev) => prev.filter((id) => id !== orgUser.id));
+      } else {
+        await followUser(orgUser.id);
+        setFollowingIds((prev) => [...prev, orgUser.id]);
+      }
+    } finally {
+      setFollowBusyIds((prev) => prev.filter((id) => id !== orgUser.id));
     }
   }
 
@@ -153,14 +179,14 @@ export default function FriendsScreen() {
             <Pressable onPress={exitAddMode} hitSlop={8}>
               <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
             </Pressable>
-            <ThemedText style={styles.addHeaderTitle}>Adicionar amigo</ThemedText>
+            <ThemedText style={styles.addHeaderTitle}>{t('profile.friends.addFriendTitle')}</ThemedText>
           </View>
 
           <View style={styles.searchBox}>
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Procurar pelo nome..."
+              placeholder={t('profile.friends.searchPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={addQuery}
               onChangeText={setAddQuery}
@@ -179,20 +205,23 @@ export default function FriendsScreen() {
 
           {results === null ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Escreve um nome para procurar.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.friends.typeToSearch')}</ThemedText>
             </View>
           ) : results.length === 0 && !searching ? (
             <View style={styles.empty}>
-              <ThemedText style={styles.emptyText}>Nenhum utilizador encontrado.</ThemedText>
+              <ThemedText style={styles.emptyText}>{t('profile.friends.noUsersFound')}</ThemedText>
             </View>
           ) : (
             <>
               <ThemedText style={styles.sectionTitle}>
-                Resultados{searching ? '...' : ` (${results.length})`}
+                {searching ? t('profile.friends.resultsSearching') : t('profile.friends.resultsCount', { count: results.length })}
               </ThemedText>
               {results.map((u) => {
+                const isOrg = u.role === 'partner';
                 const isFriend = friendIds.includes(u.id);
                 const isSent = sentIds.includes(u.id);
+                const isFollowing = followingIds.includes(u.id);
+                const followBusy = followBusyIds.includes(u.id);
                 return (
                   <Pressable
                     key={u.id}
@@ -200,9 +229,30 @@ export default function FriendsScreen() {
                     onPress={() => router.push({ pathname: '/user/[id]', params: { id: u.id } })}
                   >
                     <AvatarCircle name={u.name} avatarUrl={u.avatarUrl} />
-                    <ThemedText style={styles.name}>{u.name}</ThemedText>
+                    <View style={styles.nameColumn}>
+                      <ThemedText style={styles.name}>{u.name}</ThemedText>
+                      {isOrg && (
+                        <View style={styles.companyBadge}>
+                          <Ionicons name="business-outline" size={11} color="#e8823f" />
+                          <ThemedText style={styles.companyBadgeText}>{t('profile.friends.companyBadge')}</ThemedText>
+                        </View>
+                      )}
+                    </View>
                     <View style={styles.actions}>
-                      {isFriend ? (
+                      {isOrg ? (
+                        <Pressable
+                          style={isFollowing ? styles.chatBtn : styles.addBtn}
+                          onPress={() => handleToggleFollow(u)}
+                          disabled={followBusy}
+                          hitSlop={4}
+                        >
+                          <Ionicons
+                            name={isFollowing ? 'checkmark' : 'add'}
+                            size={18}
+                            color={isFollowing ? '#c9c5bf' : '#e8823f'}
+                          />
+                        </Pressable>
+                      ) : isFriend ? (
                         <View style={styles.acceptBtn}>
                           <Ionicons name="checkmark-circle-outline" size={18} color="#9ccd6b" />
                         </View>
@@ -232,7 +282,7 @@ export default function FriendsScreen() {
 
         {requests.length > 0 && (
           <>
-            <ThemedText style={styles.sectionTitle}>Pedidos ({requests.length})</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t('profile.friends.requestsCount', { count: requests.length })}</ThemedText>
             {requests.map((req) => (
               <View key={req.requestId} style={styles.row}>
                 <Pressable
@@ -255,7 +305,7 @@ export default function FriendsScreen() {
         )}
 
         <View style={styles.friendsHeader}>
-          <ThemedText style={styles.sectionTitle}>Amigos ({friends.length})</ThemedText>
+          <ThemedText style={styles.sectionTitle}>{t('profile.friends.friendsCount', { count: friends.length })}</ThemedText>
           <Pressable style={styles.addFriendBtn} onPress={() => setAddMode(true)} hitSlop={8}>
             <Ionicons name="person-add-outline" size={18} color="#e8823f" />
           </Pressable>
@@ -266,7 +316,7 @@ export default function FriendsScreen() {
             <Ionicons name="search-outline" size={18} color="#8f8b85" />
             <TextInput
               style={[styles.searchInput, { outline: 'none' } as any]}
-              placeholder="Filtrar amigos..."
+              placeholder={t('profile.friends.filterPlaceholder')}
               placeholderTextColor="#8f8b85"
               value={friendFilter}
               onChangeText={setFriendFilter}
@@ -286,8 +336,8 @@ export default function FriendsScreen() {
             <Ionicons name="people-outline" size={48} color="#141315" style={{ marginBottom: 8 }} />
             <ThemedText style={styles.emptyText}>
               {friends.length === 0
-                ? 'Ainda não tens amigos. Usa o + para adicionar.'
-                : 'Nenhum amigo encontrado.'}
+                ? t('profile.friends.noFriendsYet')
+                : t('profile.friends.noFriendsFound')}
             </ThemedText>
           </View>
         ) : (
@@ -411,6 +461,25 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#f4f2ef',
     fontSize: 15,
+  },
+  nameColumn: {
+    flex: 1,
+    gap: 3,
+  },
+  companyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(232,130,63,0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  companyBadgeText: {
+    color: '#e8823f',
+    fontSize: 10,
+    fontWeight: '700',
   },
   friendInfo: {
     flex: 1,
