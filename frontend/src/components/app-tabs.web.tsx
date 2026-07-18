@@ -20,7 +20,11 @@ export default function AppTabs() {
   const isDesktop = width >= 768;
   const { unreadCount } = useChatBadge();
   const { profile } = useAuth();
+  const isPartner = profile?.role === 'partner';
   const showAdminTab = profile?.role === 'admin';
+
+  const hidePartner = !isPartner || isDesktop;
+  const hideUser = isPartner || isDesktop;
 
   return (
     <Tabs>
@@ -28,27 +32,32 @@ export default function AppTabs() {
 
       <TabList asChild>
         <CustomTabList isDesktop={isDesktop}>
+          {/* Rotas de parceiro — sempre registadas para o router as reconhecer */}
+          <TabTrigger name="dashboard" href={'/dashboard' as never} asChild>
+            <TabButton icon="grid-outline" isDesktop={isDesktop} hidden={hidePartner}>Dashboard</TabButton>
+          </TabTrigger>
+          <TabTrigger name="my-events" href={'/my-events' as never} asChild>
+            <TabButton icon="calendar-outline" isDesktop={isDesktop} hidden={hidePartner}>Eventos</TabButton>
+          </TabTrigger>
+
+          {/* Rotas normais */}
           <TabTrigger name="home" href="/" asChild>
-            <TabButton icon="home-outline" isDesktop={isDesktop}>Home</TabButton>
+            <TabButton icon="home-outline" isDesktop={isDesktop} hidden={hideUser}>Home</TabButton>
           </TabTrigger>
-
           <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton icon="search-outline" isDesktop={isDesktop}>Discover</TabButton>
+            <TabButton icon="search-outline" isDesktop={isDesktop} hidden={hideUser}>Discover</TabButton>
           </TabTrigger>
-
           <Link href="/create-activity" asChild>
-            <TabButton icon="add-outline" isDesktop={isDesktop}>Create</TabButton>
+            <TabButton icon="add-outline" isDesktop={isDesktop} hidden={isPartner || isDesktop}>Create</TabButton>
           </Link>
           <TabTrigger name="chats" href="/chats" asChild>
-            <TabButton icon="chatbubbles-outline" badge={unreadCount} isDesktop={isDesktop}>Chats</TabButton>
+            <TabButton icon="chatbubbles-outline" badge={unreadCount} isDesktop={isDesktop} hidden={isDesktop}>Chats</TabButton>
           </TabTrigger>
-
           <TabTrigger name="map" href="/map" asChild>
-            <TabButton icon="map-outline" isDesktop={isDesktop}>Map</TabButton>
+            <TabButton icon="map-outline" isDesktop={isDesktop} hidden={hideUser}>Map</TabButton>
           </TabTrigger>
-
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton icon="person-outline" isDesktop={isDesktop}>Profile</TabButton>
+            <TabButton icon="person-outline" isDesktop={isDesktop} hidden={isDesktop}>Profile</TabButton>
           </TabTrigger>
 
           {showAdminTab && (
@@ -62,11 +71,11 @@ export default function AppTabs() {
   );
 }
 
-type TabButtonProps = TabTriggerSlotProps & { icon?: any; badge?: number; isDesktop?: boolean };
+type TabButtonProps = TabTriggerSlotProps & { icon?: any; badge?: number; isDesktop?: boolean; hidden?: boolean };
 
-export function TabButton({ children, isFocused, icon, badge, isDesktop, ...props }: TabButtonProps) {
+export function TabButton({ children, isFocused, icon, badge, isDesktop, hidden, ...props }: TabButtonProps) {
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable {...props} style={hidden ? { display: 'none' } : ({ pressed }) => pressed && styles.pressed}>
       <View
         style={[
           styles.tabButtonView,

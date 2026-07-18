@@ -566,6 +566,10 @@ export class ActivitiesService {
         throw new Error("Cannot join a cancelled or completed activity");
       }
 
+      if (activity.createdBy === userId) {
+        throw new Error("Não podes pedir para entrar na tua própria atividade");
+      }
+
       if (activity.participantsList.includes(userId)) {
         throw new Error("User is already a participant");
       }
@@ -817,6 +821,9 @@ export class ActivitiesService {
 
       if (activity.status !== "completed") {
         throw new Error("Só é possível avaliar atividades terminadas");
+      }
+      if (!activity.createdByVerified) {
+        throw new Error("Só é possível avaliar atividades de empresas");
       }
       if (!activity.participantsList.includes(raterId)) {
         throw new Error("Só participantes podem avaliar a atividade");

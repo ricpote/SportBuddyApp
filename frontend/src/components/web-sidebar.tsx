@@ -20,7 +20,6 @@ const PARTNER_NAV_ITEMS = [
   { href: '/dashboard',        icon: 'grid-outline',           label: 'Dashboard'       },
   { href: '/my-events',        icon: 'calendar-outline',       label: 'Os meus eventos' },
   { href: '/create-activity',  icon: 'add-circle-outline',     label: 'Criar evento'    },
-  { href: '/statistics',       icon: 'bar-chart-outline',      label: 'Estatísticas'    },
   { href: '/chats',            icon: 'chatbubbles-outline',    label: 'Mensagens'       },
   { href: '/profile',          icon: 'business-outline',       label: 'Página da marca' },
 ] as const;
