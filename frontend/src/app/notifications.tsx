@@ -105,16 +105,18 @@ function getItemAction(n: Notification, t: (key: string) => string): { label: st
   switch (n.type) {
     case 'mvp_voting_open':
       return n.activityId
-        ? { label: t('notifications.voteNow'), onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
+        ? { label: t('notifications.voteNow'), onPress: () => router.push({ pathname: '/chat/[id]', params: { id: n.activityId! } }) }
         : null;
     case 'mvp_result':
       return n.activityId
         ? { label: t('notifications.viewResult'), onPress: () => router.push({ pathname: '/activity/[id]', params: { id: n.activityId! } }) }
         : null;
     case 'badge_earned':
-      return { label: t('notifications.viewBadge'), onPress: () => router.push('/profile') };
+      return { label: t('notifications.viewBadge'), onPress: () => router.push('/badges') };
     case 'friend_request':
-      return { label: t('notifications.viewRequest'), onPress: () => router.push('/friends') };
+      return n.relatedUserId
+        ? { label: t('notifications.viewRequest'), onPress: () => router.push({ pathname: '/user/[id]', params: { id: n.relatedUserId! } }) }
+        : { label: t('notifications.viewRequest'), onPress: () => router.push('/friends') };
     default:
       return null;
   }
@@ -164,9 +166,15 @@ export default function NotificationsScreen() {
 
     const n = item.notification;
     if (n.type === 'friend_request' || n.type === 'friend_request_accepted') {
-      router.push('/friends');
+      if (n.relatedUserId) {
+        router.push({ pathname: '/user/[id]', params: { id: n.relatedUserId } });
+      } else {
+        router.push('/friends');
+      }
     } else if (n.type === 'badge_earned') {
-      router.push('/profile');
+      router.push('/badges');
+    } else if ((n.type === 'new_message' || n.type === 'mvp_voting_open') && n.activityId) {
+      router.push({ pathname: '/chat/[id]', params: { id: n.activityId } });
     } else if (n.activityId) {
       router.push({ pathname: '/activity/[id]', params: { id: n.activityId } });
     }
