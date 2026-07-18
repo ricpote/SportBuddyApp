@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, usePathname } from 'expo-router';
+import { Link, usePathname, useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { AvatarCircle } from './avatar-circle';
@@ -9,12 +9,19 @@ import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
 import { useTranslation } from '@/i18n';
 
-const NAV_ITEMS = [
+const USER_NAV_ITEMS = [
   { href: '/',                 icon: 'home-outline',        labelKey: 'nav.home'     },
   { href: '/explore',          icon: 'search-outline',      labelKey: 'nav.discover' },
   { href: '/create-activity',  icon: 'add-outline',         labelKey: 'nav.create'   },
   { href: '/chats',            icon: 'chatbubbles-outline', labelKey: 'nav.chats'    },
   { href: '/map',              icon: 'map-outline',         labelKey: 'nav.map'      },
+] as const;
+
+const PARTNER_NAV_ITEMS = [
+  { href: '/dashboard',        icon: 'grid-outline',           label: 'Dashboard'       },
+  { href: '/my-events',        icon: 'calendar-outline',       label: 'Os meus eventos' },
+  { href: '/create-activity',  icon: 'add-circle-outline',     label: 'Criar evento'    },
+  { href: '/chats',            icon: 'chatbubbles-outline',    label: 'Mensagens'       },
 ] as const;
 
 export function WebSidebar() {
@@ -23,9 +30,13 @@ export function WebSidebar() {
   const { unreadCount } = useChatBadge();
   const { t } = useTranslation();
 
+  const router = useRouter();
+  const isPartner = profile?.role === 'partner';
+  const navItems: { href: string; icon: string; label?: string; labelKey?: string }[] = isPartner ? [...PARTNER_NAV_ITEMS] : [...USER_NAV_ITEMS];
+
   return (
     <View style={styles.sidebar}>
-      <Link href="/" style={styles.brandLink}>
+      <Link href={isPartner ? '/dashboard' : '/'} style={styles.brandLink}>
         <View style={styles.brand}>
           <Image
             source={require('../../assets/images/sportbuddyIcon.png')}
@@ -40,8 +51,10 @@ export function WebSidebar() {
       </Link>
 
       <View style={styles.nav}>
-        {NAV_ITEMS.map(item => {
-          const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+        {navItems.map(item => {
+          const active = item.href === '/' ? pathname === '/'
+            : item.href === '/dashboard' ? pathname === '/dashboard' || pathname === '/'
+            : pathname.startsWith(item.href);
           const badge = item.href === '/chats' ? unreadCount : 0;
           return (
             <Link key={item.href} href={item.href as any} asChild>
@@ -61,7 +74,7 @@ export function WebSidebar() {
                     )}
                   </View>
                   <ThemedText type="smallBold" style={[styles.label, active && styles.labelActive]}>
-                    {t(item.labelKey)}
+                    {item.label ?? t(item.labelKey ?? '')}
                   </ThemedText>
                   {active && <View style={styles.dot} />}
                 </View>
@@ -94,19 +107,17 @@ export function WebSidebar() {
 
       {/* Perfil no rodapé: clicar vai para o perfil, o ícone à direita faz logout */}
       <View style={styles.footer}>
-        <Link href="/profile" asChild>
-          <Pressable style={({ pressed }) => [{ flex: 1, minWidth: 0 }, pressed && styles.pressed]}>
-            <View style={[styles.footerProfile, pathname.startsWith('/profile') && styles.itemActive]}>
-              <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
-              <View style={styles.footerText}>
-                <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
-                  {profile?.name ?? ''}
-                </ThemedText>
-                <ThemedText style={styles.footerHint}>{t('nav.viewProfile')}</ThemedText>
-              </View>
-            </View>
-          </Pressable>
-        </Link>
+        <Pressable
+          style={({ pressed }) => [styles.footerProfile, (pathname.startsWith('/profile') || (isPartner && profile?.id && pathname.startsWith(`/user/${profile.id}`))) && styles.itemActive, pressed && styles.pressed]}
+          onPress={() => router.push('/profile')}>
+          <AvatarCircle name={profile?.name ?? '?'} avatarUrl={profile?.avatarUrl} size={38} />
+          <View style={styles.footerText}>
+            <ThemedText type="smallBold" style={styles.footerName} numberOfLines={1}>
+              {(profile?.name ?? '').length > 14 ? (profile!.name.slice(0, 14) + '…') : (profile?.name ?? '')}
+            </ThemedText>
+            <ThemedText style={styles.footerHint}>{t('nav.viewProfile')}</ThemedText>
+          </View>
+        </Pressable>
         <Pressable
           onPress={signOut}
           style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]}
@@ -173,17 +184,20 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
   },
   footerProfile: {
+    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 10,
     paddingLeft: 14,
     paddingRight: 12,
+    marginRight: 8,
     borderRadius: 12,
     overflow: 'hidden',
   },
   footerText: { flex: 1, minWidth: 0 },
-  footerName: { color: '#f4f2ef', fontSize: 14 },
+  footerName: { color: '#f4f2ef', fontSize: 12 },
   footerHint: { color: '#8f8b85', fontSize: 12 },
   logoutBtn: {
     width: 36,

@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,7 +22,7 @@ function AvatarCircle({ avatarUrl }: { avatarUrl?: string }) {
 }
 
 export default function FollowingScreen() {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, patchProfile, refreshProfile } = useAuth();
   const { t } = useTranslation();
 
   const [companies, setCompanies] = useState<PublicUser[] | null>(null);
@@ -35,15 +35,16 @@ export default function FollowingScreen() {
 
   const [actionId, setActionId] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    const ids = profile?.following ?? [];
+  const followingRef = useRef(profile?.following);
+  followingRef.current = profile?.following;
+
+  useFocusEffect(useCallback(() => {
+    const ids = followingRef.current ?? [];
     if (ids.length === 0) { setCompanies([]); return; }
-    Promise.all(ids.map(id => getUserProfile(id)))
+    Promise.all(ids.map((id: string) => getUserProfile(id)))
       .then(profiles => setCompanies(profiles.filter(p => p.role === 'partner')))
       .catch(() => setCompanies([]));
-  }, [profile?.following]);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  }, []));
 
   useEffect(() => {
     if (!discoverMode) return;
@@ -69,7 +70,11 @@ export default function FollowingScreen() {
     setActionId(id);
     try {
       await followUser(id);
-      await refreshProfile();
+      patchProfile({ following: [...(profile?.following ?? []), id] });
+      const company = discoverResults?.find(p => p.id === id);
+      if (company) {
+        setCompanies(prev => prev ? [...prev, { ...company, isFollowing: true }] : [{ ...company, isFollowing: true }]);
+      }
       setDiscoverResults(prev => prev?.map(p => p.id === id ? { ...p, isFollowing: true } : p) ?? prev);
     } finally {
       setActionId(null);
@@ -81,7 +86,7 @@ export default function FollowingScreen() {
     setActionId(id);
     try {
       await unfollowUser(id);
-      await refreshProfile();
+      patchProfile({ following: (profile?.following ?? []).filter(f => f !== id) });
       setCompanies(prev => prev?.filter(c => c.id !== id) ?? prev);
     } finally {
       setActionId(null);

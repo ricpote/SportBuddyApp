@@ -1,4 +1,4 @@
-import { Link, router, useFocusEffect } from 'expo-router';
+import { Link, Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { /* ImageBackground, */ Pressable, StyleSheet, ScrollView, View, Image, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -110,6 +110,10 @@ export default function HomeScreen() {
       })();
     }, [])
   );
+
+  if (profile?.role === 'partner') {
+    return <Redirect href="/dashboard" />;
+  }
 
   const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
 

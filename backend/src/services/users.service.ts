@@ -458,6 +458,15 @@ export class UsersService {
     await batch.commit();
   }
 
+  async getFollowers(userId: string): Promise<User[]> {
+    const doc = await this.usersRef.doc(userId).get();
+    if (!doc.exists) throw new Error("User not found");
+    const followerIds: string[] = doc.data()?.followers ?? [];
+    if (followerIds.length === 0) return [];
+    const docs = await Promise.all(followerIds.map(id => this.usersRef.doc(id).get()));
+    return docs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() } as User));
+  }
+
   async unfollowUser(followerId: string, targetId: string): Promise<void> {
     const batch = db.batch();
     batch.update(this.usersRef.doc(followerId), { following: FieldValue.arrayRemove(targetId) });

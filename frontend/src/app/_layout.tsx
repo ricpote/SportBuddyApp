@@ -92,6 +92,10 @@ function RootNavigator() {
           options={{ headerShown: true, title: t('layout.following') }}
         />
         <Stack.Screen
+          name="followers/[id]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="badges"
           options={{ headerShown: true, title: t('layout.badges'), presentation: 'modal' }}
         />

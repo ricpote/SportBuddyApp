@@ -9,7 +9,7 @@ import { AvatarCircle } from '@/components/avatar-circle';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { getMyActivities } from '@/services/activities';
+import { getMyActivities, listActivities } from '@/services/activities';
 import { getConversations, openConversation } from '@/services/conversations';
 import { getFriends } from '@/services/friends';
 import { getLastActivityMessage } from '@/services/messages';
@@ -42,7 +42,8 @@ function sportIconName(name = ''): any {
 }
 
 export default function ChatsScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isPartner = profile?.role === 'partner';
   const { t } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { checkUnread, checkUnreadConversations, unreadIds = [], unreadConversationIds = [] } = useChatBadge();
@@ -66,16 +67,19 @@ export default function ChatsScreen() {
 
   const load = useCallback(() => {
     const uid = user?.uid ?? '';
-    getMyActivities().then(async (data) => {
+    const fetch = isPartner
+      ? Promise.all([listActivities({ createdBy: uid }), listActivities({ createdBy: uid, status: 'completed' })]).then(([a, b]) => [...a, ...b])
+      : getMyActivities();
+    fetch.then(async (data) => {
       setActivities(data);
       const chattableIds = data
-        .filter((a) => a.status !== 'cancelled' && (a.participantsList || []).includes(uid))
+        .filter((a) => a.status !== 'cancelled' && (isPartner || (a.participantsList || []).includes(uid)))
         .map((a) => a.id);
       checkUnread(chattableIds, uid);
 
       // For active chats without lastMessage yet, fetch from the messages subcollection
       const needsPreview = data.filter(
-        (a) => (a.status === 'open' || a.status === 'full') && !a.lastMessage && (a.participantsList || []).includes(uid)
+        (a) => (a.status === 'open' || a.status === 'full') && !a.lastMessage && (isPartner || (a.participantsList || []).includes(uid))
       );
       if (needsPreview.length > 0) {
         const results = await Promise.allSettled(needsPreview.map((a) => getLastActivityMessage(a.id)));
@@ -95,7 +99,7 @@ export default function ChatsScreen() {
       setConversations(data);
       checkUnreadConversations(data, user?.uid);
     }).catch(() => setConversations([]));
-  }, [checkUnread, checkUnreadConversations, user?.uid]);
+  }, [checkUnread, checkUnreadConversations, isPartner, user?.uid]);
 
   useFocusEffect(load);
 
@@ -129,7 +133,7 @@ export default function ChatsScreen() {
 
   const uid = user?.uid ?? '';
   const allChats = (activities ?? []).filter(
-    (a) => a.status !== 'cancelled' && (a.participantsList || []).includes(uid)
+    (a) => a.status !== 'cancelled' && (isPartner || (a.participantsList || []).includes(uid))
   );
   const activeChats = allChats.filter((a) => a.status === 'open' || a.status === 'full');
   const pastChats = allChats.filter((a) => a.status === 'completed');
@@ -319,12 +323,14 @@ export default function ChatsScreen() {
             </ThemedText>
             {tab === 'activities' && <View style={styles.tabUnderline} />}
           </Pressable>
-          <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
-            <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
-              {t('chat.list.tabFriends')}{conversations !== null ? ` ${conversations.length}` : ''}
-            </ThemedText>
-            {tab === 'friends' && <View style={styles.tabUnderline} />}
-          </Pressable>
+          {!isPartner && (
+            <Pressable onPress={() => setTab('friends')} style={styles.tabBtn}>
+              <ThemedText style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>
+                {t('chat.list.tabFriends')}{conversations !== null ? ` ${conversations.length}` : ''}
+              </ThemedText>
+              {tab === 'friends' && <View style={styles.tabUnderline} />}
+            </Pressable>
+          )}
         </View>
 
         {tab === 'friends' && (
@@ -344,7 +350,9 @@ export default function ChatsScreen() {
             {activities === null && <ThemedText style={styles.emptyText}>{t('chat.list.loading')}</ThemedText>}
             {activities !== null && allChats.length === 0 && (
               <ThemedText style={styles.emptyText}>
-                {t('chat.list.noActivitiesYet')}
+                {isPartner
+                  ? 'Ainda não criaste nenhuma atividade. Cria uma para poder comunicar com os participantes!'
+                  : t('chat.list.noActivitiesYet')}
               </ThemedText>
             )}
 
@@ -365,12 +373,14 @@ export default function ChatsScreen() {
                   <ThemedText style={styles.sectionLabel}>{t('chat.list.sectionEnded')}</ThemedText>
                 </View>
                 {filteredPastChats.map(renderActivityRow)}
-                <View style={styles.infoBanner}>
-                  <Ionicons name="trophy-outline" size={18} color="#e8823f" style={{ marginTop: 1 }} />
-                  <ThemedText style={styles.infoBannerText}>
-                    {t('chat.list.mvpBannerBefore')} <ThemedText style={styles.infoBannerLink}>{t('chat.list.mvpLabel')}</ThemedText> {t('chat.list.mvpBannerAfter')}
-                  </ThemedText>
-                </View>
+                {!isPartner && (
+                  <View style={styles.infoBanner}>
+                    <Ionicons name="trophy-outline" size={18} color="#e8823f" style={{ marginTop: 1 }} />
+                    <ThemedText style={styles.infoBannerText}>
+                      {t('chat.list.mvpBannerBefore')} <ThemedText style={styles.infoBannerLink}>{t('chat.list.mvpLabel')}</ThemedText> {t('chat.list.mvpBannerAfter')}
+                    </ThemedText>
+                  </View>
+                )}
               </>
             )}
           </>

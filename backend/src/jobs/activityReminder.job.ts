@@ -31,8 +31,19 @@ async function checkActivities() {
     .where("status", "in", ["open", "full"])
     .get();
 
+  // Fetch creator roles in batch to avoid per-activity reads
+  const creatorIds = [...new Set(snapshot.docs.map(d => d.data().createdBy as string))];
+  const creatorDocs = await Promise.all(creatorIds.map(id => db.collection("users").doc(id).get()));
+  const partnerCreators = new Set<string>(
+    creatorDocs.filter(d => d.exists && d.data()?.role === "partner").map(d => d.id)
+  );
+
   for (const doc of snapshot.docs) {
     const activity = { id: doc.id, ...doc.data() } as Activity & { date: any };
+
+    // Atividades de parceiros não têm cancelamento automático nem notificações de aviso
+    if (partnerCreators.has(activity.createdBy)) continue;
+
     const activityDate: Date = activity.date?.toDate ? activity.date.toDate() : new Date(activity.date);
 
     const msUntilActivity = activityDate.getTime() - now.getTime();

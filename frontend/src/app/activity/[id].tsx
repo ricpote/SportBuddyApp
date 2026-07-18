@@ -563,8 +563,8 @@ export default function ActivityDetailScreen() {
             </View>
           )}
 
-          {/* AVALIAÇÃO DA ATIVIDADE (atividades terminadas, para participantes) */}
-          {activity.status === 'completed' && isParticipant && (
+          {/* AVALIAÇÃO DA ATIVIDADE (só atividades de empresas, para participantes) */}
+          {activity.status === 'completed' && isParticipant && activity.createdByVerified && (
             <View style={styles.mvpCard}>
               <View style={styles.mvpHeader}>
                 <Ionicons name="star" size={20} color="#e8823f" />
@@ -659,6 +659,23 @@ export default function ActivityDetailScreen() {
                 )
               )}
             </>
+          ) : isCreator ? (
+            <View style={styles.actionsRow}>
+              {canJoin && (
+                <Pressable
+                  onPress={() => router.push({ pathname: '/edit-activity/[id]', params: { id: activity.id } })}
+                  style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                  <Ionicons name="pencil-outline" size={16} color="#f4f2ef" />
+                  <ThemedText style={styles.secondaryButtonText}>Editar</ThemedText>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={handleShare}
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                <Ionicons name="share-outline" size={16} color="#f4f2ef" />
+                <ThemedText style={styles.secondaryButtonText}>Partilhar</ThemedText>
+              </Pressable>
+            </View>
           ) : canJoin ? (
             <View style={styles.actionsRow}>
               <Pressable

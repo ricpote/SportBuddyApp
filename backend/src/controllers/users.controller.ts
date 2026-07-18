@@ -284,6 +284,22 @@ export async function getMutualFriends(
   }
 }
 
+export async function getFollowers(
+  req: AuthenticatedRequest<UserParams>,
+  res: Response
+) {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    if (req.user.uid !== req.params.userId) {
+      return res.status(403).json({ message: "Apenas o dono da conta pode ver os seguidores" });
+    }
+    const followers = await usersService.getFollowers(req.params.userId);
+    return res.json(followers);
+  } catch (error) {
+    return res.status(500).json({ message: error instanceof Error ? error.message : "Error getting followers" });
+  }
+}
+
 export async function getMyBadges(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) {

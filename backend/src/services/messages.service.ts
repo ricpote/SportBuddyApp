@@ -68,7 +68,7 @@ export class MessagesService {
       throw new Error("Activity not found");
     }
 
-    if (!activity.participantsList.includes(requesterId)) {
+    if (!activity.participantsList.includes(requesterId) && activity.createdBy !== requesterId) {
       throw new Error("Only participants can read messages");
     }
 
@@ -88,7 +88,7 @@ export class MessagesService {
   async getLastActivityMessage(activityId: string, requesterId: string): Promise<{ text: string; senderName: string; createdAt: Date } | null> {
     const activity = await activitiesService.getActivityById(activityId);
     if (!activity) throw new Error("Activity not found");
-    if (!activity.participantsList.includes(requesterId)) throw new Error("Only participants can read messages");
+    if (!activity.participantsList.includes(requesterId) && activity.createdBy !== requesterId) throw new Error("Only participants can read messages");
 
     const snap = await this.messagesRef(activityId).orderBy("createdAt", "desc").limit(1).get();
     if (snap.empty) return null;

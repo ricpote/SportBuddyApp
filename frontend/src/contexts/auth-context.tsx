@@ -33,6 +33,7 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  patchProfile: (patch: Partial<UserProfile>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -185,6 +186,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadProfile(auth.currentUser);
   }
 
+  function patchProfile(patch: Partial<UserProfile>) {
+    setProfile(prev => prev ? { ...prev, ...patch } : prev);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -199,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signOut,
         refreshProfile,
+        patchProfile,
       }}>
       {children}
     </AuthContext.Provider>

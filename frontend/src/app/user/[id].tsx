@@ -432,15 +432,33 @@ export default function UserProfileScreen() {
 
               <View style={styles.orgStatsRow}>
                 {[
-                  { label: t('profile.user.stat.followers'), value: followersCount },
-                  { label: t('profile.user.stat.events'), value: profile.stats.activitiesCreated },
-                  { label: t('profile.user.stat.rating'), value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—' },
-                ].map(({ label, value }, i) => (
-                  <View key={label} style={[styles.orgStatBox, i > 0 && styles.orgStatBoxDivider]}>
-                    <ThemedText style={styles.orgStatValue}>{value}</ThemedText>
-                    <ThemedText style={styles.orgStatLabel}>{label}</ThemedText>
-                  </View>
-                ))}
+                  { label: t('profile.user.stat.followers'), value: followersCount, isFollowers: true },
+                  { label: t('profile.user.stat.events'), value: profile.stats.activitiesCreated, isFollowers: false },
+                  { label: t('profile.user.stat.rating'), value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—', isFollowers: false },
+                ].map(({ label, value, isFollowers }, i) => {
+                  const isOwner = me?.uid === id;
+                  const inner = (
+                    <>
+                      <ThemedText style={styles.orgStatValue}>{value}</ThemedText>
+                      <ThemedText style={styles.orgStatLabel}>{label}</ThemedText>
+                    </>
+                  );
+                  if (isFollowers && isOwner) {
+                    return (
+                      <Pressable
+                        key={label}
+                        style={({ pressed }) => [styles.orgStatBox, i > 0 && styles.orgStatBoxDivider, pressed && styles.pressed]}
+                        onPress={() => router.push({ pathname: '/followers/[id]', params: { id } })}>
+                        {inner}
+                      </Pressable>
+                    );
+                  }
+                  return (
+                    <View key={label} style={[styles.orgStatBox, i > 0 && styles.orgStatBoxDivider]}>
+                      {inner}
+                    </View>
+                  );
+                })}
               </View>
             </View>
 
