@@ -13,8 +13,8 @@ import {
   getWindDirectionLabel,
   getUvColor,
   getUvLabel,
-  WIND_SPEED_LABELS,
-  WARNING_LEVEL_LABELS,
+  WIND_SPEED_KEYS,
+  WARNING_LEVEL_KEYS,
   WARNING_LEVEL_COLORS,
 } from '@/utils/weather-codes';
 
@@ -25,11 +25,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // Lisboa — usado quando a permissão de localização é negada ou falha.
 const DEFAULT_COORDS = { latitude: 38.7223, longitude: -9.1393 };
 
-function formatDayLabel(dateStr: string, index: number, todayLabel: string) {
+function formatDayLabel(dateStr: string, index: number, todayLabel: string, t: (key: string) => string) {
   if (index === 0) return todayLabel;
 
-  const label = new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'short' });
-  return label.charAt(0).toUpperCase() + label.slice(1).replace('.', '');
+  return t(`weather.weekday.${new Date(dateStr).getDay()}`);
 }
 
 export function WeatherSection() {
@@ -93,14 +92,15 @@ export function WeatherSection() {
 
       <View style={styles.row}>
         {forecast.map((day, index) => {
-          const { icon, category, label } = getWeatherInfo(day.weatherCode);
+          const { icon, category, labelKey } = getWeatherInfo(day.weatherCode);
           const precipitation = Math.round(day.precipitationProbability);
           const fillHeight = `${Math.min(100, Math.max(0, precipitation))}%` as const;
           const isToday = index === 0;
           const isSelected = selectedDate === day.date;
           const isOpen = isSelected || hoveredDate === day.date;
           const windLabel = getWindDirectionLabel(day.windDirection);
-          const windSpeedLabel = WIND_SPEED_LABELS[day.windSpeedClass] ?? t('activity.weather.unknownWind');
+          const windSpeedKey = WIND_SPEED_KEYS[day.windSpeedClass];
+          const windSpeedLabel = windSpeedKey ? t(windSpeedKey) : t('activity.weather.unknownWind');
 
           return (
             <Pressable
@@ -114,7 +114,7 @@ export function WeatherSection() {
                 pressed && styles.cardPressed,
               ]}>
               <ThemedText style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
-                {formatDayLabel(day.date, index, t('activity.weather.today'))}
+                {formatDayLabel(day.date, index, t('activity.weather.today'), t)}
               </ThemedText>
 
               <View style={styles.circle}>
@@ -140,7 +140,7 @@ export function WeatherSection() {
                 <View style={styles.details}>
                   <View style={styles.detailsDivider} />
 
-                  <ThemedText style={styles.detailsLabel}>{label}</ThemedText>
+                  <ThemedText style={styles.detailsLabel}>{t(labelKey)}</ThemedText>
 
                   <View style={styles.detailRow}>
                     <Ionicons name="navigate" size={12} color="#22C55E" />
@@ -157,7 +157,7 @@ export function WeatherSection() {
                     />
                     <ThemedText style={styles.detailText}>
                       {day.uvIndex !== null
-                        ? t('activity.weather.uvFormat', { value: Math.round(day.uvIndex), label: getUvLabel(day.uvIndex) })
+                        ? t('activity.weather.uvFormat', { value: Math.round(day.uvIndex), label: t(getUvLabel(day.uvIndex)) })
                         : t('activity.weather.uvUnavailable')}
                     </ThemedText>
                   </View>
@@ -169,7 +169,7 @@ export function WeatherSection() {
                           style={[styles.warningDot, { backgroundColor: WARNING_LEVEL_COLORS[day.warning.level] }]}
                         />
                         <ThemedText style={styles.warningTitle}>
-                          {WARNING_LEVEL_LABELS[day.warning.level]} · {day.warning.type}
+                          {t(WARNING_LEVEL_KEYS[day.warning.level])} · {day.warning.type}
                         </ThemedText>
                       </View>
                       {day.warning.text ? (

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 // import { DIFFICULTY_COLORS } from '@/constants/difficulty';
 // import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
@@ -21,7 +22,7 @@ import { Friend } from '@/types/friend';
 import { SportIcon } from '@/utils/sport-icon';
 import { relativeDate } from '@/utils/date';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
-import { getWeatherInfo, getUvColor, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
+import { getWeatherInfo, getUvColor } from '@/utils/weather-codes';
 import { haversineKm } from '@/utils/distance';
 import { useNow } from '@/hooks/use-now';
 import * as Location from 'expo-location';
@@ -161,8 +162,7 @@ export default function HomeScreen() {
     <View style={styles.sidebarInner}>
       {forecast && forecast.length > 0 && (() => {
         const today = forecast[0];
-        const { icon, category, label } = getWeatherInfo(today.weatherCode);
-        const iconColor = WEATHER_CATEGORY_COLORS[category];
+        const { icon, category, labelKey } = getWeatherInfo(today.weatherCode);
         const sportHint =
           category === 'clear' || category === 'partly-cloud' ? t('home.weather.idealForPlaying')
           : category === 'cloud' ? t('home.weather.goodForPlaying')
@@ -183,10 +183,10 @@ export default function HomeScreen() {
 
             {/* Hoje — grande */}
             <View style={styles.compactToday}>
-              <Ionicons name={icon as any} size={48} color={iconColor} />
+              <AnimatedWeatherIcon icon={icon} category={category} size={48} />
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.compactTodayTemp}>{Math.round(today.tempMax)}°</ThemedText>
-                <ThemedText style={styles.compactTodayLabel}>{label}{sportHint}</ThemedText>
+                <ThemedText style={styles.compactTodayLabel}>{t(labelKey)}{sportHint}</ThemedText>
               </View>
               <View style={styles.compactSideInfo}>
                 <View style={styles.compactPrecip}>
@@ -209,10 +209,12 @@ export default function HomeScreen() {
             {/* Próximos dias — pequeno */}
             <View style={styles.compactWeatherRow}>
               {forecast.slice(1, 5).map((day) => {
-                const dayLabel = new Date(day.date).toLocaleDateString('en-GB', { weekday: 'short' }).replace('.', '');
+                const dayLabel = t(`weather.weekday.${new Date(day.date).getDay()}`);
+                const dayWeather = getWeatherInfo(day.weatherCode);
                 return (
                   <View key={day.date} style={styles.compactDayItem}>
                     <ThemedText style={styles.compactDayLabel}>{dayLabel}</ThemedText>
+                    <AnimatedWeatherIcon icon={dayWeather.icon} category={dayWeather.category} size={22} />
                     <ThemedText style={styles.compactDayTemp}>{Math.round(day.tempMax)}°</ThemedText>
                   </View>
                 );

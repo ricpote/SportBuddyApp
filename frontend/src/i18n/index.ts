@@ -7,9 +7,10 @@ import home from './dictionaries/home';
 import profile from './dictionaries/profile';
 import activity from './dictionaries/activity';
 import chat from './dictionaries/chat';
+import weather from './dictionaries/weather';
 import type { Dictionary, Language } from './types';
 
-const dictionaries = [common, auth, layout, home, profile, activity, chat];
+const dictionaries = [common, auth, layout, home, profile, activity, chat, weather];
 
 const en: Dictionary = Object.assign({}, ...dictionaries.map((d) => d.en));
 const pt: Dictionary = Object.assign({}, ...dictionaries.map((d) => d.pt));

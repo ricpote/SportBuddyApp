@@ -57,7 +57,7 @@ const home: LanguageDictionaries = {
     'nav.brandSlogan': 'Connect & Play',
   },
   pt: {
-    'home.weather.title': 'Tempo',
+    'home.weather.title': 'Meteorologia',
     'home.weather.idealForPlaying': ' · ideal para jogar',
     'home.weather.goodForPlaying': ' · bom para jogar',
     'home.weather.difficultConditions': ' · condições difíceis',
