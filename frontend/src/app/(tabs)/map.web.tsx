@@ -15,6 +15,7 @@ import { joinActivity, listNearbyActivities } from '@/services/activities';
 import { useAuth } from '@/contexts/auth-context';
 import { listSports } from '@/services/sports';
 import { Activity } from '@/types/activity';
+import { SportIcon } from '@/utils/sport-icon';
 
 const DEFAULT_CENTER = { lat: 38.7223, lng: -9.1393 };
 const mapId = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_MAP_ID;
@@ -59,18 +60,6 @@ const STATUS_INFO: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'Cancelada', color: '#eb8f84' },
   completed: { label: 'Terminada', color: '#8f8b85' },
 };
-
-function sportIconName(name = ''): any {
-  const n = name.toLowerCase();
-  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
-  if (n.includes('basket')) return 'basketball-outline';
-  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
-  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
-  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
-  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
-  if (n.includes('golf')) return 'golf-outline';
-  return 'fitness-outline';
-}
 
 function UserLocationController({
   location,
@@ -171,7 +160,7 @@ function ActivityPinMarker({
         borderWidth: 1.5,
         borderColor: selected ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
       }}>
-        <Ionicons name={sportIconName(sportName)} size={22} color={iconColor} />
+        <SportIcon sportName={sportName} size={22} color={iconColor} />
       </View>
     </View>
   );
@@ -456,7 +445,7 @@ export default function MapWebScreen() {
           onPress={() => router.push({ pathname: '/activity/[id]', params: { id: selectedActivity.id } })}
         >
           <View style={styles.cardIconBox}>
-            <Ionicons name={sportIconName(selectedSportName)} size={24} color="#1a1005" />
+            <SportIcon sportName={selectedSportName} size={24} color="#1a1005" />
           </View>
 
           <View style={styles.cardContent}>

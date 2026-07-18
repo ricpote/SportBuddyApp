@@ -21,7 +21,7 @@ import { Friend } from '@/types/friend';
 import { SportIcon } from '@/utils/sport-icon';
 import { relativeDate } from '@/utils/date';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
-import { getWeatherInfo, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
+import { getWeatherInfo, getUvColor, WEATHER_CATEGORY_COLORS } from '@/utils/weather-codes';
 import * as Location from 'expo-location';
 
 // const DIFFICULTY_LABELS: Record<Activity['difficultyLevel'], string> = {
@@ -69,6 +69,7 @@ export default function HomeScreen() {
   const [friendFeed, setFriendFeed] = useState<FeedItem[]>([]);
   const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
+  const [showAllActivities, setShowAllActivities] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,13 +103,16 @@ export default function HomeScreen() {
 
   const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
 
-  const nextActivity = myActivities
+  const myUpcomingActivities = myActivities
     .filter((a) =>
       (a.status === 'open' || a.status === 'full') &&
       new Date(a.date).getTime() > Date.now() &&
       a.participantsList.includes(user?.uid ?? '')
     )
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const nextActivity = myUpcomingActivities[0] ?? null;
+  const otherUpcomingActivities = myUpcomingActivities.slice(1);
 
   function countdown(iso: string): string {
     const diff = new Date(iso).getTime() - Date.now();
@@ -173,9 +177,19 @@ export default function HomeScreen() {
                 <ThemedText style={styles.compactTodayTemp}>{Math.round(today.tempMax)}°</ThemedText>
                 <ThemedText style={styles.compactTodayLabel}>{label}{sportHint}</ThemedText>
               </View>
-              <View style={styles.compactPrecip}>
-                <Ionicons name="water-outline" size={13} color="#60A5FA" />
-                <ThemedText style={styles.compactPrecipText}>{Math.round(today.precipitationProbability)}%</ThemedText>
+              <View style={styles.compactSideInfo}>
+                <View style={styles.compactPrecip}>
+                  <Ionicons name="water-outline" size={13} color="#60A5FA" />
+                  <ThemedText style={styles.compactPrecipText}>{Math.round(today.precipitationProbability)}%</ThemedText>
+                </View>
+                {today.uvIndex !== null && (
+                  <View style={styles.compactUv}>
+                    <Ionicons name="sunny-outline" size={13} color={getUvColor(today.uvIndex)} />
+                    <ThemedText style={[styles.compactUvText, { color: getUvColor(today.uvIndex) }]}>
+                      UV {Math.round(today.uvIndex)}
+                    </ThemedText>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -287,7 +301,24 @@ export default function HomeScreen() {
               {/* PRÓXIMA ATIVIDADE */}
               {nextActivity && (
                 <View style={styles.nextSection}>
-                  <ThemedText style={styles.nextSectionLabel}>YOUR NEXT ACTIVITY</ThemedText>
+                  <View style={styles.nextSectionHeader}>
+                    <ThemedText style={styles.nextSectionLabel}>YOUR NEXT ACTIVITY</ThemedText>
+                    {otherUpcomingActivities.length > 0 && (
+                      <Pressable
+                        onPress={() => setShowAllActivities((v) => !v)}
+                        style={({ pressed }) => [styles.seeAllToggle, pressed && styles.pressed]}
+                      >
+                        <ThemedText style={styles.seeAllSmall}>
+                          {showAllActivities ? 'Show less' : 'Show all'}
+                        </ThemedText>
+                        <Ionicons
+                          name={showAllActivities ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color="#e8823f"
+                        />
+                      </Pressable>
+                    )}
+                  </View>
                     <View style={styles.nextCard}>
                       <View style={styles.nextCardLeft}>
                         <View style={styles.nextSportCircle}>
@@ -349,6 +380,42 @@ export default function HomeScreen() {
                         </View>
                       </View>
                     </View>
+
+                    {showAllActivities && otherUpcomingActivities.length > 0 && (
+                      <View style={styles.miniActivitiesList}>
+                        {otherUpcomingActivities.map((activity) => {
+                          const d = new Date(activity.date);
+                          const isToday = d.toDateString() === new Date().toDateString();
+                          return (
+                            <Pressable
+                              key={activity.id}
+                              onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
+                              style={({ pressed }) => [styles.miniActivityCard, pressed && styles.pressed]}
+                            >
+                              <View style={styles.miniSportCircle}>
+                                <SportIcon sportName={sportNameById.get(activity.sportId)} size={16} color="#e8823f" />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <ThemedText style={styles.miniActivityTitle} numberOfLines={1}>
+                                  {activity.title}
+                                </ThemedText>
+                                <View style={styles.miniInfoRow}>
+                                  <Ionicons name="calendar-outline" size={11} color="#8f8b85" />
+                                  <ThemedText style={styles.miniInfoText}>
+                                    {isToday ? 'Today' : formatDate(activity.date)} · {formatTime(activity.date)}
+                                  </ThemedText>
+                                  <Ionicons name="location-outline" size={11} color="#8f8b85" style={{ marginLeft: 6 }} />
+                                  <ThemedText style={styles.miniInfoText} numberOfLines={1}>
+                                    {activity.location.name}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                              <Ionicons name="chevron-forward" size={16} color="#8f8b85" />
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
                 </View>
               )}
 
@@ -502,10 +569,16 @@ const styles = StyleSheet.create({
 
   // Next activity
   nextSection: { paddingHorizontal: Spacing.four, marginBottom: Spacing.five },
+  nextSectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
   nextSectionLabel: {
     color: '#8f8b85', fontSize: 11, fontWeight: '600',
-    letterSpacing: 0.8, marginBottom: Spacing.two,
+    letterSpacing: 0.8,
   },
+  seeAllToggle: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  seeAllSmall: { color: '#e8823f', fontWeight: 'bold', fontSize: 12 },
   nextCard: {
     backgroundColor: '#111012', borderRadius: 16, borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', overflow: 'hidden',
@@ -546,6 +619,22 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
   nextBtnGhostText: { color: '#8f8b85', fontSize: 14 },
+
+  // Mini activities list (dropdown "Ver todas")
+  miniActivitiesList: { marginTop: Spacing.three, gap: Spacing.two },
+  miniActivityCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#111012', borderRadius: 12, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)', padding: Spacing.three,
+  },
+  miniSportCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(232,130,63,0.12)',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  miniActivityTitle: { color: '#f4f2ef', fontSize: 13, fontWeight: 'bold' },
+  miniInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  miniInfoText: { color: '#8f8b85', fontSize: 11, flexShrink: 1 },
 
 
   recEmpty: {
@@ -701,12 +790,22 @@ const styles = StyleSheet.create({
   },
   compactTodayTemp: { color: '#f4f2ef', fontSize: 36, fontWeight: 'bold', lineHeight: 40 },
   compactTodayLabel: { color: '#8f8b85', fontSize: 13, marginTop: 2 },
+  compactSideInfo: {
+    alignItems: 'flex-end',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
   compactPrecip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    alignSelf: 'flex-start',
   },
+  compactUv: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  compactUvText: { fontSize: 14, fontWeight: '600' },
   compactPrecipText: { color: '#60A5FA', fontSize: 14, fontWeight: '600' },
   compactDivider: {
     height: 1,
