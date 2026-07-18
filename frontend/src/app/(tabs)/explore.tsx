@@ -1,6 +1,7 @@
 import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ImageBackground,
   Modal,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { listActivities, listNearbyActivities } from '@/services/activities';
@@ -271,40 +273,61 @@ export default function ExploreScreen() {
     const shown = activity.participantsList.slice(0, maxAvatars);
     const extra = activity.participantsList.length - maxAvatars;
 
+    const image = sportImages[activity.sportId];
+    const badges = (
+      <>
+        {isWaitlisted ? (
+          <View style={[styles.statusBadge, styles.waitlistBadge]}>
+            <ThemedText style={[styles.statusText, styles.waitlistText]}>Waitlist</ThemedText>
+          </View>
+        ) : isPrivate ? (
+          <View style={[styles.statusBadge, styles.privateBadge]}>
+            <Ionicons name="lock-closed" size={10} color="#8f8b85" />
+            <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>Private</ThemedText>
+          </View>
+        ) : (
+          <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
+            <ThemedText style={[styles.statusText, { color: status.color }]}>
+              {status.label}
+            </ThemedText>
+          </View>
+        )}
+        {isAlmostFull && (
+          <View style={[styles.statusBadge, { backgroundColor: '#e8823f22' }]}>
+            <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>Almost full</ThemedText>
+          </View>
+        )}
+      </>
+    );
+
     return (
       <Link key={activity.id} href={{ pathname: '/activity/[id]', params: { id: activity.id } }} asChild>
         <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
         <View style={styles.card}>
 
-          {/* TOP ROW: icon + title + badges */}
+          {/* IMAGEM: foto do desporto como fundo; sem foto fica o ícone a solo */}
+          {image ? (
+            <ImageBackground source={image} resizeMode="cover" style={styles.cardImage}>
+              <View style={styles.cardImageOverlay} />
+              <View style={styles.cardImageTopRow}>
+                <View style={styles.cardImageSportChip}>
+                  <SportIcon sportName={sportName} size={13} color="#f4f2ef" />
+                  <ThemedText style={styles.cardImageSportText}>{sportName}</ThemedText>
+                </View>
+                <View style={styles.badgeStack}>{badges}</View>
+              </View>
+            </ImageBackground>
+          ) : (
+            <View style={styles.cardImageFallback}>
+              <SportIcon sportName={sportName} size={28} color="#e8823f" />
+            </View>
+          )}
+
+          <View style={styles.cardBody}>
+          {/* TOP ROW: title + badges (só quando não há imagem) */}
           <View style={styles.cardTop}>
-            <View style={styles.sportIconBox}>
-              <SportIcon sportName={sportName} size={22} color="#1a1005" />
-            </View>
             <ThemedText style={styles.cardTitle} numberOfLines={1}>{activity.title}</ThemedText>
-            <View style={styles.badgeStack}>
-              {isWaitlisted ? (
-                <View style={[styles.statusBadge, styles.waitlistBadge]}>
-                  <ThemedText style={[styles.statusText, styles.waitlistText]}>Waitlist</ThemedText>
-                </View>
-              ) : isPrivate ? (
-                <View style={[styles.statusBadge, styles.privateBadge]}>
-                  <Ionicons name="lock-closed" size={10} color="#8f8b85" />
-                  <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>Private</ThemedText>
-                </View>
-              ) : (
-                <View style={[styles.statusBadge, { backgroundColor: `${status.color}22` }]}>
-                  <ThemedText style={[styles.statusText, { color: status.color }]}>
-                    {status.label}
-                  </ThemedText>
-                </View>
-              )}
-              {isAlmostFull && (
-                <View style={[styles.statusBadge, { backgroundColor: '#e8823f22' }]}>
-                  <ThemedText style={[styles.statusText, { color: '#e8823f' }]}>Almost full</ThemedText>
-                </View>
-              )}
-            </View>
+            {!image && <View style={styles.badgeStack}>{badges}</View>}
           </View>
 
           {activity.createdByName && (
@@ -355,6 +378,7 @@ export default function ExploreScreen() {
                 backgroundColor: '#e8823f',
               }]} />
             </View>
+          </View>
           </View>
 
         </View>
@@ -666,14 +690,31 @@ const styles = StyleSheet.create({
   list: { gap: Spacing.two },
 
   card: {
-    backgroundColor: '#0f0e12', borderRadius: 16, padding: 16, gap: 10,
+    backgroundColor: '#0f0e12', borderRadius: 16, overflow: 'hidden',
   },
 
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sportIconBox: {
-    width: 40, height: 40, borderRadius: 10,
-    backgroundColor: '#e8823f', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  cardImage: { height: 120, justifyContent: 'flex-start' },
+  cardImageOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(10,10,11,0.35)',
   },
+  cardImageTopRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    padding: 10,
+  },
+  cardImageSportChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(10,10,11,0.55)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  cardImageSportText: { color: '#f4f2ef', fontSize: 11, fontWeight: '700' },
+  cardImageFallback: {
+    height: 120, backgroundColor: 'rgba(232,130,63,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  cardBody: { padding: 16, gap: 10 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardTitle: { flex: 1, color: '#f4f2ef', fontSize: 15, fontWeight: '700' },
   badgeStack: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexShrink: 0 },
