@@ -459,6 +459,7 @@ const styles = StyleSheet.create({
     color: '#8f8b85',
     fontSize: 14,
     fontWeight: '600',
+    userSelect: 'none' as any,
   },
   tabTextActive: {
     color: '#f4f2ef',

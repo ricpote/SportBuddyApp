@@ -410,6 +410,7 @@ const styles = StyleSheet.create({
   toggleText: {
     color: TEXT_SEC,
     fontWeight: '600',
+    userSelect: 'none' as any,
   },
   toggleTextActive: {
     color: BG,

@@ -14,6 +14,7 @@ const common: LanguageDictionaries = {
     'common.retry': 'Retry',
     'common.error': 'Something went wrong',
     'common.ok': 'OK',
+    'common.createEvent': 'Create event',
   },
   pt: {
     'common.loading': 'A carregar...',
@@ -28,6 +29,7 @@ const common: LanguageDictionaries = {
     'common.retry': 'Tentar novamente',
     'common.error': 'Ocorreu um erro',
     'common.ok': 'OK',
+    'common.createEvent': 'Criar evento',
   },
 };
 

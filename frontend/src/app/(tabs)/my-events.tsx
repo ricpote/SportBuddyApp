@@ -15,6 +15,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { cancelActivity, listActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
 import { SportIcon } from '@/utils/sport-icon';
@@ -23,13 +24,13 @@ type Filter = 'active' | 'past';
 
 const PAGE_SIZE = 5;
 
-function statusInfo(event: Activity): { label: string; color: string } {
+function statusInfo(event: Activity, t: (key: string) => string): { label: string; color: string } {
   const fill = event.maxParticipants > 0 ? event.participantsList.length / event.maxParticipants : 0;
-  if (event.status === 'cancelled') return { label: 'Cancelada', color: '#eb8f84' };
-  if (event.status === 'completed') return { label: 'Terminada', color: '#8f8b85' };
-  if (fill >= 1) return { label: 'Completa', color: '#eb8f84' };
-  if (fill >= 0.75) return { label: 'Quase cheia', color: '#e8823f' };
-  return { label: 'Aberta', color: '#9ccd6b' };
+  if (event.status === 'cancelled') return { label: t('activity.view.status.cancelled'), color: '#eb8f84' };
+  if (event.status === 'completed') return { label: t('activity.view.status.completed'), color: '#8f8b85' };
+  if (fill >= 1) return { label: t('myEvents.status.full'), color: '#eb8f84' };
+  if (fill >= 0.75) return { label: t('explore.card.almostFull'), color: '#e8823f' };
+  return { label: t('activity.view.status.open'), color: '#9ccd6b' };
 }
 
 function formatDate(dateStr: string) {
@@ -41,6 +42,7 @@ function formatDate(dateStr: string) {
 
 export default function MyEvents() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const router = useRouter();
 
@@ -99,16 +101,16 @@ export default function MyEvents() {
       }
     };
     if (Platform.OS === 'web') {
-      if (window.confirm(`Cancelar "${event.title}"? Esta ação não pode ser desfeita.`)) {
+      if (window.confirm(t('myEvents.confirm.webMessage', { title: event.title }))) {
         doCancel();
       }
     } else {
       Alert.alert(
-        'Cancelar atividade',
-        `Tens a certeza que queres cancelar "${event.title}"?`,
+        t('myEvents.confirm.cancelTitle'),
+        t('myEvents.confirm.cancelMessage', { title: event.title }),
         [
-          { text: 'Não', style: 'cancel' },
-          { text: 'Sim, cancelar', style: 'destructive', onPress: doCancel },
+          { text: t('myEvents.confirm.no'), style: 'cancel' },
+          { text: t('myEvents.confirm.yesCancel'), style: 'destructive', onPress: doCancel },
         ],
       );
     }
@@ -127,16 +129,17 @@ export default function MyEvents() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <ThemedText type="title" style={styles.title}>Os meus eventos</ThemedText>
+          <ThemedText type="title" style={styles.title}>{t('myEvents.title')}</ThemedText>
           <ThemedText style={styles.subtitle}>
-            {activities.length} eventos no total · <ThemedText style={styles.subtitleOrange}>{active.length} ativos</ThemedText>
+            {t('myEvents.subtitle.total', { count: activities.length })}
+            <ThemedText style={styles.subtitleOrange}>{t('myEvents.subtitle.active', { count: active.length })}</ThemedText>
           </ThemedText>
         </View>
         <Link href="/create-activity" asChild>
           <Pressable style={({ pressed }) => pressed && { opacity: 0.75 }}>
             <View style={styles.createBtn}>
               <Ionicons name="add" size={16} color="#000" style={{ marginRight: 6 }} />
-              <ThemedText style={styles.createBtnText}>Criar evento</ThemedText>
+              <ThemedText style={styles.createBtnText}>{t('common.createEvent')}</ThemedText>
             </View>
           </Pressable>
         </Link>
@@ -149,14 +152,14 @@ export default function MyEvents() {
             onPress={() => { setFilter('active'); setLimit(PAGE_SIZE); }}
             style={({ pressed }) => [styles.chip, filter === 'active' && styles.chipActive, pressed && { opacity: 0.7 }]}>
             <ThemedText style={[styles.chipText, filter === 'active' && styles.chipTextActive]}>
-              Ativos {active.length}
+              {t('myEvents.filter.active', { count: active.length })}
             </ThemedText>
           </Pressable>
           <Pressable
             onPress={() => { setFilter('past'); setLimit(PAGE_SIZE); }}
             style={({ pressed }) => [styles.chip, filter === 'past' && styles.chipActive, pressed && { opacity: 0.7 }]}>
             <ThemedText style={[styles.chipText, filter === 'past' && styles.chipTextActive]}>
-              Passados {past.length}
+              {t('myEvents.filter.past', { count: past.length })}
             </ThemedText>
           </Pressable>
         </View>
@@ -165,10 +168,10 @@ export default function MyEvents() {
           <Ionicons name="search-outline" size={14} color="#5a5855" style={{ marginRight: 6 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Pesquisar evento..."
+            placeholder={t('myEvents.searchPlaceholder')}
             placeholderTextColor="#5a5855"
             value={search}
-            onChangeText={t => { setSearch(t); setLimit(PAGE_SIZE); }}
+            onChangeText={q => { setSearch(q); setLimit(PAGE_SIZE); }}
           />
         </View>
       </View>
@@ -177,22 +180,22 @@ export default function MyEvents() {
       <View style={styles.table}>
         {/* Table header */}
         <View style={styles.tableHeader}>
-          <ThemedText style={[styles.th, { flex: 5 }]}>EVENTO</ThemedText>
-          <ThemedText style={[styles.th, { flex: 1.5 }]}>DATA</ThemedText>
-          <ThemedText style={[styles.th, { flex: 1.5 }]}>ESTADO</ThemedText>
-          <ThemedText style={[styles.th, { flex: 1.5 }]}>INSCRITOS</ThemedText>
-          <ThemedText style={[styles.th, { flex: 1.5, paddingLeft: 20 }]}>PEDIDOS</ThemedText>
+          <ThemedText style={[styles.th, { flex: 5 }]}>{t('myEvents.table.event')}</ThemedText>
+          <ThemedText style={[styles.th, { flex: 1.5 }]}>{t('myEvents.table.date')}</ThemedText>
+          <ThemedText style={[styles.th, { flex: 1.5 }]}>{t('myEvents.table.status')}</ThemedText>
+          <ThemedText style={[styles.th, { flex: 1.5 }]}>{t('myEvents.table.participants')}</ThemedText>
+          <ThemedText style={[styles.th, { flex: 1.5, paddingLeft: 20 }]}>{t('myEvents.table.requests')}</ThemedText>
           <View style={{ width: 36 }} />
         </View>
 
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="calendar-outline" size={36} color="#3a3838" />
-            <ThemedText style={styles.emptyText}>Sem eventos</ThemedText>
+            <ThemedText style={styles.emptyText}>{t('myEvents.noEvents')}</ThemedText>
           </View>
         ) : (
           shown.map(event => {
-            const { label: statusLabel, color: statusColor } = statusInfo(event);
+            const { label: statusLabel, color: statusColor } = statusInfo(event, t);
             const { day, time } = formatDate(event.date);
             const fill = event.maxParticipants > 0
               ? event.participantsList.length / event.maxParticipants : 0;
@@ -241,7 +244,9 @@ export default function MyEvents() {
                 {/* Pedidos */}
                 <View style={{ flex: 1.5, paddingLeft: 20 }}>
                   {pendingCount > 0 ? (
-                    <ThemedText style={styles.pendingText}>{pendingCount} novo{pendingCount !== 1 ? 's' : ''}</ThemedText>
+                    <ThemedText style={styles.pendingText}>
+                      {t('myEvents.pendingNew', { count: pendingCount, plural: pendingCount !== 1 ? 's' : '' })}
+                    </ThemedText>
                   ) : (
                     <ThemedText style={styles.dash}>—</ThemedText>
                   )}
@@ -260,13 +265,13 @@ export default function MyEvents() {
                         style={({ pressed }) => [styles.dropdownItem, pressed && { opacity: 0.7 }]}
                         onPress={() => handleEdit(event)}>
                         <Ionicons name="create-outline" size={16} color="#c9c5bf" />
-                        <ThemedText style={styles.dropdownText}>Editar</ThemedText>
+                        <ThemedText style={styles.dropdownText}>{t('common.edit')}</ThemedText>
                       </Pressable>
                       <Pressable
                         style={({ pressed }) => [styles.dropdownItem, pressed && { opacity: 0.7 }]}
                         onPress={() => handleDelete(event)}>
                         <Ionicons name="close-circle-outline" size={16} color="#eb8f84" />
-                        <ThemedText style={[styles.dropdownText, { color: '#eb8f84' }]}>Cancelar evento</ThemedText>
+                        <ThemedText style={[styles.dropdownText, { color: '#eb8f84' }]}>{t('myEvents.cancelEvent')}</ThemedText>
                       </Pressable>
                     </View>
                   )}
@@ -281,14 +286,18 @@ export default function MyEvents() {
       {filtered.length > 0 && (
         <View style={styles.pagination}>
           <ThemedText style={styles.paginationText}>
-            A mostrar {shown.length} de {filtered.length} {filter === 'active' ? 'ativos' : 'passados'}
+            {t('myEvents.pagination.showing', {
+              shown: shown.length,
+              total: filtered.length,
+              filterLabel: t(filter === 'active' ? 'myEvents.pagination.activeLabel' : 'myEvents.pagination.pastLabel'),
+            })}
             {limit < filtered.length && (
               <>
                 {' · '}
                 <ThemedText
                   style={styles.verMais}
                   onPress={() => setLimit(l => l + PAGE_SIZE)}>
-                  Ver mais
+                  {t('common.seeMore')}
                 </ThemedText>
               </>
             )}
@@ -333,7 +342,7 @@ const styles = StyleSheet.create({
   chipActive: {
     backgroundColor: '#e8823f',
   },
-  chipText: { fontSize: 13, color: '#8f8b85' },
+  chipText: { fontSize: 13, color: '#8f8b85', userSelect: 'none' as any },
   chipTextActive: { color: '#000', fontFamily: 'HankenGrotesk_700Bold' },
 
   searchWrap: {
@@ -401,7 +410,7 @@ const styles = StyleSheet.create({
 
   pagination: { alignItems: 'center', marginTop: 16 },
   paginationText: { fontSize: 13, color: '#5a5855' },
-  verMais: { fontSize: 13, color: '#e8823f', fontFamily: 'HankenGrotesk_700Bold' },
+  verMais: { fontSize: 13, color: '#e8823f', fontFamily: 'HankenGrotesk_700Bold', userSelect: 'none' as any },
 
   dropdown: {
     position: 'absolute',

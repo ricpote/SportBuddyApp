@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   tabBtnActive: { backgroundColor: '#e8823f' },
-  tabBtnText: { color: '#c9c5bf', fontWeight: '700', fontSize: 13 },
+  tabBtnText: { color: '#c9c5bf', fontWeight: '700', fontSize: 13, userSelect: 'none' as any },
   tabBtnTextActive: { color: '#1a1005' },
 
   searchBox: {
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   filterChipActive: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
-  filterChipText: { color: '#c9c5bf', fontSize: 12, fontWeight: '700' },
+  filterChipText: { color: '#c9c5bf', fontSize: 12, fontWeight: '700', userSelect: 'none' as any },
   filterChipTextActive: { color: '#1a1005' },
 
   tableCard: {
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   roleChipActive: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
-  roleChipText: { color: '#c9c5bf', fontSize: 12, fontWeight: '700' },
+  roleChipText: { color: '#c9c5bf', fontSize: 12, fontWeight: '700', userSelect: 'none' as any },
   roleChipTextActive: { color: '#1a1005' },
 
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  actionButtonText: { fontSize: 12, fontWeight: '700' },
+  actionButtonText: { fontSize: 12, fontWeight: '700', userSelect: 'none' as any },
   helperText: { color: '#6b6862', fontSize: 11 },
 
   paginationRow: {
@@ -989,6 +989,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   paginationText: { color: '#6b6862', fontSize: 12 },
-  paginationLink: { color: '#e8823f', fontSize: 12, fontWeight: '700' },
+  paginationLink: { color: '#e8823f', fontSize: 12, fontWeight: '700', userSelect: 'none' as any },
   pressed: { opacity: 0.75 },
 });

@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(235,143,132,0.4)',
   },
-  removeButtonText: { color: '#eb8f84', fontSize: 12, fontWeight: 'bold' },
+  removeButtonText: { color: '#eb8f84', fontSize: 12, fontWeight: 'bold', userSelect: 'none' as any },
   waitlistActions: { flexDirection: 'row', gap: Spacing.two },
   admitButton: {
     paddingHorizontal: 12,
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(156,205,107,0.4)',
   },
-  admitButtonText: { color: '#9ccd6b', fontSize: 12, fontWeight: 'bold' },
+  admitButtonText: { color: '#9ccd6b', fontSize: 12, fontWeight: 'bold', userSelect: 'none' as any },
 
   mvpCard: {
     backgroundColor: '#111012',
@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e8823f',
   },
-  voteButtonText: { color: '#e8823f', fontSize: 12, fontWeight: 'bold' },
+  voteButtonText: { color: '#e8823f', fontSize: 12, fontWeight: 'bold', userSelect: 'none' as any },
   winnerBox: { alignItems: 'center', gap: 6, paddingVertical: 8 },
   winnerLabel: {
     color: '#c9c5bf',

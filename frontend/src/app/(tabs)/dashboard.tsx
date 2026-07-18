@@ -13,6 +13,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useTranslation } from '@/i18n';
 import { admitFromWaitlist, listActivities, rejectFromWaitlist } from '@/services/activities';
 import { getUserProfile } from '@/services/users';
 import { Activity } from '@/types/activity';
@@ -47,6 +48,7 @@ function formatDate(dateStr: string) {
 
 export default function PartnerDashboard() {
   const { profile, user } = useAuth();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -125,7 +127,7 @@ export default function PartnerDashboard() {
   }, [activeActivities]);
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const greeting = t(hour < 12 ? 'dashboard.greeting.morning' : hour < 18 ? 'dashboard.greeting.afternoon' : 'dashboard.greeting.evening');
   const followerCount = profile?.followers?.length ?? 0;
   const totalPending = pendingRequests.length;
 
@@ -168,10 +170,14 @@ export default function PartnerDashboard() {
             {greeting}, {profile?.name} 👋
           </ThemedText>
           <ThemedText style={styles.subtitle}>
-            {'Tens '}
-            <ThemedText style={styles.subtitleBold}>{totalPending} pedido{totalPending !== 1 ? 's' : ''}</ThemedText>
-            {' por rever'}
-            {eventsThisWeek > 0 ? ` e ${eventsThisWeek} evento${eventsThisWeek !== 1 ? 's' : ''} esta semana` : ''}
+            {t('dashboard.subtitle.youHave')}
+            <ThemedText style={styles.subtitleBold}>
+              {t('dashboard.subtitle.requests', { count: totalPending, plural: totalPending !== 1 ? 's' : '' })}
+            </ThemedText>
+            {t('dashboard.subtitle.toReview')}
+            {eventsThisWeek > 0
+              ? t('dashboard.subtitle.andEventsThisWeek', { count: eventsThisWeek, plural: eventsThisWeek !== 1 ? 's' : '' })
+              : ''}
             {'.'}
           </ThemedText>
         </View>
@@ -179,7 +185,7 @@ export default function PartnerDashboard() {
           <Pressable style={({ pressed }) => pressed && { opacity: 0.75 }}>
             <View style={styles.createBtn}>
               <Ionicons name="add" size={16} color="#000" style={{ marginRight: 6 }} />
-              <ThemedText style={styles.createBtnText}>Criar evento</ThemedText>
+              <ThemedText style={styles.createBtnText}>{t('common.createEvent')}</ThemedText>
             </View>
           </Pressable>
         </Link>
@@ -195,7 +201,7 @@ export default function PartnerDashboard() {
             </View>
           </View>
           <ThemedText style={styles.tileValue}>{followerCount.toLocaleString('pt-PT')}</ThemedText>
-          <ThemedText style={styles.tileLabel}>Seguidores</ThemedText>
+          <ThemedText style={styles.tileLabel}>{t('dashboard.stats.followers')}</ThemedText>
         </View>
 
         {/* Eventos ativos */}
@@ -206,7 +212,7 @@ export default function PartnerDashboard() {
             </View>
           </View>
           <ThemedText style={styles.tileValue}>{activeActivities.length}</ThemedText>
-          <ThemedText style={styles.tileLabel}>Eventos ativos</ThemedText>
+          <ThemedText style={styles.tileLabel}>{t('dashboard.stats.activeEvents')}</ThemedText>
         </View>
 
         {/* Pedidos pendentes */}
@@ -218,7 +224,7 @@ export default function PartnerDashboard() {
             {totalPending > 0 && <View style={styles.accentDot} />}
           </View>
           <ThemedText style={styles.tileValue}>{totalPending}</ThemedText>
-          <ThemedText style={styles.tileLabel}>Pedidos pendentes</ThemedText>
+          <ThemedText style={styles.tileLabel}>{t('dashboard.stats.pendingRequests')}</ThemedText>
         </View>
       </View>
 
@@ -227,22 +233,22 @@ export default function PartnerDashboard() {
         {/* Próximos eventos */}
         <View style={[styles.card, isDesktop && { flex: 3 }]}>
           <View style={styles.cardHeader}>
-            <ThemedText style={styles.cardTitle}>Próximos eventos</ThemedText>
+            <ThemedText style={styles.cardTitle}>{t('dashboard.upcomingEvents')}</ThemedText>
             <Link href="/my-events" asChild>
               <Pressable style={({ pressed }) => pressed && { opacity: 0.7 }}>
-                <ThemedText style={styles.seeAll}>Ver todos</ThemedText>
+                <ThemedText style={styles.seeAll}>{t('dashboard.seeAll')}</ThemedText>
               </Pressable>
             </Link>
           </View>
 
           {upcomingEvents.length === 0 ? (
-            <ThemedText style={styles.empty}>Sem eventos próximos</ThemedText>
+            <ThemedText style={styles.empty}>{t('dashboard.noUpcomingEvents')}</ThemedText>
           ) : (
             <>
               <View style={styles.tableHeader}>
-                <ThemedText style={[styles.th, { flex: 4 }]}>EVENTO</ThemedText>
-                <ThemedText style={[styles.th, { flex: 2 }]}>DATA</ThemedText>
-                <ThemedText style={[styles.th, { flex: 3 }]}>INSCRITOS</ThemedText>
+                <ThemedText style={[styles.th, { flex: 4 }]}>{t('dashboard.table.event')}</ThemedText>
+                <ThemedText style={[styles.th, { flex: 2 }]}>{t('dashboard.table.date')}</ThemedText>
+                <ThemedText style={[styles.th, { flex: 3 }]}>{t('dashboard.table.participants')}</ThemedText>
               </View>
               {upcomingEvents.map(event => {
                 const pct =
@@ -280,11 +286,11 @@ export default function PartnerDashboard() {
         {/* Pedidos pendentes */}
         <View style={[styles.card, isDesktop && { flex: 2 }]}>
           <View style={styles.cardHeader}>
-            <ThemedText style={styles.cardTitle}>Pedidos pendentes</ThemedText>
+            <ThemedText style={styles.cardTitle}>{t('dashboard.stats.pendingRequests')}</ThemedText>
           </View>
 
           {pendingRequests.length === 0 ? (
-            <ThemedText style={styles.empty}>Nenhum pedido pendente</ThemedText>
+            <ThemedText style={styles.empty}>{t('dashboard.noPendingRequests')}</ThemedText>
           ) : (
             pendingRequests.slice(0, 5).map(req => {
               const u = pendingUsers[req.userId];
@@ -333,7 +339,7 @@ export default function PartnerDashboard() {
           {pendingRequests.length > 5 && (
             <Pressable style={{ marginTop: 12 }}>
               <ThemedText style={styles.seeAll}>
-                Ver todos os {pendingRequests.length} pedidos
+                {t('dashboard.seeAllRequests', { count: pendingRequests.length })}
               </ThemedText>
             </Pressable>
           )}
@@ -405,7 +411,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', marginBottom: 16,
   },
   cardTitle: { fontSize: 16, color: '#f4f2ef', fontFamily: 'HankenGrotesk_700Bold' },
-  seeAll: { fontSize: 13, color: '#e8823f' },
+  seeAll: { fontSize: 13, color: '#e8823f', userSelect: 'none' as any },
 
   tableHeader: {
     flexDirection: 'row', paddingBottom: 10,

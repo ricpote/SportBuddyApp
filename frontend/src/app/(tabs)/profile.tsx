@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   filterChipOn: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
-  filterText: { color: '#c9c5bf' },
+  filterText: { color: '#c9c5bf', userSelect: 'none' as any },
   filterTextOn: { color: '#0a0a0b' },
 
   emptyText: { color: '#8f8b85', textAlign: 'center', paddingVertical: Spacing.two },
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.two,
   },
-  showAllText: { color: '#e8823f' },
+  showAllText: { color: '#e8823f', userSelect: 'none' as any },
 
   pressed: { opacity: 0.7 },
 });

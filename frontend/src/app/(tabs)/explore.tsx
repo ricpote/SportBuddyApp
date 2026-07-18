@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
   chipActive: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
-  chipText: { color: '#8f8b85', fontWeight: '600', fontSize: 13 },
+  chipText: { color: '#8f8b85', fontWeight: '600', fontSize: 13, userSelect: 'none' as any },
   chipTextActive: { color: '#1a1005' },
 
   sportDropdown: {
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', alignItems: 'center',
   },
   filterRowChipActive: { backgroundColor: '#e8823f', borderColor: '#e8823f' },
-  filterRowChipText: { color: '#c9c5bf', fontSize: 13, fontWeight: '600' },
+  filterRowChipText: { color: '#c9c5bf', fontSize: 13, fontWeight: '600', userSelect: 'none' as any },
   filterRowChipTextActive: { color: '#1a1005' },
 
   distanceRow: { gap: 6 },
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   },
 
   checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  checkboxLabel: { color: '#c9c5bf', fontSize: 13 },
+  checkboxLabel: { color: '#c9c5bf', fontSize: 13, userSelect: 'none' as any },
 
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 4 },
   filtersHint: { color: '#8f8b85', fontSize: 11, marginTop: 2 },

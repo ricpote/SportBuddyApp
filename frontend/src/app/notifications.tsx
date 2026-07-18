@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, backgroundColor: 'transparent',
   },
   chipActive: { backgroundColor: '#e8823f' },
-  chipText: { color: '#8f8b85', fontSize: 13 },
+  chipText: { color: '#8f8b85', fontSize: 13, userSelect: 'none' as any },
   chipTextActive: { color: '#000', fontFamily: 'HankenGrotesk_700Bold' },
   chipBadge: {
     backgroundColor: '#e8823f', borderRadius: 10,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   chipBadgeText: { color: '#0a0a0b', fontSize: 11, fontWeight: 'bold' },
   markAllBtn: { paddingHorizontal: 10, paddingVertical: 6, marginLeft: 4 },
-  markAllText: { color: '#8f8b85', fontSize: 13 },
+  markAllText: { color: '#8f8b85', fontSize: 13, userSelect: 'none' as any },
 
   // Sections
   section: { marginBottom: Spacing.four },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: '#8f8b85', fontSize: 11, fontWeight: '600', letterSpacing: 0.8,
   },
-  viewAllText: { color: '#e8823f', fontSize: 13, fontWeight: '600' },
+  viewAllText: { color: '#e8823f', fontSize: 13, fontWeight: '600', userSelect: 'none' as any },
 
   // Notification row
   row: {

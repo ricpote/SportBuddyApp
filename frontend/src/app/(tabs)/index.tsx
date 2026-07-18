@@ -347,7 +347,9 @@ export default function HomeScreen() {
                           <SportIcon sportName={sportNameById.get(nextActivity.sportId)} size={28} color="#e8823f" />
                         </View>
                         <ThemedText style={styles.nextComecaLabel}>{t('home.startsIn')}</ThemedText>
-                        <ThemedText style={styles.nextCountdown}>{countdown(nextActivity.date)}</ThemedText>
+                        <ThemedText style={styles.nextCountdown} numberOfLines={1} adjustsFontSizeToFit>
+                          {countdown(nextActivity.date)}
+                        </ThemedText>
                       </View>
 
                       <View style={styles.nextCardRight}>
@@ -599,14 +601,15 @@ const styles = StyleSheet.create({
     color: '#8f8b85', fontSize: 11, fontWeight: '600',
     letterSpacing: 0.8,
   },
-  seeAllToggle: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  seeAllSmall: { color: '#e8823f', fontWeight: 'bold', fontSize: 12 },
+  seeAllToggle: { flexDirection: 'row', alignItems: 'center', gap: 3, userSelect: 'none' as any },
+  seeAllSmall: { color: '#e8823f', fontWeight: 'bold', fontSize: 12, userSelect: 'none' as any },
   nextCard: {
     backgroundColor: '#111012', borderRadius: 16, borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', overflow: 'hidden',
   },
   nextCardLeft: {
-    width: 110, backgroundColor: '#0f0e12', padding: Spacing.three,
+    width: 110, backgroundColor: '#0f0e12',
+    paddingVertical: Spacing.three, paddingHorizontal: Spacing.two,
     alignItems: 'center', justifyContent: 'center', gap: Spacing.one,
     borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.06)',
   },
@@ -616,7 +619,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
   nextComecaLabel: { color: '#8f8b85', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
-  nextCountdown: { color: '#f4f2ef', fontSize: 22, fontWeight: 'bold' },
+  nextCountdown: { color: '#f4f2ef', fontSize: 19, fontWeight: 'bold' },
   nextCardRight: { flex: 1, padding: Spacing.three, gap: Spacing.two },
   nextTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   nextCardTitle: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold', flex: 1 },

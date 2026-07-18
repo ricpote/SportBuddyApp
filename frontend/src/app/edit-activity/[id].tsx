@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: '#c9c5bf',
     fontWeight: '600',
+    userSelect: 'none' as any,
   },
   chipTextActive: {
     color: '#1a1005',
