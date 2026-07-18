@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { cancelActivity, listActivities } from '@/services/activities';
 import { Activity } from '@/types/activity';
@@ -301,7 +302,7 @@ export default function MyEvents() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { flex: 1, backgroundColor: '#0a0a0b' },
-  content: { padding: 24, paddingBottom: 48 },
+  content: { padding: 24, paddingTop: TopTabInset + Spacing.two, paddingBottom: 48 },
 
   header: {
     flexDirection: 'row', alignItems: 'flex-start',

@@ -77,7 +77,7 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="user/[id]"
-          options={{ headerShown: true, title: t('layout.profile') }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="notifications"

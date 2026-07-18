@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { admitFromWaitlist, listActivities, rejectFromWaitlist } from '@/services/activities';
 import { getUserProfile } from '@/services/users';
@@ -345,7 +346,7 @@ export default function PartnerDashboard() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { flex: 1, backgroundColor: '#0a0a0b' },
-  content: { padding: 24, paddingBottom: 48 },
+  content: { padding: 24, paddingTop: TopTabInset + Spacing.two, paddingBottom: 48 },
 
   header: { flexDirection: 'column', gap: 16, marginBottom: 28 },
   headerDesktop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
