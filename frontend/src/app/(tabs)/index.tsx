@@ -306,6 +306,11 @@ export default function HomeScreen() {
                     <Ionicons name="people-outline" size={24} color="#f4f2ef" />
                   </Pressable>
                 </Link>
+                <Link href={{ pathname: '/friends', params: { mode: 'search' } }} asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="search-outline" size={24} color="#f4f2ef" />
+                  </Pressable>
+                </Link>
               </View>
             </View>
 
@@ -559,7 +564,7 @@ const styles = StyleSheet.create({
   mainColumn: { flex: 3, overflow: 'hidden' },
 
   // Header
-  header: { paddingHorizontal: Spacing.four, paddingRight: Spacing.four + 80, marginBottom: Spacing.four },
+  header: { paddingHorizontal: Spacing.four, marginBottom: Spacing.four },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   profilePic: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#111012' },

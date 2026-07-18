@@ -1,7 +1,11 @@
+import { UserRole } from './user';
+
 export type FriendUser = {
   id: string;
   name: string;
   avatarUrl?: string;
+  role?: UserRole;
+  isFollowing?: boolean;
 };
 
 export type Friend = {
