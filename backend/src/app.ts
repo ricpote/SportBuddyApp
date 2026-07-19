@@ -15,6 +15,7 @@ import badgesRoutes from "./routes/badges.route";
 
 const app = express();
 
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
