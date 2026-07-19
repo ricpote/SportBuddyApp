@@ -10,6 +10,7 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from '@/services/notifications';
+import { getFriends } from '@/services/friends';
 import { Notification, NotificationType } from '@/types/notification';
 import { relativeDate } from '@/utils/date';
 import { useTranslation } from '@/i18n';
@@ -103,7 +104,11 @@ function HighlightedText({ text, unread }: { text: string; unread: boolean }) {
   );
 }
 
-function getItemAction(n: Notification, t: (key: string) => string): { label: string; onPress: () => void } | null {
+function getItemAction(
+  n: Notification,
+  t: (key: string) => string,
+  friendIds: Set<string>
+): { label: string; onPress: () => void; done?: boolean } | null {
   switch (n.type) {
     case 'mvp_voting_open':
       return n.activityId
@@ -115,10 +120,15 @@ function getItemAction(n: Notification, t: (key: string) => string): { label: st
         : null;
     case 'badge_earned':
       return { label: t('notifications.viewBadge'), onPress: () => router.push('/badges') };
-    case 'friend_request':
-      return n.relatedUserId
-        ? { label: t('notifications.viewRequest'), onPress: () => router.push({ pathname: '/user/[id]', params: { id: n.relatedUserId! } }) }
-        : { label: t('notifications.viewRequest'), onPress: () => router.push('/friends') };
+    case 'friend_request': {
+      const alreadyFriends = !!n.relatedUserId && friendIds.has(n.relatedUserId);
+      const onPress = n.relatedUserId
+        ? () => router.push({ pathname: '/user/[id]', params: { id: n.relatedUserId! } })
+        : () => router.push('/friends');
+      return alreadyFriends
+        ? { label: t('notifications.friendsBadge'), onPress, done: true }
+        : { label: t('notifications.viewRequest'), onPress };
+    }
     default:
       return null;
   }
@@ -127,6 +137,7 @@ function getItemAction(n: Notification, t: (key: string) => string): { label: st
 export default function NotificationsScreen() {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [submitting, setSubmitting] = useState(false);
   const [showOlder, setShowOlder] = useState(false);
@@ -134,6 +145,9 @@ export default function NotificationsScreen() {
   useFocusEffect(
     useCallback(() => {
       getNotifications().then(setNotifications).catch(() => setNotifications([]));
+      getFriends()
+        .then(friends => setFriendIds(new Set(friends.map(f => f.userId))))
+        .catch(() => setFriendIds(new Set()));
     }, [])
   );
 
@@ -294,7 +308,7 @@ export default function NotificationsScreen() {
 
               const n = item.notification;
               const meta = TYPE_META[n.type] ?? { icon: 'notifications-outline' as keyof typeof Ionicons.glyphMap, color: '#c9c5bf' };
-              const action = getItemAction(n, t);
+              const action = getItemAction(n, t, friendIds);
 
               return (
                 <Pressable
@@ -311,9 +325,10 @@ export default function NotificationsScreen() {
                     {action && (
                       <Pressable
                         onPress={() => { markRead([n.id]); action.onPress(); }}
-                        style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+                        style={({ pressed }) => [styles.actionBtn, action.done && styles.actionBtnDone, pressed && styles.pressed]}
                       >
-                        <Text style={styles.actionBtnText}>{action.label}</Text>
+                        {action.done && <Ionicons name="checkmark" size={14} color="#9ccd6b" style={{ marginRight: 4 }} />}
+                        <Text style={[styles.actionBtnText, action.done && styles.actionBtnTextDone]}>{action.label}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -387,11 +402,17 @@ const styles = StyleSheet.create({
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e8823f', marginTop: 6, flexShrink: 0 },
 
   actionBtn: {
+    flexDirection: 'row', alignItems: 'center',
     marginTop: 10, alignSelf: 'flex-start',
     paddingHorizontal: 16, paddingVertical: 8,
     backgroundColor: '#e8823f', borderRadius: 10,
   },
   actionBtnText: { color: '#0a0a0b', fontSize: 13, fontWeight: 'bold' },
+  actionBtnDone: {
+    backgroundColor: 'rgba(156,205,107,0.12)',
+    borderWidth: 1, borderColor: 'rgba(156,205,107,0.35)',
+  },
+  actionBtnTextDone: { color: '#9ccd6b' },
 
   pressed: { opacity: 0.7 },
 });
