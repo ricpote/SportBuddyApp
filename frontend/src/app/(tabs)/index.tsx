@@ -11,7 +11,6 @@ import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { useChatBadge } from '@/contexts/chat-badge-context';
 import { /* listActivities, */ getFriendsActivities, getFriendsFeed, getMyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { getNotifications } from '@/services/notifications';
@@ -63,7 +62,6 @@ function getInitials(name: string): string {
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
-  const { unreadCount: chatUnread } = useChatBadge();
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= 900;
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
@@ -294,19 +292,14 @@ export default function HomeScreen() {
                     )}
                   </Pressable>
                 </Link>
-                <Link href="/chats" asChild>
-                  <Pressable style={styles.iconBtn} hitSlop={8}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#f4f2ef" />
-                    {chatUnread > 0 && (
-                      <View style={styles.iconBadge}>
-                        <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
-                      </View>
-                    )}
-                  </Pressable>
-                </Link>
                 <Link href="/friends" asChild>
                   <Pressable style={styles.iconBtn} hitSlop={8}>
                     <Ionicons name="people-outline" size={24} color="#f4f2ef" />
+                  </Pressable>
+                </Link>
+                <Link href={{ pathname: '/friends', params: { mode: 'search' } }} asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="search-outline" size={24} color="#f4f2ef" />
                   </Pressable>
                 </Link>
               </View>
@@ -484,13 +477,13 @@ export default function HomeScreen() {
                             <ImageBackground source={image} resizeMode="cover" style={styles.recCardImage}>
                               <View style={styles.recCardImageOverlay} />
                               <View style={styles.recCardImageTopRow}>
-                                <View style={styles.recSportChip}>
-                                  <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#c9c5bf" />
-                                  <ThemedText style={styles.recSportText}>
+                                <View style={styles.recSportChipOnImage}>
+                                  <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#f4f2ef" />
+                                  <ThemedText style={styles.recSportTextOnImage}>
                                     {sportNameById.get(activity.sportId) ?? activity.sportId}
                                   </ThemedText>
                                 </View>
-                                <View style={[styles.recStatusChip, { borderColor: statusColor + '55' }]}>
+                                <View style={[styles.recStatusChipOnImage, { borderColor: statusColor + '55' }]}>
                                   <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
                                 </View>
                               </View>
@@ -722,7 +715,7 @@ const styles = StyleSheet.create({
   recCardImage: { height: 100, justifyContent: 'flex-start' },
   recCardImageOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(10,10,11,0.35)',
+    backgroundColor: 'rgba(10,10,11,0.5)',
   },
   recCardImageTopRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -740,7 +733,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
   },
   recSportText: { color: '#c9c5bf', fontSize: 11, fontWeight: '600' },
+  recSportChipOnImage: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(10,10,11,0.6)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  recSportTextOnImage: { color: '#f4f2ef', fontSize: 11, fontWeight: '700' },
   recStatusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  recStatusChipOnImage: {
+    backgroundColor: 'rgba(10,10,11,0.6)',
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1,
+  },
   recStatusText: { fontSize: 11, fontWeight: '600' },
   recTitle: { color: '#f4f2ef', fontSize: 15, fontWeight: 'bold' },
   recInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },

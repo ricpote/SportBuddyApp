@@ -15,3 +15,8 @@ export function markNotificationAsRead(notificationId: string): Promise<Notifica
 export function markAllNotificationsAsRead(): Promise<void> {
   return api.patch<void>('/api/notifications/read-all');
 }
+
+// Marca como lidas as notificações de mensagens de uma atividade (ao abrir o chat).
+export function markActivityMessagesAsRead(activityId: string): Promise<void> {
+  return api.patch<void>(`/api/notifications/activity/${activityId}/read`);
+}

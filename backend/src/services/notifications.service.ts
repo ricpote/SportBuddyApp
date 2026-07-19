@@ -91,6 +91,21 @@ export class NotificationsService {
     snapshot.docs.forEach(doc => batch.update(doc.ref, { read: true }));
     await batch.commit();
   }
+
+  async markActivityMessagesAsRead(userId: string, activityId: string): Promise<void> {
+    const snapshot = await this.notificationsRef
+      .where("userId", "==", userId)
+      .where("activityId", "==", activityId)
+      .where("type", "==", "new_message")
+      .where("read", "==", false)
+      .get();
+
+    if (snapshot.empty) return;
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.update(doc.ref, { read: true }));
+    await batch.commit();
+  }
 }
 
 export const notificationsService = new NotificationsService();

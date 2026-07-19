@@ -163,14 +163,14 @@ export default function ChatsScreen() {
     return (
       <Link key={activity.id} href={{ pathname: '/chat/[id]', params: { id: activity.id } }} asChild>
         <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
-          <View style={[styles.rowInner, isPast && styles.rowPast]}>
+          <View style={[styles.rowInner, isPast && styles.rowPast, isUnread && styles.rowInnerUnread]}>
             <View style={[styles.sportIconWrap, isPast && styles.sportIconWrapPast]}>
               <Ionicons name={sportIconName(sportName)} size={22} color={isPast ? '#6b6862' : '#e8823f'} />
             </View>
             <View style={styles.rowBody}>
               <View style={styles.rowTop}>
                 <View style={styles.rowTitleWrap}>
-                  <ThemedText style={styles.rowTitle} numberOfLines={1}>{activity.title}</ThemedText>
+                  <ThemedText style={[styles.rowTitle, isUnread && styles.rowTitleUnread]} numberOfLines={1}>{activity.title}</ThemedText>
                   {isPast && (
                     <View style={styles.terminadaChip}>
                       <ThemedText style={styles.terminadaText}>{t('chat.list.endedBadge')}</ThemedText>
@@ -203,7 +203,7 @@ export default function ChatsScreen() {
         }}
         asChild>
         <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
-          <View style={styles.rowInner}>
+          <View style={[styles.rowInner, isUnread && styles.rowInnerUnread]}>
             <AvatarCircle
               name={conversation.otherUser.name}
               avatarUrl={conversation.otherUser.avatarUrl}
@@ -212,7 +212,7 @@ export default function ChatsScreen() {
             />
             <View style={styles.rowBody}>
               <View style={styles.rowTop}>
-                <ThemedText style={styles.rowTitle} numberOfLines={1}>{conversation.otherUser.name}</ThemedText>
+                <ThemedText style={[styles.rowTitle, isUnread && styles.rowTitleUnread]} numberOfLines={1}>{conversation.otherUser.name}</ThemedText>
                 {!!timeStr && <ThemedText style={styles.rowTime}>{timeStr}</ThemedText>}
               </View>
               <View style={styles.rowBottom}>
@@ -504,6 +504,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
+  rowInnerUnread: {
+    backgroundColor: 'rgba(232,130,63,0.08)',
+    borderColor: 'rgba(232,130,63,0.35)',
+    borderLeftWidth: 3,
+    paddingLeft: 12,
+  },
   sportIconWrap: {
     width: 44,
     height: 44,
@@ -540,6 +546,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     flexShrink: 1,
+  },
+  rowTitleUnread: {
+    fontWeight: '800',
   },
   terminadaChip: {
     backgroundColor: '#2a2a2e',
@@ -582,10 +591,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#e8823f',
+    borderWidth: 2,
+    borderColor: 'rgba(232,130,63,0.35)',
     flexShrink: 0,
   },
   unreadBadge: {
