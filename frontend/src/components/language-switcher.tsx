@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePathname } from 'expo-router';
 
 import { PortugalFlag, UnitedKingdomFlag } from '@/components/flags';
 import { useLanguage } from '@/contexts/language-context';
@@ -13,13 +14,16 @@ const LABELS: Record<Language, string> = {
 export function LanguageSwitcher() {
   const { language, toggleLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const isHome = pathname === '/' && width < 900;
   const label = LABELS[language];
 
   return (
     <Pressable
       onPress={toggleLanguage}
       hitSlop={8}
-      style={({ pressed }) => [styles.container, { top: insets.top + 12 }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.container, { top: insets.top + (isHome ? 45 : 12) }, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={`${label === 'PT' ? 'Mudar' : 'Switch'} idioma / language: ${label}`}>
       {language === 'pt' ? <PortugalFlag size={20} /> : <UnitedKingdomFlag size={20} />}

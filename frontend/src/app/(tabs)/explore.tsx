@@ -481,12 +481,6 @@ export default function ExploreScreen() {
     <>
       <View style={styles.header}>
         <ThemedText type="title" style={styles.pageTitle}>{t('explore.header.title')}</ThemedText>
-        <Link href="/create-activity" asChild>
-          <Pressable style={({ pressed }) => [styles.newBtn, !isWide && styles.newBtnClearance, pressed && { opacity: 0.8 }]}>
-            <Ionicons name="add" size={18} color="#1a1005" style={{ marginRight: 4 }} />
-            <ThemedText style={styles.newBtnText}>{t('explore.header.newButton')}</ThemedText>
-          </Pressable>
-        </Link>
       </View>
 
       <View style={styles.searchBar}>
@@ -644,12 +638,6 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pageTitle: { color: '#f4f2ef', fontSize: 32 },
-  newBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#e8823f', paddingVertical: 9, paddingHorizontal: 16, borderRadius: 20,
-  },
-  newBtnClearance: { marginRight: 64 },
-  newBtnText: { color: '#1a1005', fontWeight: '700', fontSize: 14 },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

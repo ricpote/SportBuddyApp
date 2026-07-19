@@ -5,6 +5,7 @@ import { HankenGrotesk_400Regular, HankenGrotesk_500Medium, HankenGrotesk_600Sem
 import { Platform, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { DownloadAppScreen } from '@/components/download-app-screen';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatBadgeProvider } from '@/contexts/chat-badge-context';
@@ -119,8 +120,14 @@ export default function RootLayout() {
     HankenGrotesk_600SemiBold,
     HankenGrotesk_700Bold,
   });
+  const { width } = useWindowDimensions();
+  const isMobileWeb = Platform.OS === 'web' && width < 768;
 
   if (!fontsLoaded) return null;
+
+  if (isMobileWeb) {
+    return <DownloadAppScreen />;
+  }
 
   return (
     <ThemeProvider value={SportBuddyTheme}>
