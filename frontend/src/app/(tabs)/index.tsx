@@ -11,7 +11,6 @@ import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { useChatBadge } from '@/contexts/chat-badge-context';
 import { /* listActivities, */ getFriendsActivities, getFriendsFeed, getMyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { getNotifications } from '@/services/notifications';
@@ -63,7 +62,6 @@ function getInitials(name: string): string {
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
-  const { unreadCount: chatUnread } = useChatBadge();
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= 900;
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
@@ -294,19 +292,14 @@ export default function HomeScreen() {
                     )}
                   </Pressable>
                 </Link>
-                <Link href="/chats" asChild>
-                  <Pressable style={styles.iconBtn} hitSlop={8}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#f4f2ef" />
-                    {chatUnread > 0 && (
-                      <View style={styles.iconBadge}>
-                        <ThemedText style={styles.iconBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</ThemedText>
-                      </View>
-                    )}
-                  </Pressable>
-                </Link>
                 <Link href="/friends" asChild>
                   <Pressable style={styles.iconBtn} hitSlop={8}>
                     <Ionicons name="people-outline" size={24} color="#f4f2ef" />
+                  </Pressable>
+                </Link>
+                <Link href={{ pathname: '/friends', params: { mode: 'search' } }} asChild>
+                  <Pressable style={styles.iconBtn} hitSlop={8}>
+                    <Ionicons name="search-outline" size={24} color="#f4f2ef" />
                   </Pressable>
                 </Link>
               </View>

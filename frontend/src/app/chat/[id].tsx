@@ -22,6 +22,7 @@ import { getActivity, voteMvp } from '@/services/activities';
 import { getMessages, sendMessage } from '@/services/messages';
 import { getSport } from '@/services/sports';
 import { getUserProfile } from '@/services/users';
+import { markActivityMessagesAsRead } from '@/services/notifications';
 import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 import { PublicUser } from '@/types/user';
@@ -87,6 +88,7 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!id) return;
     markRead(id);
+    markActivityMessagesAsRead(id).catch(() => {});
   }, [id, markRead]);
 
   useEffect(() => {
