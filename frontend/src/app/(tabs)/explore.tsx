@@ -307,7 +307,6 @@ export default function ExploreScreen() {
                   <SportIcon sportName={sportName} size={13} color="#f4f2ef" />
                   <ThemedText style={styles.cardImageSportText}>{sportName}</ThemedText>
                 </View>
-                <View style={styles.badgeStack}>{badges}</View>
               </View>
             </ImageBackground>
           ) : (
@@ -320,7 +319,7 @@ export default function ExploreScreen() {
           {/* TOP ROW: title + badges (só quando não há imagem) */}
           <View style={styles.cardTop}>
             <ThemedText style={styles.cardTitle} numberOfLines={1}>{activity.title}</ThemedText>
-            {!image && <View style={styles.badgeStack}>{badges}</View>}
+            <View style={styles.badgeStack}>{badges}</View>
           </View>
 
           {activity.createdByName && (
@@ -385,53 +384,20 @@ export default function ExploreScreen() {
       <View style={styles.filtersPanel}>
         <ThemedText style={styles.filtersPanelTitle}>{t('explore.filters.title')}</ThemedText>
 
-        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.whenLabel')}</ThemedText>
-        <View style={styles.filterSectionStack}>
-          {([
-            { key: 'upcoming', label: t('explore.filters.upcoming') },
-            { key: 'today', label: t('explore.filters.today') },
-            { key: 'weekend', label: t('explore.filters.weekend') },
-          ] as { key: DateFilter; label: string }[]).map(({ key, label }) => (
-            <Pressable key={key} onPress={() => setDateFilter(key)}>
-              <View style={[styles.filterRowChip, dateFilter === key && styles.filterRowChipActive]}>
-                <ThemedText style={[styles.filterRowChipText, dateFilter === key && styles.filterRowChipTextActive]}>
-                  {label}
-                </ThemedText>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+        <Pressable onPress={() => setVerifiedOnly((v) => !v)}>
+          <View style={styles.checkboxRow}>
+            <Ionicons name={verifiedOnly ? 'checkbox' : 'square-outline'} size={18} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
+            <Ionicons name="checkmark-circle-outline" size={14} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
+            <ThemedText style={styles.checkboxLabel}>{t('explore.filters.verifiedOnly')}</ThemedText>
+          </View>
+        </Pressable>
+        {verifiedOnly && (
+          <ThemedText style={styles.filtersHint}>
+            {t('explore.filters.verifiedHint')}
+          </ThemedText>
+        )}
 
-        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.typeLabel')}</ThemedText>
-        <View style={styles.filterRowInline}>
-          {(['team', 'individual'] as SportCategory[]).map((cat) => (
-            <Pressable
-              key={cat}
-              style={{ flex: 1 }}
-              onPress={() => {
-                const next = catFilter === cat ? null : cat;
-                setCatFilter(next);
-                if (next) {
-                  setSportFilterSet((prev) => {
-                    const filtered = new Set(Array.from(prev).filter((id) => categoryBySportId.get(id) === next));
-                    return filtered;
-                  });
-                }
-              }}>
-              <View style={[styles.filterChipSmall, catFilter === cat && styles.filterRowChipActive]}>
-                <ThemedText style={[styles.filterRowChipText, catFilter === cat && styles.filterRowChipTextActive]}>
-                  {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
-                </ThemedText>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-
-        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.distanceLabel')}</ThemedText>
-        <View style={styles.distanceRow}>
-          <DistanceSlider value={radiusKm} min={MIN_RADIUS_KM} max={NEARBY_RADIUS_KM} onChange={setRadiusKm} />
-          <ThemedText style={styles.distanceValue}>{t('explore.filters.radiusValue', { value: radiusKm })}</ThemedText>
-        </View>
+        <View style={styles.divider} />
 
         <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.sportLabel')}</ThemedText>
         <View style={styles.filterSectionStack}>
@@ -459,20 +425,53 @@ export default function ExploreScreen() {
           })}
         </View>
 
-        <View style={styles.divider} />
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.typeLabel')}</ThemedText>
+        <View style={styles.filterRowInline}>
+          {(['team', 'individual'] as SportCategory[]).map((cat) => (
+            <Pressable
+              key={cat}
+              style={{ flex: 1 }}
+              onPress={() => {
+                const next = catFilter === cat ? null : cat;
+                setCatFilter(next);
+                if (next) {
+                  setSportFilterSet((prev) => {
+                    const filtered = new Set(Array.from(prev).filter((id) => categoryBySportId.get(id) === next));
+                    return filtered;
+                  });
+                }
+              }}>
+              <View style={[styles.filterChipSmall, catFilter === cat && styles.filterRowChipActive]}>
+                <ThemedText style={[styles.filterRowChipText, catFilter === cat && styles.filterRowChipTextActive]}>
+                  {cat === 'team' ? t('explore.category.team') : t('explore.category.individual')}
+                </ThemedText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
 
-        <Pressable onPress={() => setVerifiedOnly((v) => !v)}>
-          <View style={styles.checkboxRow}>
-            <Ionicons name={verifiedOnly ? 'checkbox' : 'square-outline'} size={18} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
-            <Ionicons name="checkmark-circle-outline" size={14} color={verifiedOnly ? '#e8823f' : '#8f8b85'} />
-            <ThemedText style={styles.checkboxLabel}>{t('explore.filters.verifiedOnly')}</ThemedText>
-          </View>
-        </Pressable>
-        {verifiedOnly && (
-          <ThemedText style={styles.filtersHint}>
-            {t('explore.filters.verifiedHint')}
-          </ThemedText>
-        )}
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.whenLabel')}</ThemedText>
+        <View style={styles.filterSectionStack}>
+          {([
+            { key: 'upcoming', label: t('explore.filters.upcoming') },
+            { key: 'today', label: t('explore.filters.today') },
+            { key: 'weekend', label: t('explore.filters.weekend') },
+          ] as { key: DateFilter; label: string }[]).map(({ key, label }) => (
+            <Pressable key={key} onPress={() => setDateFilter(key)}>
+              <View style={[styles.filterRowChip, dateFilter === key && styles.filterRowChipActive]}>
+                <ThemedText style={[styles.filterRowChipText, dateFilter === key && styles.filterRowChipTextActive]}>
+                  {label}
+                </ThemedText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+
+        <ThemedText style={styles.filterSectionLabel}>{t('explore.filters.distanceLabel')}</ThemedText>
+        <View style={styles.distanceRow}>
+          <DistanceSlider value={radiusKm} min={MIN_RADIUS_KM} max={NEARBY_RADIUS_KM} onChange={setRadiusKm} />
+          <ThemedText style={styles.distanceValue}>{t('explore.filters.radiusValue', { value: radiusKm })}</ThemedText>
+        </View>
       </View>
     );
   }

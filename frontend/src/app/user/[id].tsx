@@ -346,6 +346,9 @@ export default function UserProfileScreen() {
           },
         ]}>
         <View style={styles.center}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#e8823f" />
+          </Pressable>
           <View style={styles.orgWrap}>
 
             <View style={styles.orgCard}>

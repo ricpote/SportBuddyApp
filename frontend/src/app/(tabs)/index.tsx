@@ -461,8 +461,9 @@ export default function HomeScreen() {
                     {recommended.map((activity) => {
                       const spotsLeft = activity.maxParticipants - activity.participantsList.length;
                       const isAlmostFull = spotsLeft <= 3 && spotsLeft > 0 && activity.status === 'open';
-                      const statusLabel = isAlmostFull ? t('home.almostFull') : activity.status === 'full' ? t('home.full') : t('home.open');
-                      const statusColor = isAlmostFull ? '#e8823f' : activity.status === 'full' ? '#8f8b85' : '#4ade80';
+                      const isPrivate = activity.requiresApproval;
+                      const statusLabel = isAlmostFull ? t('home.almostFull') : activity.status === 'full' ? t('home.full') : isPrivate ? t('explore.card.private') : t('home.open');
+                      const statusColor = isAlmostFull ? '#e8823f' : activity.status === 'full' ? '#8f8b85' : isPrivate ? '#8f8b85' : '#4ade80';
                       const goingLabel = friendsGoingLabel(activity);
 
                       const image = sportImages[activity.sportId];
@@ -483,9 +484,6 @@ export default function HomeScreen() {
                                     {sportNameById.get(activity.sportId) ?? activity.sportId}
                                   </ThemedText>
                                 </View>
-                                <View style={[styles.recStatusChipOnImage, { borderColor: statusColor + '55' }]}>
-                                  <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
-                                </View>
                               </View>
                             </ImageBackground>
                           ) : (
@@ -503,13 +501,15 @@ export default function HomeScreen() {
                                     {sportNameById.get(activity.sportId) ?? activity.sportId}
                                   </ThemedText>
                                 </View>
-                                <View style={[styles.recStatusChip, { borderColor: statusColor + '55' }]}>
-                                  <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
-                                </View>
                               </View>
                             )}
 
-                            <ThemedText style={styles.recTitle} numberOfLines={1}>{activity.title}</ThemedText>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                              <ThemedText style={[styles.recTitle, { flex: 1 }]} numberOfLines={1}>{activity.title}</ThemedText>
+                              <View style={[styles.recStatusChip, { borderColor: statusColor + '55' }]}>
+                                <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
+                              </View>
+                            </View>
 
                             <View style={styles.recInfoRow}>
                               <Ionicons name="calendar-outline" size={12} color="#8f8b85" />
