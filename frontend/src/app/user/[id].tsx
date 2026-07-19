@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -258,6 +258,8 @@ export default function UserProfileScreen() {
 
   const isMe = me?.uid === id;
   const isOrg = profile.role === 'partner';
+
+  const backHeader = <Stack.Screen options={{ headerShown: true, title: '' }} />;
   const memberSinceStr = memberSince(profile.createdAt, t);
   const locationStr = locName(profile.location);
 
@@ -336,6 +338,8 @@ export default function UserProfileScreen() {
 
   if (isOrg) {
     return (
+      <>
+      {backHeader}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -346,9 +350,6 @@ export default function UserProfileScreen() {
           },
         ]}>
         <View style={styles.center}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color="#e8823f" />
-          </Pressable>
           <View style={styles.orgWrap}>
 
             <View style={styles.orgCard}>
@@ -503,10 +504,13 @@ export default function UserProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      </>
     );
   }
 
   return (
+    <>
+    {backHeader}
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
@@ -723,6 +727,7 @@ export default function UserProfileScreen() {
         </View>
       </View>
     </ScrollView>
+    </>
   );
 }
 
