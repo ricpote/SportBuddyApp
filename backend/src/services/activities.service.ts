@@ -383,7 +383,7 @@ export class ActivitiesService {
     return snap.docs
       .map(doc => normalizeActivity({ id: doc.id, ...doc.data() }))
       .filter(a => a.status === "completed")
-      .reverse()
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, limit);
   }
 

@@ -111,7 +111,7 @@ export default function ProfileScreen() {
     if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
     if (activityFilter === 'past') return a.status === 'completed';
     return true;
-  });
+  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const visibleActivities = filteredActivities.slice(0, activityLimit);
 
   const earnedWithCurrentIcon = (earnedBadges ?? []).map(eb => {

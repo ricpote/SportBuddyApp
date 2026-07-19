@@ -46,6 +46,7 @@ function locName(loc?: string | { name?: string }): string | null {
   return loc.name ?? null;
 }
 
+
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: me, profile: myProfile, patchProfile, refreshProfile } = useAuth();
@@ -499,7 +500,7 @@ export default function UserProfileScreen() {
             )}
             {pastActivities !== null && pastActivities.length > 0 && (
               <View style={styles.actList}>
-                {pastActivities.map(renderHistoryRow)}
+                {[...pastActivities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(renderHistoryRow)}
               </View>
             )}
 
@@ -694,7 +695,7 @@ export default function UserProfileScreen() {
             )}
             {activities !== null && activities.length > 0 && (
               <View style={styles.actList}>
-                {activities.map(activity => {
+                {[...activities].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(activity => {
                   const sportName = sportMap[activity.sportId];
                   const loc = (activity as any).location?.name as string | undefined;
                   const color = STATUS_COLOR[activity.status];
