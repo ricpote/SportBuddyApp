@@ -31,7 +31,7 @@ function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl?: string })
 }
 
 export default function FriendsScreen() {
-  const { user: me } = useAuth();
+  const { user: me, profile: myProfile, patchProfile } = useAuth();
   const { t } = useTranslation();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -41,6 +41,7 @@ export default function FriendsScreen() {
   const [friendFilter, setFriendFilter] = useState('');
 
   const [addMode, setAddMode] = useState(mode === 'search');
+  const [friendsOnly, setFriendsOnly] = useState(mode !== 'search');
   const [addQuery, setAddQuery] = useState('');
   const [results, setResults] = useState<FriendUser[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -64,7 +65,7 @@ export default function FriendsScreen() {
     const timer = setTimeout(() => {
       searchUsers(trimmed)
         .then((users) => {
-          const filtered = users.filter((u) => u.id !== me?.uid);
+          const filtered = users.filter((u) => u.id !== me?.uid && (!friendsOnly || u.role !== 'partner'));
           setResults(filtered);
           setFollowingIds(filtered.filter((u) => u.isFollowing).map((u) => u.id));
           setSearchError(null);
@@ -96,6 +97,7 @@ export default function FriendsScreen() {
 
   function exitAddMode() {
     setAddMode(false);
+    setFriendsOnly(false);
     setAddQuery('');
     setResults(null);
     setSearchError(null);
@@ -149,9 +151,11 @@ export default function FriendsScreen() {
       if (isFollowing) {
         await unfollowUser(orgUser.id);
         setFollowingIds((prev) => prev.filter((id) => id !== orgUser.id));
+        patchProfile({ following: (myProfile?.following ?? []).filter(f => f !== orgUser.id) });
       } else {
         await followUser(orgUser.id);
         setFollowingIds((prev) => [...prev, orgUser.id]);
+        patchProfile({ following: [...(myProfile?.following ?? []), orgUser.id] });
       }
     } finally {
       setFollowBusyIds((prev) => prev.filter((id) => id !== orgUser.id));
@@ -179,7 +183,7 @@ export default function FriendsScreen() {
             <Pressable onPress={exitAddMode} hitSlop={8}>
               <Ionicons name="arrow-back" size={22} color="#f4f2ef" />
             </Pressable>
-            <ThemedText style={styles.addHeaderTitle}>{t('profile.friends.addFriendTitle')}</ThemedText>
+            <ThemedText style={styles.addHeaderTitle}>{friendsOnly ? t('profile.friends.addPeopleTitle') : t('profile.friends.addFriendTitle')}</ThemedText>
           </View>
 
           <View style={styles.searchBox}>
@@ -306,7 +310,7 @@ export default function FriendsScreen() {
 
         <View style={styles.friendsHeader}>
           <ThemedText style={styles.sectionTitle}>{t('profile.friends.friendsCount', { count: friends.length })}</ThemedText>
-          <Pressable style={styles.addFriendBtn} onPress={() => setAddMode(true)} hitSlop={8}>
+          <Pressable style={styles.addFriendBtn} onPress={() => { setAddMode(true); setFriendsOnly(true); }} hitSlop={8}>
             <Ionicons name="person-add-outline" size={18} color="#e8823f" />
           </Pressable>
         </View>

@@ -1,5 +1,5 @@
 import { Link, router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ImageBackground, Pressable, StyleSheet, ScrollView, View, Image, Text, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { AnimatedWeatherIcon } from '@/components/animated-weather-icon';
 import { sportImages } from '@/constants/sport-images';
 import { BottomTabInset, MaxContentWidth, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
-import { /* listActivities, */ getFriendsActivities, getFriendsFeed, getMyActivities } from '@/services/activities';
+import { listActivities, getFriendsActivities, getFriendsFeed, getMyActivities } from '@/services/activities';
 import { listSports } from '@/services/sports';
 import { getNotifications } from '@/services/notifications';
 import { getFriends } from '@/services/friends';
@@ -74,6 +74,7 @@ export default function HomeScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsActivities, setFriendsActivities] = useState<Activity[]>([]);
   const [friendFeed, setFriendFeed] = useState<FeedItem[]>([]);
+  const [followedCompanyActivities, setFollowedCompanyActivities] = useState<Activity[]>([]);
   const [forecast, setForecast] = useState<DailyForecast[] | null>(null);
   const [locationName, setLocationName] = useState<string | null>(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
@@ -90,6 +91,7 @@ export default function HomeScreen() {
       getFriends().then(setFriends).catch(() => setFriends([]));
       getFriendsActivities().then(setFriendsActivities).catch(() => setFriendsActivities([]));
       getFriendsFeed().then(setFriendFeed).catch(() => setFriendFeed([]));
+
       (async () => {
         const DEFAULT = { latitude: 38.7223, longitude: -9.1393 };
         let coords = DEFAULT;
@@ -109,6 +111,18 @@ export default function HomeScreen() {
       })();
     }, [])
   );
+
+  useEffect(() => {
+    const followingIds: string[] = profile?.following ?? [];
+    if (followingIds.length > 0) {
+      Promise.all(followingIds.map(id => listActivities({ createdBy: id })))
+        .then(results => setFollowedCompanyActivities(results.flat()))
+        .catch(() => setFollowedCompanyActivities([]));
+    } else {
+      setFollowedCompanyActivities([]);
+    }
+  }, [profile?.following?.join(',')]);
+
 
   const sportNameById = new Map(sports.map((s) => [s.id, s.name]));
 
@@ -150,6 +164,11 @@ export default function HomeScreen() {
   //   .filter(isUpcoming)
   //   .filter((a) => activeFilter === ALL_FILTER || sportNameById.get(a.sportId) === activeFilter)
   //   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const followedCompanyUpcoming = followedCompanyActivities
+    .filter(a => isUpcoming(a) && !a.participantsList.includes(user?.uid ?? ''))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 4);
 
   const recommended = friendsActivities.filter((a) => {
     if (!isUpcoming(a) || a.participantsList.includes(user?.uid ?? '')) return false;
@@ -541,6 +560,88 @@ export default function HomeScreen() {
                   </View>
                 )}
               </View>
+
+              {followedCompanyUpcoming.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeader}>
+                    <ThemedText type="subtitle" style={styles.sectionTitle}>{t('home.followedCompanies')}</ThemedText>
+                  </View>
+                  <View style={[styles.recGrid, isWide && styles.recGridWide]}>
+                    {followedCompanyUpcoming.map((activity) => {
+                      const spotsLeft = activity.maxParticipants - activity.participantsList.length;
+                      const isAlmostFull = spotsLeft <= 3 && spotsLeft > 0 && activity.status === 'open';
+                      const isPrivate = activity.requiresApproval;
+                      const statusLabel = isAlmostFull ? t('home.almostFull') : activity.status === 'full' ? t('home.full') : isPrivate ? t('explore.card.private') : t('home.open');
+                      const statusColor = isAlmostFull ? '#e8823f' : activity.status === 'full' ? '#8f8b85' : isPrivate ? '#8f8b85' : '#4ade80';
+                      const image = sportImages[activity.sportId];
+                      return (
+                        <Pressable
+                          key={activity.id}
+                          onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
+                          style={({ pressed }) => [styles.recCard, isWide && styles.recCardWide, pressed && styles.pressed]}
+                        >
+                          {image ? (
+                            <ImageBackground source={image} resizeMode="cover" style={styles.recCardImage}>
+                              <View style={styles.recCardImageOverlay} />
+                              <View style={styles.recCardImageTopRow}>
+                                <View style={styles.recSportChipOnImage}>
+                                  <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#f4f2ef" />
+                                  <ThemedText style={styles.recSportTextOnImage}>
+                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            </ImageBackground>
+                          ) : (
+                            <View style={styles.recCardImageFallback}>
+                              <SportIcon sportName={sportNameById.get(activity.sportId)} size={26} color="#e8823f" />
+                            </View>
+                          )}
+                          <View style={styles.recCardBody}>
+                            {!image && (
+                              <View style={styles.recCardTop}>
+                                <View style={styles.recSportChip}>
+                                  <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#c9c5bf" />
+                                  <ThemedText style={styles.recSportText}>
+                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            )}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                              <ThemedText style={[styles.recTitle, { flex: 1 }]} numberOfLines={1}>{activity.title}</ThemedText>
+                              <View style={[styles.recStatusChip, { borderColor: statusColor + '55' }]}>
+                                <ThemedText style={[styles.recStatusText, { color: statusColor }]}>{statusLabel}</ThemedText>
+                              </View>
+                            </View>
+                            <View style={styles.recInfoRow}>
+                              <Ionicons name="calendar-outline" size={12} color="#8f8b85" />
+                              <ThemedText style={styles.recInfoText}>
+                                {formatDate(activity.date)} · {formatTime(activity.date)}
+                              </ThemedText>
+                            </View>
+                            {activity.createdByName && (
+                              <View style={styles.recFriendsRow}>
+                                <Ionicons name="business-outline" size={12} color="#e8823f" />
+                                <ThemedText style={styles.recFriendsText} numberOfLines={1}>{activity.createdByName}</ThemedText>
+                              </View>
+                            )}
+                            <View style={styles.recCardBottom}>
+                              <View style={styles.recInfoRow}>
+                                <Ionicons name="location-outline" size={12} color="#8f8b85" />
+                                <ThemedText style={styles.recInfoText} numberOfLines={1}>{activity.location.name}</ThemedText>
+                              </View>
+                              <ThemedText style={styles.recParticipants}>
+                                {activity.participantsList.length} / {activity.maxParticipants}
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
 
               {/* Sidebar inline em mobile */}
               {!isWide && sidebarContent}

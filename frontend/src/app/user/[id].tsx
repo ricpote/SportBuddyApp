@@ -48,7 +48,7 @@ function locName(loc?: string | { name?: string }): string | null {
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user: me, refreshProfile } = useAuth();
+  const { user: me, profile: myProfile, patchProfile, refreshProfile } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -190,10 +190,12 @@ export default function UserProfileScreen() {
         await unfollowUser(id);
         setIsFollowing(false);
         setFollowersCount(c => Math.max(0, c - 1));
+        patchProfile({ following: (myProfile?.following ?? []).filter(f => f !== id) });
       } else {
         await followUser(id);
         setIsFollowing(true);
         setFollowersCount(c => c + 1);
+        patchProfile({ following: [...(myProfile?.following ?? []), id] });
       }
     } catch {
     } finally {
@@ -437,7 +439,7 @@ export default function UserProfileScreen() {
               <View style={styles.orgStatsRow}>
                 {[
                   { label: t('profile.user.stat.followers'), value: followersCount, isFollowers: true },
-                  { label: t('profile.user.stat.events'), value: profile.stats.activitiesCreated, isFollowers: false },
+                  { label: t('profile.user.stat.completedEvents'), value: pastActivities !== null ? pastActivities.length : profile.stats.activitiesCreated, isFollowers: false },
                   { label: t('profile.user.stat.rating'), value: profile.rating.count > 0 ? profile.rating.average.toFixed(1) : '—', isFollowers: false },
                 ].map(({ label, value, isFollowers }, i) => {
                   const isOwner = me?.uid === id;
@@ -488,7 +490,7 @@ export default function UserProfileScreen() {
               </View>
             )}
 
-            <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.history.title')}</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.org.completedEvents')}</ThemedText>
             {pastActivities === null && (
               <ThemedText type="small" style={styles.emptyText}>{t('profile.loading')}</ThemedText>
             )}

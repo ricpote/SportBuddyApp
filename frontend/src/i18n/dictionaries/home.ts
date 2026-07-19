@@ -28,6 +28,7 @@ const home: LanguageDictionaries = {
     'home.chat': 'Chat',
 
     'home.recommended': 'Recommended for you',
+    'home.followedCompanies': 'From companies you follow',
     'home.seeAll': 'See all',
     'home.noRecommendationsTitle': 'No recommendations yet',
     'home.noRecommendationsText': 'Join activities and add your sports to your profile to get better suggestions.',
@@ -83,6 +84,7 @@ const home: LanguageDictionaries = {
     'home.chat': 'Chat',
 
     'home.recommended': 'Recomendado para ti',
+    'home.followedCompanies': 'De empresas que segues',
     'home.seeAll': 'Ver tudo',
     'home.noRecommendationsTitle': 'Ainda sem recomendações',
     'home.noRecommendationsText': 'Participa em atividades e adiciona os teus desportos ao perfil para receberes melhores sugestões.',
