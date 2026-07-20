@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { BadgeIcon } from '@/components/badge-icon';
 import { AvatarCircle } from '@/components/avatar-circle';
 import { SportIcon } from '@/utils/sport-icon';
+import { translateSportName } from '@/utils/translate-sport';
 import { BottomTabInset, Spacing, TopTabInset } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { getBadgeCatalog, getUserBadges } from '@/services/badges';
@@ -279,7 +280,7 @@ export default function UserProfileScreen() {
         <View style={styles.eventCardTop}>
           <View style={styles.eventSportTag}>
             <SportIcon sportName={sportName} size={12} color="#e8823f" />
-            <ThemedText style={styles.eventSportTagText}>{sportName}</ThemedText>
+            <ThemedText style={styles.eventSportTagText}>{translateSportName(sportName, language)}</ThemedText>
           </View>
           <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
             <ThemedText style={[styles.statusText, { color }]}>{STATUS_LABEL[activity.status]}</ThemedText>
@@ -621,7 +622,7 @@ export default function UserProfileScreen() {
                   return (
                     <View key={sid} style={styles.sportChip}>
                       <SportIcon sportName={sName} size={12} color="#e8823f" />
-                      <ThemedText type="small" style={styles.sportChipText}>{sName}</ThemedText>
+                      <ThemedText type="small" style={styles.sportChipText}>{translateSportName(sName, language)}</ThemedText>
                     </View>
                   );
                 })}
