@@ -289,16 +289,16 @@ export default function HomeScreen() {
                     <Ionicons name="person" size={24} color="#8f8b85" />
                   </View>
                 )}
-                <View>
-                  <ThemedText type="subtitle" style={styles.profileName}>
-                    {isWide ? t('home.greeting', { name: firstName }) : firstName}
-                  </ThemedText>
-                  {isWide && (
+                {isWide && (
+                  <View>
+                    <ThemedText type="subtitle" style={styles.profileName}>
+                      {t('home.greeting', { name: firstName })}
+                    </ThemedText>
                     <ThemedText style={styles.greetingText}>
                       {t('home.subtitle')}
                     </ThemedText>
-                  )}
-                </View>
+                  </View>
+                )}
               </View>
 
               <View style={styles.headerIcons}>
