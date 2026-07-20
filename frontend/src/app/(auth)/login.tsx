@@ -1,13 +1,17 @@
 ﻿import { Link } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useTranslation } from '@/i18n';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const BG = '#0a0a0b';
 const ORANGE = '#e8823f';
@@ -16,7 +20,7 @@ const TEXT_SEC = '#c9c5bf';
 const ERROR = '#eb8f84';
 
 export default function LoginScreen() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInWithGoogleIdToken } = useAuth();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
@@ -25,6 +29,27 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+
+  // Fluxo nativo (Android/iOS) — no web usa-se signInWithPopup diretamente.
+  const [, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !googleResponse) return;
+
+    if (googleResponse.type === 'success') {
+      const idToken = googleResponse.params.id_token;
+      setGoogleSubmitting(true);
+      setError(null);
+      signInWithGoogleIdToken(idToken)
+        .catch((err) => setError(err instanceof Error ? t(err.message) : t('auth.login.googleError')))
+        .finally(() => setGoogleSubmitting(false));
+    } else if (googleResponse.type === 'error') {
+      setError(t('auth.login.googleError'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleResponse]);
 
   async function handleSubmit() {
     setError(null);
@@ -40,6 +65,14 @@ export default function LoginScreen() {
 
   async function handleGoogle() {
     setError(null);
+
+    if (Platform.OS !== 'web') {
+      // No nativo, o resultado é tratado no useEffect acima quando o
+      // promptAsync devolver o id_token; aqui só abrimos o fluxo.
+      await promptGoogleAsync();
+      return;
+    }
+
     setGoogleSubmitting(true);
     try {
       await signInWithGoogle();
@@ -79,7 +112,7 @@ export default function LoginScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <ThemedText type="title" style={styles.title}>SportBuddy</ThemedText>
+            <ThemedText type="title" style={styles.title} numberOfLines={1} adjustsFontSizeToFit>SportBuddy</ThemedText>
             <ThemedText style={styles.subtitle}>{t('auth.login.subtitle')}</ThemedText>
 
             <View style={styles.form}>

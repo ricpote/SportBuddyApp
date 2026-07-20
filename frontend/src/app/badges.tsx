@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +32,15 @@ export default function BadgesScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  if (Platform.OS !== 'web') {
+    return (
+      <View style={[styles.container, styles.unavailable]}>
+        <Ionicons name="medal-outline" size={32} color="#8f8b85" />
+        <ThemedText style={styles.unavailableText}>{t('profile.badges.mobileUnavailable')}</ThemedText>
+      </View>
+    );
+  }
 
   const earnedIds = new Set((earnedBadges ?? []).map(b => b.id));
 
@@ -129,6 +138,8 @@ export default function BadgesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0b' },
   scroll: { padding: Spacing.four, gap: Spacing.three },
+  unavailable: { alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.five },
+  unavailableText: { color: '#8f8b85', textAlign: 'center', fontSize: 14 },
 
   sectionTitle: {
     color: '#f4f2ef',
