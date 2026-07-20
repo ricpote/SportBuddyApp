@@ -121,7 +121,11 @@ export default function RootLayout() {
     HankenGrotesk_700Bold,
   });
   const { width } = useWindowDimensions();
-  const isMobileWeb = Platform.OS === 'web' && width < 768;
+  // No export estático (web), a primeira renderização acontece em Node sem
+  // "window" real — useWindowDimensions devolve width:0 nesse momento, o que
+  // "cozia" esta página no HTML estático para qualquer ecrã. width > 0
+  // confirma que já temos uma medição real do browser antes de decidir.
+  const isMobileWeb = Platform.OS === 'web' && width > 0 && width < 768;
 
   if (!fontsLoaded) return null;
 
