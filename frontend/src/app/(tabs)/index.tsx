@@ -19,6 +19,7 @@ import { Activity, FeedItem } from '@/types/activity';
 import { Sport } from '@/types/sport';
 import { Friend } from '@/types/friend';
 import { SportIcon } from '@/utils/sport-icon';
+import { translateSportName } from '@/utils/translate-sport';
 import { relativeDate } from '@/utils/date';
 import { getWeeklyForecast, DailyForecast } from '@/services/weather';
 import { getWeatherInfo, getUvColor } from '@/utils/weather-codes';
@@ -60,7 +61,7 @@ function getInitials(name: string): string {
 }
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { user, profile } = useAuth();
   const { width: screenWidth } = useWindowDimensions();
   const isWide = screenWidth >= 900;
@@ -359,7 +360,7 @@ export default function HomeScreen() {
                     <View style={styles.nextCardRight}>
                       <View style={styles.nextTitleRow}>
                         <ThemedText style={styles.nextCardTitle} numberOfLines={1}>
-                          {sportNameById.get(nextActivity.sportId) ? `${sportNameById.get(nextActivity.sportId)} · ` : ''}{nextActivity.title}
+                          {sportNameById.get(nextActivity.sportId) ? `${translateSportName(sportNameById.get(nextActivity.sportId), language)} · ` : ''}{nextActivity.title}
                         </ThemedText>
                         {nextActivity.status === 'full' ? (
                           <View style={styles.confirmedBadge}>
@@ -500,7 +501,7 @@ export default function HomeScreen() {
                                 <View style={styles.recSportChipOnImage}>
                                   <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#f4f2ef" />
                                   <ThemedText style={styles.recSportTextOnImage}>
-                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                    {translateSportName(sportNameById.get(activity.sportId), language) || activity.sportId}
                                   </ThemedText>
                                 </View>
                               </View>
@@ -517,7 +518,7 @@ export default function HomeScreen() {
                                 <View style={styles.recSportChip}>
                                   <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#c9c5bf" />
                                   <ThemedText style={styles.recSportText}>
-                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                    {translateSportName(sportNameById.get(activity.sportId), language) || activity.sportId}
                                   </ThemedText>
                                 </View>
                               </View>
@@ -587,7 +588,7 @@ export default function HomeScreen() {
                                 <View style={styles.recSportChipOnImage}>
                                   <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#f4f2ef" />
                                   <ThemedText style={styles.recSportTextOnImage}>
-                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                    {translateSportName(sportNameById.get(activity.sportId), language) || activity.sportId}
                                   </ThemedText>
                                 </View>
                               </View>
@@ -603,7 +604,7 @@ export default function HomeScreen() {
                                 <View style={styles.recSportChip}>
                                   <SportIcon sportName={sportNameById.get(activity.sportId)} size={12} color="#c9c5bf" />
                                   <ThemedText style={styles.recSportText}>
-                                    {sportNameById.get(activity.sportId) ?? activity.sportId}
+                                    {translateSportName(sportNameById.get(activity.sportId), language) || activity.sportId}
                                   </ThemedText>
                                 </View>
                               </View>

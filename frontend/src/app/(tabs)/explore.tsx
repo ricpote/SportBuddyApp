@@ -27,6 +27,7 @@ import { Activity } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 import { relativeDate } from '@/utils/date';
 import { SportIcon } from '@/utils/sport-icon';
+import { translateSportName } from '@/utils/translate-sport';
 
 const NEARBY_RADIUS_KM = 50;
 const MIN_RADIUS_KM = 1;
@@ -124,7 +125,7 @@ type DateFilter = 'upcoming' | 'today' | 'weekend';
 
 export default function ExploreScreen() {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
@@ -305,7 +306,7 @@ export default function ExploreScreen() {
               <View style={styles.cardImageTopRow}>
                 <View style={styles.cardImageSportChip}>
                   <SportIcon sportName={sportName} size={13} color="#f4f2ef" />
-                  <ThemedText style={styles.cardImageSportText}>{sportName}</ThemedText>
+                  <ThemedText style={styles.cardImageSportText}>{translateSportName(sportName, language)}</ThemedText>
                 </View>
               </View>
             </ImageBackground>
@@ -418,7 +419,7 @@ export default function ExploreScreen() {
                 <View style={styles.checkboxRow}>
                   <Ionicons name={active ? 'checkbox' : 'square-outline'} size={18} color={active ? '#e8823f' : '#8f8b85'} />
                   <SportIcon sportName={sport.name} size={14} color={active ? '#e8823f' : '#8f8b85'} />
-                  <ThemedText style={styles.checkboxLabel}>{sport.name}</ThemedText>
+                  <ThemedText style={styles.checkboxLabel}>{translateSportName(sport.name, language)}</ThemedText>
                 </View>
               </Pressable>
             );
@@ -575,7 +576,7 @@ export default function ExploreScreen() {
             <Pressable onPress={() => setSportModalOpen(true)} style={styles.sportDropdown}>
               <Ionicons name="options-outline" size={14} color="#c9c5bf" style={{ marginRight: 5 }} />
               <ThemedText style={styles.sportDropdownText} numberOfLines={1}>
-                {selectedSport ? selectedSport.name : t('explore.sport.allSports')}
+                {selectedSport ? translateSportName(selectedSport.name, language) : t('explore.sport.allSports')}
               </ThemedText>
               <Ionicons name="chevron-down" size={12} color="#8f8b85" style={{ marginLeft: 3 }} />
             </Pressable>
@@ -606,7 +607,7 @@ export default function ExploreScreen() {
                 <View style={styles.modalOptionRow}>
                   <SportIcon sportName={sport.name} size={16} color={sportFilter === sport.id ? '#e8823f' : '#8f8b85'} style={{ marginRight: 8 }} />
                   <ThemedText style={[styles.modalOptionText, sportFilter === sport.id && styles.modalOptionTextActive]}>
-                    {sport.name}
+                    {translateSportName(sport.name, language)}
                   </ThemedText>
                 </View>
                 {sportFilter === sport.id && <Ionicons name="checkmark" size={16} color="#e8823f" />}

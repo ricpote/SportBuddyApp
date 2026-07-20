@@ -13,6 +13,7 @@ import { listSports } from '@/services/sports';
 import { SkillLevel } from '@/types/activity';
 import { Sport, SportCategory } from '@/types/sport';
 import { SportIcon } from '@/utils/sport-icon';
+import { translateSportName } from '@/utils/translate-sport';
 
 const DIFFICULTY_OPTIONS: SkillLevel[] = [
   'beginner',
@@ -46,7 +47,7 @@ function initialDate() {
 }
 
 export default function CreateActivityScreen() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [sports, setSports] = useState<Sport[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -198,7 +199,7 @@ export default function CreateActivityScreen() {
                       style={{ marginRight: 6 }}
                     />
                     <ThemedText style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {sport.name}
+                      {translateSportName(sport.name, language)}
                     </ThemedText>
                   </View>
                 </Pressable>
