@@ -69,7 +69,7 @@ export default function ProfileScreen() {
   };
 
   const [activities, setActivities] = useState<Activity[] | null>(null);
-  const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'past'>('all');
+  const [activityFilter, setActivityFilter] = useState<'active' | 'past'>('active');
   const [activityLimit, setActivityLimit] = useState(5);
   const [managedLimit, setManagedLimit] = useState(5);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -107,10 +107,8 @@ export default function ProfileScreen() {
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const filteredActivities = (activities ?? []).filter(a => {
-    if (a.status === 'cancelled') return false;
     if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
-    if (activityFilter === 'past') return a.status === 'completed';
-    return true;
+    return a.status === 'completed';
   }).sort((a, b) => activityFilter === 'past'
     ? new Date(b.date).getTime() - new Date(a.date).getTime()
     : new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -398,7 +396,7 @@ export default function ProfileScreen() {
               <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.history.title')}</ThemedText>
               <View style={styles.filterRow}>
                 {(['active', 'past'] as const).map(f => (
-                  <Pressable key={f} onPress={() => { setActivityFilter(activityFilter === f ? 'all' : f); setActivityLimit(5); }}>
+                  <Pressable key={f} onPress={() => { setActivityFilter(f); setActivityLimit(5); }}>
                     <View style={[styles.filterChip, activityFilter === f && styles.filterChipOn]}>
                       <ThemedText
                         type="small"
