@@ -104,14 +104,17 @@ export default function ProfileScreen() {
 
   const managedActivities = (activities ?? []).filter(
     a => a.createdBy === user?.uid && (a.status === 'open' || a.status === 'full')
-  );
+  ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const filteredActivities = (activities ?? []).filter(a => {
     if (a.status === 'cancelled') return false;
     if (activityFilter === 'active') return a.status === 'open' || a.status === 'full';
     if (activityFilter === 'past') return a.status === 'completed';
     return true;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }).sort((a, b) => activityFilter === 'past'
+    ? new Date(b.date).getTime() - new Date(a.date).getTime()
+    : new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
   const visibleActivities = filteredActivities.slice(0, activityLimit);
 
   const earnedWithCurrentIcon = (earnedBadges ?? []).map(eb => {
