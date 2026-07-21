@@ -1,19 +1,21 @@
 import type { Language } from '@/i18n/types';
 
-const SPORT_NAME_TRANSLATIONS: Record<string, string> = {
-  Futebol: 'Football',
-  Basquetebol: 'Basketball',
-  Voleibol: 'Volleyball',
-  Ténis: 'Tennis',
-  Padel: 'Padel',
-  Corrida: 'Running',
-  Ciclismo: 'Cycling',
-  Natação: 'Swimming',
+// Os nomes dos desportos vêm da base de dados sempre em português.
+// Isto só traduz o texto mostrado — o valor original continua a ser
+// usado para o SportIcon reconhecer o ícone certo.
+const SPORT_NAME_EN: Record<string, string> = {
+  'Basquetebol': 'Basketball',
+  'Ciclismo': 'Cycling',
+  'Corrida': 'Running',
+  'Futebol': 'Football',
+  'Natação': 'Swimming',
+  'Padel': 'Padel',
+  'Ténis': 'Tennis',
+  'Voleibol': 'Volleyball',
 };
 
-export function translateSportName(sportName: string | undefined, language: Language): string {
-  if (!sportName) return '';
-  if (language === 'pt') return sportName;
-
-  return SPORT_NAME_TRANSLATIONS[sportName] ?? sportName;
+export function translateSportName(name: string | undefined, language: Language): string {
+  if (!name) return '';
+  if (language === 'pt') return name;
+  return SPORT_NAME_EN[name] ?? name;
 }
