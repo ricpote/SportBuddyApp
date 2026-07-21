@@ -5,19 +5,30 @@ export type Sport = {
   name: string;
   description: string;
   category: SportCategory;
+  createdAt: Date;
+  updatedAt: Date;
 };
+
 export type CreateSportDto = {
-  id: string;
   name: string;
   description: string;
   category: SportCategory;
 };
 
-export function createSportObject(data: CreateSportDto): Sport {
+export type UpdateSportDto = {
+  name?: string;
+  description?: string;
+  category?: SportCategory;
+};
+
+export function createSportObject(id: string, data: CreateSportDto): Sport {
+  const now = new Date();
   return {
-    id: data.id,
+    id,
     name: data.name,
     description: data.description,
     category: data.category,
+    createdAt: now,
+    updatedAt: now,
   };
 }

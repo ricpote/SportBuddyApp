@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
@@ -17,10 +17,10 @@ export const Colors = {
   },
   dark: {
     text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    background: '#0a0a0b',
+    backgroundElement: '#111012',
+    backgroundSelected: '#141315',
+    textSecondary: '#c9c5bf',
   },
 } as const;
 
@@ -61,5 +61,8 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 80;
+// On web the tab bar floats over the top of the content, so screens need extra
+// top padding to avoid being covered by it.
+export const TopTabInset = Platform.select({ web: 80 }) ?? 0;
 export const MaxContentWidth = 800;
