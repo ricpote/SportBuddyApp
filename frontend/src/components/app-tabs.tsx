@@ -3,13 +3,11 @@ import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useChatBadge } from '@/contexts/chat-badge-context';
-import { usePendingWaitlist } from '@/contexts/pending-waitlist-context';
 import { useTranslation } from '@/i18n';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-  const { pendingCount } = usePendingWaitlist();
   const { unreadCount } = useChatBadge();
   const { t } = useTranslation();
 
@@ -34,21 +32,30 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="create">
+        <NativeTabs.Trigger.Label>{t('nav.create')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/create.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="chats">
         <NativeTabs.Trigger.Label>
           {unreadCount > 0 ? t('nav.chatsWithCount', { count: unreadCount }) : t('nav.chats')}
         </NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bubble.left.and.bubble.right.fill" drawable="ic_menu_allfriends" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>{pendingCount > 0 ? t('nav.profileWithCount', { count: pendingCount }) : t('nav.profile')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_menu_myplaces" />
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/chats.png')}
+          renderingMode="template"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="map">
         <NativeTabs.Trigger.Label>{t('nav.map')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="map.fill" drawable="ic_dialog_map" />
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/map.png')}
+          renderingMode="template"
+        />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

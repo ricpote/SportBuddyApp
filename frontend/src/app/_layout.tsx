@@ -56,6 +56,7 @@ function RootNavigator() {
     >
       <Stack.Protected guard={!!authedUser}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen
           name="create-activity"
           options={{ headerShown: true, title: t('layout.newActivity'), presentation: 'modal' }}
