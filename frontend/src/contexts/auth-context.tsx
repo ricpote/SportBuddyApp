@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
@@ -31,6 +32,7 @@ type AuthContextValue = {
     password: string
   ) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithGoogleIdToken: (idToken: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   patchProfile: (patch: Partial<UserProfile>) => void;
@@ -150,11 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-    const firebaseUser = credential.user;
-
+  async function completeGoogleSignIn(firebaseUser: FirebaseUser) {
     try {
       await getMyProfile();
     } catch {
@@ -175,6 +173,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await loadProfile(firebaseUser);
     }
+  }
+
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    const credential = await signInWithPopup(auth, provider);
+    await completeGoogleSignIn(credential.user);
+  }
+
+  // Fluxo nativo (Android/iOS): o ecrã de login obtém o id_token via
+  // expo-auth-session e troca-o aqui por uma sessão Firebase — o
+  // signInWithPopup usado no web não existe fora do browser.
+  async function signInWithGoogleIdToken(idToken: string) {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, credential);
+    await completeGoogleSignIn(result.user);
   }
 
   async function signOut() {
@@ -202,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signUpOrganization,
         signInWithGoogle,
+        signInWithGoogleIdToken,
         signOut,
         refreshProfile,
         patchProfile,

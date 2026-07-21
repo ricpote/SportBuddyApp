@@ -369,11 +369,13 @@ export default function ProfileScreen() {
 
             <View style={styles.sectionHeader}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>{t('profile.badges.title')}</ThemedText>
-              <Pressable
-                style={({ pressed }) => [styles.verTodasBtn, pressed && styles.pressed]}
-                onPress={() => router.push('/badges')}>
-                <ThemedText type="small" style={styles.verTodasText}>{t('profile.badges.viewAll')}</ThemedText>
-              </Pressable>
+              {Platform.OS === 'web' && (
+                <Pressable
+                  style={({ pressed }) => [styles.verTodasBtn, pressed && styles.pressed]}
+                  onPress={() => router.push('/badges')}>
+                  <ThemedText type="small" style={styles.verTodasText}>{t('profile.badges.viewAll')}</ThemedText>
+                </Pressable>
+              )}
             </View>
 
             {displayedEarned.length > 0 ? (

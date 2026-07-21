@@ -10,13 +10,13 @@ export type CreateMessageDto = {
   text: string;
 };
 
-export function createMessageObject(id: string, activityId: string, senderId: string, data: CreateMessageDto): Message {
+export function createMessageObject(id: string, activityId: string, senderId: string, data: CreateMessageDto, createdAt: Date = new Date()): Message {
   return {
     id,
     activityId,
     senderId,
     text: data.text,
-    createdAt: new Date(),
+    createdAt,
   };
 }
 

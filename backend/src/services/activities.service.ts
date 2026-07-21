@@ -59,6 +59,7 @@ function normalizeActivity(data: FirebaseFirestore.DocumentData): Activity {
     date: data.date?.toDate ? data.date.toDate() : data.date,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+    lastMessageAt: data.lastMessageAt?.toDate ? data.lastMessageAt.toDate() : data.lastMessageAt,
     votingClosedAt: data.votingClosedAt?.toDate
       ? data.votingClosedAt.toDate().toISOString()
       : (data.votingClosedAt ?? null),

@@ -1,13 +1,21 @@
 ﻿import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useTranslation } from '@/i18n';
+
+// SDK nativo do Google (Play Services) — só existe fora do web.
+if (Platform.OS !== 'web') {
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+}
 
 const BG = '#0a0a0b';
 const ORANGE = '#e8823f';
@@ -16,7 +24,7 @@ const TEXT_SEC = '#c9c5bf';
 const ERROR = '#eb8f84';
 
 export default function LoginScreen() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInWithGoogleIdToken } = useAuth();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
@@ -41,6 +49,22 @@ export default function LoginScreen() {
   async function handleGoogle() {
     setError(null);
     setGoogleSubmitting(true);
+
+    if (Platform.OS !== 'web') {
+      try {
+        await GoogleSignin.hasPlayServices();
+        const result = await GoogleSignin.signIn();
+        if (result.type === 'success' && result.data.idToken) {
+          await signInWithGoogleIdToken(result.data.idToken);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? t(err.message) : t('auth.login.googleError'));
+      } finally {
+        setGoogleSubmitting(false);
+      }
+      return;
+    }
+
     try {
       await signInWithGoogle();
     } catch (err: any) {
@@ -79,7 +103,7 @@ export default function LoginScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <ThemedText type="title" style={styles.title}>SportBuddy</ThemedText>
+            <ThemedText type="title" style={styles.title} numberOfLines={1} adjustsFontSizeToFit>SportBuddy</ThemedText>
             <ThemedText style={styles.subtitle}>{t('auth.login.subtitle')}</ThemedText>
 
             <View style={styles.form}>
