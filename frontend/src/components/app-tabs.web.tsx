@@ -58,9 +58,9 @@ export default function AppTabs() {
           <TabTrigger name="map" href="/map" asChild>
             <TabButton icon="map-outline" isDesktop={isDesktop} hidden={hideUser}>{t('nav.map')}</TabButton>
           </TabTrigger>
-          <TabTrigger name="profile" href="/profile" asChild>
+          <Link href="/profile" asChild>
             <TabButton icon="person-outline" isDesktop={isDesktop} hidden={isDesktop}>{t('nav.profile')}</TabButton>
-          </TabTrigger>
+          </Link>
 
           {showAdminTab && (
             <TabTrigger name="admin" href={'/admin' as never} asChild>
