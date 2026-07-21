@@ -101,7 +101,8 @@ export class BadgesService {
       await notificationsService.createNotification(
         userId,
         "badge_earned",
-        `Desbloqueaste o badge "${badge.name}"!`
+        "notifications.msg.badgeEarned",
+        { name: badge.name }
       );
     }
 

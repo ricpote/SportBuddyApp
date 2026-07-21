@@ -54,7 +54,8 @@ export class MessagesService {
       await notificationsService.createNotificationForMany(
         others,
         "new_message",
-        `${senderName} em "${activity.title}": ${preview}`,
+        "notifications.msg.newMessage",
+        { name: senderName, title: activity.title, preview },
         activityId
       );
     }

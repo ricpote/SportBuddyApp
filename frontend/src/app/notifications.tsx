@@ -59,7 +59,14 @@ function getTimeGroup(iso: string): 'today' | 'yesterday' | 'older' {
   return 'older';
 }
 
-function buildDisplayItems(notifications: Notification[]): DisplayItem[] {
+function resolveNotificationText(n: Notification, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  return n.messageKey ? t(n.messageKey, n.messageParams) : n.message ?? '';
+}
+
+function buildDisplayItems(
+  notifications: Notification[],
+  t: (key: string, vars?: Record<string, string | number>) => string
+): DisplayItem[] {
   const requestMap = new Map<string, Notification[]>();
   const rest: Notification[] = [];
 
@@ -75,7 +82,7 @@ function buildDisplayItems(notifications: Notification[]): DisplayItem[] {
 
   const items: DisplayItem[] = [];
   for (const [activityId, group] of requestMap) {
-    const title = /"([^"]+)"/.exec(group[0].message)?.[1] ?? '';
+    const title = /"([^"]+)"/.exec(resolveNotificationText(group[0], t))?.[1] ?? '';
     items.push(
       group.length === 1
         ? { kind: 'single', notification: group[0] }
@@ -208,7 +215,7 @@ export default function NotificationsScreen() {
     ? notifications
     : notifications.filter(n => FILTER_TYPES[activeFilter].includes(n.type));
 
-  const displayItems = buildDisplayItems(filtered);
+  const displayItems = buildDisplayItems(filtered, t);
   const unreadTotal = notifications.filter(n => !n.read).length;
 
   const sections = [
@@ -320,7 +327,7 @@ export default function NotificationsScreen() {
                     <Ionicons name={meta.icon} size={20} color={meta.color} />
                   </View>
                   <View style={styles.rowBody}>
-                    <HighlightedText text={n.message} unread={!n.read} />
+                    <HighlightedText text={resolveNotificationText(n, t)} unread={!n.read} />
                     <ThemedText style={styles.notifTime}>{relativeDate(n.createdAt, t, language)}</ThemedText>
                     {action && (
                       <Pressable

@@ -65,7 +65,8 @@ export class FriendsService {
     await notificationsService.createNotification(
       addresseeId,
       "friend_request",
-      `${requesterName} enviou-te um pedido de amizade.`,
+      "notifications.msg.friendRequest",
+      { name: requesterName },
       undefined,
       requesterId
     );
@@ -132,7 +133,8 @@ export class FriendsService {
     await notificationsService.createNotification(
       request.requesterId,
       "friend_request_accepted",
-      `${addresseeName} aceitou o teu pedido de amizade.`,
+      "notifications.msg.friendRequestAccepted",
+      { name: addresseeName },
       undefined,
       request.addresseeId
     );

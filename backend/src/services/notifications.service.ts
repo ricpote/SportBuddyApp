@@ -1,6 +1,7 @@
 import { db } from "../config/firebase";
 import {
   Notification,
+  NotificationParams,
   NotificationType,
   createNotificationObject,
 } from "../models/notification.model";
@@ -13,12 +14,13 @@ export class NotificationsService {
   async createNotification(
     userId: string,
     type: NotificationType,
-    message: string,
+    messageKey: string,
+    messageParams?: NotificationParams,
     activityId?: string,
     relatedUserId?: string
   ): Promise<Notification> {
     const docRef = this.notificationsRef.doc();
-    const notification = createNotificationObject(docRef.id, userId, type, message, activityId, relatedUserId);
+    const notification = createNotificationObject(docRef.id, userId, type, messageKey, messageParams, activityId, relatedUserId);
     await docRef.set(notification);
     return notification;
   }
@@ -26,14 +28,15 @@ export class NotificationsService {
   async createNotificationForMany(
     userIds: string[],
     type: NotificationType,
-    message: string,
+    messageKey: string,
+    messageParams: NotificationParams | undefined,
     activityId: string
   ): Promise<void> {
     const batch = db.batch();
 
     for (const userId of userIds) {
       const docRef = this.notificationsRef.doc();
-      const notification = createNotificationObject(docRef.id, userId, type, message, activityId);
+      const notification = createNotificationObject(docRef.id, userId, type, messageKey, messageParams, activityId);
       batch.set(docRef, notification);
     }
 

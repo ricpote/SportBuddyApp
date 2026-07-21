@@ -97,7 +97,8 @@ export class ActivitiesService {
         notificationsService.createNotificationForMany(
           followerIds,
           "new_activity_from_followed",
-          `${creator.name} criou uma nova atividade: "${data.title}".`,
+          "notifications.msg.newActivityFromFollowed",
+          { name: creator.name, title: data.title },
           docRef.id
         ).catch(() => {});
       }
@@ -162,7 +163,8 @@ export class ActivitiesService {
         notificationsService.createNotificationForMany(
           participants,
           "activity_rating_open",
-          `A atividade "${result.activity.title}" terminou. Avalia a experiência!`,
+          "notifications.msg.activityRatingOpen",
+          { title: result.activity.title },
           result.activity.id
         ).catch(() => {});
       }
@@ -516,7 +518,8 @@ export class ActivitiesService {
       await notificationsService.createNotificationForMany(
         participants,
         "activity_cancelled",
-        `A atividade "${activity.title}" foi cancelada pelo criador.`,
+        "notifications.msg.activityCancelled",
+        { title: activity.title },
         activityId
       );
     }
@@ -571,7 +574,8 @@ export class ActivitiesService {
     await notificationsService.createNotification(
       participantId,
       "participant_removed",
-      `Foste removido da atividade "${result.activity.title}" pelo criador.`,
+      "notifications.msg.participantRemoved",
+      { title: result.activity.title },
       activityId
     );
 
@@ -623,7 +627,8 @@ export class ActivitiesService {
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_joined",
-        `Um novo participante entrou na tua atividade "${result.activity.title}".`,
+        "notifications.msg.activityJoined",
+        { title: result.activity.title },
         activityId
       );
 
@@ -631,7 +636,8 @@ export class ActivitiesService {
         await notificationsService.createNotification(
           result.activity.createdBy,
           "activity_full",
-          `A tua atividade "${result.activity.title}" ficou cheia!`,
+          "notifications.msg.activityFull",
+          { title: result.activity.title },
           activityId
         );
       }
@@ -642,7 +648,8 @@ export class ActivitiesService {
     await notificationsService.createNotification(
       result.activity.createdBy,
       "activity_join_request",
-      `Alguém pediu para entrar na tua atividade "${result.activity.title}".`,
+      "notifications.msg.activityJoinRequest",
+      { title: result.activity.title },
       activityId
     );
 
@@ -702,7 +709,8 @@ export class ActivitiesService {
       await notificationsService.createNotification(
         result.activity.createdBy,
         "activity_left",
-        `Um participante saiu da tua atividade "${result.activity.title}".`,
+        "notifications.msg.activityLeft",
+        { title: result.activity.title },
         activityId
       );
 
@@ -748,7 +756,8 @@ export class ActivitiesService {
     await notificationsService.createNotification(
       userId,
       "waitlist_admitted",
-      `O teu pedido foi aceite! Entraste na atividade "${result.activity.title}".`,
+      "notifications.msg.waitlistAdmitted",
+      { title: result.activity.title },
       activityId
     );
 
@@ -825,8 +834,9 @@ export class ActivitiesService {
         result.activity.participantsList,
         "mvp_result",
         result.winners.length === 1
-          ? `A votação de MVP da atividade "${result.activity.title}" terminou!`
-          : `A votação de MVP da atividade "${result.activity.title}" terminou com empate!`,
+          ? "notifications.msg.mvpResult"
+          : "notifications.msg.mvpResultTie",
+        { title: result.activity.title },
         activityId
       );
     }

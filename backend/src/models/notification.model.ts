@@ -17,11 +17,16 @@ export type NotificationType =
   | "new_activity_from_followed"
   | "activity_rating_open";
 
+export type NotificationParams = Record<string, string | number>;
+
 export type Notification = {
   id: string;
   userId: string;
   type: NotificationType;
-  message: string;
+  // Legacy pre-i18n notifications stored a pre-rendered PT message instead of a key.
+  message?: string;
+  messageKey?: string;
+  messageParams?: NotificationParams;
   activityId?: string;
   relatedUserId?: string;
   read: boolean;
@@ -32,7 +37,8 @@ export function createNotificationObject(
   id: string,
   userId: string,
   type: NotificationType,
-  message: string,
+  messageKey: string,
+  messageParams?: NotificationParams,
   activityId?: string,
   relatedUserId?: string
 ): Notification {
@@ -40,7 +46,8 @@ export function createNotificationObject(
     id,
     userId,
     type,
-    message,
+    messageKey,
+    ...(messageParams !== undefined ? { messageParams } : {}),
     ...(activityId !== undefined ? { activityId } : {}),
     ...(relatedUserId !== undefined ? { relatedUserId } : {}),
     read: false,

@@ -21,7 +21,10 @@ export type Notification = {
   id: string;
   userId: string;
   type: NotificationType;
-  message: string;
+  // Legacy pre-i18n notifications carry a pre-rendered PT message instead of a key.
+  message?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   activityId?: string;
   relatedUserId?: string;
   read: boolean;

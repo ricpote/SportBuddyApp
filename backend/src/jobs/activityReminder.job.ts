@@ -54,12 +54,13 @@ async function checkActivities() {
     if (hoursUntilActivity > 23 && hoursUntilActivity <= 24 && !isFull) {
       const missing = activity.maxParticipants - activity.participantsList.length;
       const deadline = new Date(activityDate.getTime() - 3 * 60 * 60 * 1000);
-      const deadlineStr = deadline.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+      const deadlineStr = `${String(deadline.getHours()).padStart(2, "0")}:${String(deadline.getMinutes()).padStart(2, "0")}`;
 
       await notificationsService.createNotificationForMany(
         activity.participantsList,
         "activity_reminder",
-        `A atividade "${activity.title}" começa amanhã e ainda faltam ${missing} pessoa(s). Têm até às ${deadlineStr} para completar — caso contrário será cancelada.`,
+        "notifications.msg.activityReminder",
+        { title: activity.title, missing, deadline: deadlineStr },
         activity.id
       );
     }
@@ -73,7 +74,8 @@ async function checkActivities() {
       await notificationsService.createNotificationForMany(
         activity.participantsList,
         "activity_auto_cancelled",
-        `A atividade "${activity.title}" foi cancelada automaticamente por não ter ficado cheia a tempo.`,
+        "notifications.msg.activityAutoCancelled",
+        { title: activity.title },
         activity.id
       );
     }
@@ -109,10 +111,11 @@ async function checkMvpVoting() {
       activity.participantsList,
       "mvp_result",
       winners.length === 1
-        ? `A votação de MVP da atividade "${activity.title}" terminou!`
+        ? "notifications.msg.mvpResult"
         : winners.length > 1
-          ? `A votação de MVP da atividade "${activity.title}" terminou com empate!`
-          : `A votação de MVP da atividade "${activity.title}" terminou sem votos suficientes.`,
+          ? "notifications.msg.mvpResultTie"
+          : "notifications.msg.mvpResultNone",
+      { title: activity.title },
       activity.id
     );
   }
