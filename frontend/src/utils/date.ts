@@ -6,6 +6,11 @@ export function relativeDate(dateStr: string): string {
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    if (Math.abs(diffMinutes) < 1) return 'now';
+    if (Math.abs(diffMinutes) < 60) {
+      return diffMinutes > 0 ? `in ${diffMinutes}m` : `${Math.abs(diffMinutes)}m ago`;
+    }
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
     if (diffHours > 0) return `in ${diffHours}h`;
     if (diffHours < 0) return `${Math.abs(diffHours)}h ago`;

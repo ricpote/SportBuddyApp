@@ -34,7 +34,8 @@ export class MessagesService {
     }
 
     const docRef = this.messagesRef(activityId).doc();
-    const message = createMessageObject(docRef.id, activityId, senderId, data);
+    const now = new Date();
+    const message = createMessageObject(docRef.id, activityId, senderId, data, now);
     const preview = data.text.length > 60 ? data.text.slice(0, 60) + "…" : data.text;
     const sender = await usersService.getUserById(senderId);
     const senderName = sender?.name ?? "Alguém";
@@ -43,7 +44,7 @@ export class MessagesService {
       docRef.set(message),
       db.collection(ACTIVITIES_COLLECTION).doc(activityId).update({
         lastMessage: preview,
-        lastMessageAt: new Date(),
+        lastMessageAt: now,
         lastMessageSender: senderName,
       }),
     ]);
@@ -170,19 +171,20 @@ export class MessagesService {
     if (!participants.includes(senderId)) throw new Error("Não tens acesso a esta conversa");
 
     const docRef = this.directMessagesRef(conversationId).doc();
+    const now = new Date();
     const message: DirectMessage = {
       id: docRef.id,
       conversationId,
       senderId,
       text,
-      createdAt: new Date(),
+      createdAt: now,
     };
 
     const preview = text.length > 60 ? text.slice(0, 60) + "…" : text;
 
     await Promise.all([
       docRef.set(message),
-      this.conversationsRef.doc(conversationId).update({ lastMessage: preview, lastMessageAt: new Date(), lastMessageSenderId: senderId }),
+      this.conversationsRef.doc(conversationId).update({ lastMessage: preview, lastMessageAt: now, lastMessageSenderId: senderId }),
     ]);
 
     return message;

@@ -31,7 +31,7 @@ const home: LanguageDictionaries = {
     'home.followedCompanies': 'From companies you follow',
     'home.seeAll': 'See all',
     'home.noRecommendationsTitle': 'No recommendations yet',
-    'home.noRecommendationsText': 'Join activities and add your sports to your profile to get better suggestions.',
+    'home.noRecommendationsText': "Add friends to see what activities they're joining nearby.",
     'home.exploreActivities': 'Explore activities  →',
 
     'home.almostFull': 'Almost full',
@@ -87,7 +87,7 @@ const home: LanguageDictionaries = {
     'home.followedCompanies': 'De empresas que segues',
     'home.seeAll': 'Ver tudo',
     'home.noRecommendationsTitle': 'Ainda sem recomendações',
-    'home.noRecommendationsText': 'Participa em atividades e adiciona os teus desportos ao perfil para receberes melhores sugestões.',
+    'home.noRecommendationsText': 'Adiciona amigos para veres que atividades eles estão a participar perto de ti.',
     'home.exploreActivities': 'Explorar atividades  →',
 
     'home.almostFull': 'Quase cheio',
