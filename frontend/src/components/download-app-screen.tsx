@@ -3,7 +3,7 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { PortugalFlag, UnitedKingdomFlag } from '@/components/flags';
 
-const APK_DOWNLOAD_URL = 'https://expo.dev/accounts/pedrop0s-team/projects/frontend/builds/e4a21775-a21d-4c84-96e7-848f3b34e934';
+const APK_DOWNLOAD_URL = 'https://expo.dev/artifacts/eas/_s0ALehYK5nJhMAZZvCF7Ipfi9pANvGHe8tFW0Rbcik.apk';
 
 type PageLanguage = 'pt' | 'en';
 
