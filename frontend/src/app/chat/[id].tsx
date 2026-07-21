@@ -27,6 +27,7 @@ import { Activity } from '@/types/activity';
 import { Message } from '@/types/message';
 import { PublicUser } from '@/types/user';
 import { relativeDate } from '@/utils/date';
+import { SportIcon } from '@/utils/sport-icon';
 import { useNow } from '@/hooks/use-now';
 import { useTranslation } from '@/i18n';
 
@@ -41,18 +42,6 @@ function avatarColor(userId: string): string {
   let hash = 0;
   for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
   return colors[hash % colors.length];
-}
-
-function sportIconName(name = ''): string {
-  const n = name.toLowerCase();
-  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
-  if (n.includes('basket')) return 'basketball-outline';
-  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
-  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
-  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
-  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
-  if (n.includes('golf')) return 'golf-outline';
-  return 'fitness-outline';
 }
 
 export default function ChatScreen() {
@@ -293,7 +282,6 @@ export default function ChatScreen() {
     );
   }
 
-  const iconName = sportIconName(sportName || activity?.title || '');
   const count = activity?.participantsList.length ?? 0;
 
   return (
@@ -306,7 +294,7 @@ export default function ChatScreen() {
                 onPress={() => router.push({ pathname: '/activity/[id]', params: { id: activity.id } })}
                 style={({ pressed }) => [styles.headerTitle, pressed && { opacity: 0.7 }]}>
                 <View style={styles.headerIconWrap}>
-                  <Ionicons name={iconName as any} size={20} color="#e8823f" />
+                  <SportIcon sportName={sportName} size={20} color="#e8823f" />
                 </View>
                 <View>
                   <ThemedText style={styles.headerName} numberOfLines={1}>

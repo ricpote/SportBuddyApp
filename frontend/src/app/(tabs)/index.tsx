@@ -282,13 +282,17 @@ export default function HomeScreen() {
             {/* CABEÇALHO */}
             <View style={[styles.header, styles.headerRow]}>
               <View style={styles.profileHeader}>
-                {profile?.avatarUrl || user?.photoURL ? (
-                  <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
-                ) : (
-                  <View style={styles.profilePicPlaceholder}>
-                    <Ionicons name="person" size={24} color="#8f8b85" />
-                  </View>
-                )}
+                <Link href="/profile" asChild>
+                  <Pressable hitSlop={8}>
+                    {profile?.avatarUrl || user?.photoURL ? (
+                      <Image source={{ uri: profile?.avatarUrl ?? user?.photoURL ?? undefined }} style={styles.profilePic} />
+                    ) : (
+                      <View style={styles.profilePicPlaceholder}>
+                        <Ionicons name="person" size={24} color="#8f8b85" />
+                      </View>
+                    )}
+                  </Pressable>
+                </Link>
                 {isWide && (
                   <View>
                     <ThemedText type="subtitle" style={styles.profileName}>
