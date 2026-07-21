@@ -44,6 +44,9 @@ const AUTH_ERROR_KEYS: Record<string, string> = {
   'auth/email-already-in-use': 'auth.error.emailInUse',
   'auth/invalid-email': 'auth.error.invalidEmail',
   'auth/weak-password': 'auth.error.weakPassword',
+  'auth/invalid-credential': 'auth.error.invalidCredentials',
+  'auth/wrong-password': 'auth.error.invalidCredentials',
+  'auth/user-not-found': 'auth.error.invalidCredentials',
 };
 
 // Message is a translation key (see i18n/dictionaries/auth.ts) so callers can
@@ -89,7 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   async function signIn(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      throw translateAuthError(err);
+    }
   }
 
   async function signUp(name: string, email: string, password: string) {

@@ -41,6 +41,7 @@ const auth: LanguageDictionaries = {
     'auth.error.emailInUse': 'This email is already registered.',
     'auth.error.invalidEmail': 'Invalid email.',
     'auth.error.weakPassword': 'Password is too weak.',
+    'auth.error.invalidCredentials': 'Invalid email or password.',
   },
   pt: {
     'auth.login.subtitle': 'Inicia sessão para continuar',
@@ -82,6 +83,7 @@ const auth: LanguageDictionaries = {
     'auth.error.emailInUse': 'Este email já está registado.',
     'auth.error.invalidEmail': 'Email inválido.',
     'auth.error.weakPassword': 'A palavra-passe é demasiado fraca.',
+    'auth.error.invalidCredentials': 'Email ou palavra-passe inválidos.',
   },
 };
 
