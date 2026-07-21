@@ -18,6 +18,7 @@ import { Activity } from '@/types/activity';
 import { Friend } from '@/types/friend';
 import { Conversation } from '@/types/message';
 import { relativeDate } from '@/utils/date';
+import { SportIcon } from '@/utils/sport-icon';
 import { useTranslation } from '@/i18n';
 
 type ChatTab = 'friends' | 'activities';
@@ -27,18 +28,6 @@ function avatarColor(userId: string): string {
   let hash = 0;
   for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
   return colors[hash % colors.length];
-}
-
-function sportIconName(name = ''): any {
-  const n = name.toLowerCase();
-  if (n.includes('futeb') || n.includes('foot') || n.includes('soccer')) return 'football-outline';
-  if (n.includes('basket')) return 'basketball-outline';
-  if (n.includes('tenis') || n.includes('ténis') || n.includes('tennis')) return 'tennisball-outline';
-  if (n.includes('natat') || n.includes('swim')) return 'water-outline';
-  if (n.includes('corrida') || n.includes('run') || n.includes('atletis')) return 'walk-outline';
-  if (n.includes('ciclis') || n.includes('bici') || n.includes('cycl')) return 'bicycle-outline';
-  if (n.includes('golf')) return 'golf-outline';
-  return 'fitness-outline';
 }
 
 export default function ChatsScreen() {
@@ -149,9 +138,7 @@ export default function ChatsScreen() {
     const isUnread = unreadIds.includes(activity.id);
     const sportName = sportsMap.get(activity.sportId) ?? '';
     const isPast = activity.status === 'completed';
-    const timeStr = activity.lastMessageAt
-      ? relativeDate(activity.lastMessageAt)
-      : relativeDate(activity.date);
+    const timeStr = activity.lastMessageAt ? relativeDate(activity.lastMessageAt) : '';
     const count = activity.participantsList.length;
     const participantsLabel = t(count === 1 ? 'chat.participants.one' : 'chat.participants.other', { count });
     const subtitle = activity.lastMessage
@@ -165,7 +152,7 @@ export default function ChatsScreen() {
         <Pressable style={({ pressed }) => [styles.rowCard, pressed && styles.pressed]}>
           <View style={[styles.rowInner, isPast && styles.rowPast, isUnread && styles.rowInnerUnread]}>
             <View style={[styles.sportIconWrap, isPast && styles.sportIconWrapPast]}>
-              <Ionicons name={sportIconName(sportName)} size={22} color={isPast ? '#6b6862' : '#e8823f'} />
+              <SportIcon sportName={sportName} size={22} color={isPast ? '#6b6862' : '#e8823f'} />
             </View>
             <View style={styles.rowBody}>
               <View style={styles.rowTop}>
