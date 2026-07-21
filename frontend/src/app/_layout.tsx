@@ -13,6 +13,7 @@ import { LanguageProvider } from '@/contexts/language-context';
 import { PendingWaitlistProvider } from '@/contexts/pending-waitlist-context';
 import { WebSidebar } from '@/components/web-sidebar';
 import { useTranslation } from '@/i18n';
+import { isMobileWebBrowser } from '@/utils/device';
 
 // 1. Criamos o nosso tema personalizado "Dark Premium"
 const SportBuddyTheme = {
@@ -120,12 +121,9 @@ export default function RootLayout() {
     HankenGrotesk_600SemiBold,
     HankenGrotesk_700Bold,
   });
-  const { width } = useWindowDimensions();
-  // No export estático (web), a primeira renderização acontece em Node sem
-  // "window" real — useWindowDimensions devolve width:0 nesse momento, o que
-  // "cozia" esta página no HTML estático para qualquer ecrã. width > 0
-  // confirma que já temos uma medição real do browser antes de decidir.
-  const isMobileWeb = Platform.OS === 'web' && width > 0 && width < 768;
+  // Baseado no user agent, não na largura da janela — redimensionar uma
+  // janela de desktop não deve mostrar o ecrã de download da app.
+  const isMobileWeb = isMobileWebBrowser();
 
   if (!fontsLoaded) return null;
 

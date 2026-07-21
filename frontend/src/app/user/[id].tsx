@@ -271,6 +271,7 @@ export default function UserProfileScreen() {
     const sportName = sportMap[activity.sportId];
     const loc = (activity as any).location?.name as string | undefined;
     const color = STATUS_COLOR[activity.status];
+    const isPrivate = activity.requiresApproval;
     const fill = activity.participantsList.length / activity.maxParticipants;
     return (
       <Pressable
@@ -282,9 +283,16 @@ export default function UserProfileScreen() {
             <SportIcon sportName={sportName} size={12} color="#e8823f" />
             <ThemedText style={styles.eventSportTagText}>{translateSportName(sportName, language)}</ThemedText>
           </View>
-          <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
-            <ThemedText style={[styles.statusText, { color }]}>{STATUS_LABEL[activity.status]}</ThemedText>
-          </View>
+          {isPrivate ? (
+            <View style={[styles.statusChip, styles.privateChip]}>
+              <Ionicons name="lock-closed" size={10} color="#8f8b85" />
+              <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>{t('explore.card.private')}</ThemedText>
+            </View>
+          ) : (
+            <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
+              <ThemedText style={[styles.statusText, { color }]}>{STATUS_LABEL[activity.status]}</ThemedText>
+            </View>
+          )}
         </View>
         <ThemedText style={styles.eventCardTitle} numberOfLines={1}>{activity.title}</ThemedText>
         <View style={styles.metaRowSmall}>
@@ -700,6 +708,7 @@ export default function UserProfileScreen() {
                   const sportName = sportMap[activity.sportId];
                   const loc = (activity as any).location?.name as string | undefined;
                   const color = STATUS_COLOR[activity.status];
+                  const isPrivate = activity.requiresApproval;
                   return (
                     <Pressable
                       key={activity.id}
@@ -716,11 +725,18 @@ export default function UserProfileScreen() {
                           {relativeDate(activity.date, t, language)}{loc ? ` · ${loc}` : ''}
                         </ThemedText>
                       </View>
-                      <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
-                        <ThemedText style={[styles.statusText, { color }]}>
-                          {STATUS_LABEL[activity.status]}
-                        </ThemedText>
-                      </View>
+                      {isPrivate ? (
+                        <View style={[styles.statusChip, styles.privateChip]}>
+                          <Ionicons name="lock-closed" size={10} color="#8f8b85" />
+                          <ThemedText style={[styles.statusText, { color: '#8f8b85' }]}>{t('explore.card.private')}</ThemedText>
+                        </View>
+                      ) : (
+                        <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>
+                          <ThemedText style={[styles.statusText, { color }]}>
+                            {STATUS_LABEL[activity.status]}
+                          </ThemedText>
+                        </View>
+                      )}
                     </Pressable>
                   );
                 })}
@@ -811,6 +827,7 @@ const styles = StyleSheet.create({
   actTitle: { color: '#f4f2ef' },
   actMeta: { color: '#8f8b85' },
   statusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  privateChip: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#8f8b8522' },
   statusText: { fontSize: 11, fontFamily: 'HankenGrotesk_600SemiBold' },
 
   historyRatingBadge: {
