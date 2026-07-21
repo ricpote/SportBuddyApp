@@ -289,7 +289,7 @@ export default function UserProfileScreen() {
         <ThemedText style={styles.eventCardTitle} numberOfLines={1}>{activity.title}</ThemedText>
         <View style={styles.metaRowSmall}>
           <Ionicons name="calendar-outline" size={12} color="#8f8b85" />
-          <ThemedText style={styles.eventMetaText}>{relativeDate(activity.date)}</ThemedText>
+          <ThemedText style={styles.eventMetaText}>{relativeDate(activity.date, t, language)}</ThemedText>
           {loc ? (
             <>
               <ThemedText style={styles.metaDotSmall}>·</ThemedText>
@@ -324,7 +324,7 @@ export default function UserProfileScreen() {
             {activity.title}
           </ThemedText>
           <ThemedText type="small" style={styles.actMeta}>
-            {relativeDate(activity.date)}{loc ? ` · ${loc}` : ''}
+            {relativeDate(activity.date, t, language)}{loc ? ` · ${loc}` : ''}
           </ThemedText>
         </View>
         <View style={styles.historyRatingBadge}>
@@ -713,7 +713,7 @@ export default function UserProfileScreen() {
                           {activity.title}
                         </ThemedText>
                         <ThemedText type="small" style={styles.actMeta}>
-                          {relativeDate(activity.date)}{loc ? ` · ${loc}` : ''}
+                          {relativeDate(activity.date, t, language)}{loc ? ` · ${loc}` : ''}
                         </ThemedText>
                       </View>
                       <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>

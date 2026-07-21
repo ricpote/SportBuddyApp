@@ -135,7 +135,7 @@ function getItemAction(
 }
 
 export default function NotificationsScreen() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -293,7 +293,7 @@ export default function NotificationsScreen() {
                         {t('notifications.joinRequestsFor')}
                         <Text style={styles.notifHighlight}>{item.activityTitle}</Text>
                       </Text>
-                      <ThemedText style={styles.notifTime}>{relativeDate(item.notifications[0].createdAt)}</ThemedText>
+                      <ThemedText style={styles.notifTime}>{relativeDate(item.notifications[0].createdAt, t, language)}</ThemedText>
                       <Pressable
                         onPress={() => { markRead(item.notifications.map(n => n.id)); router.push({ pathname: '/activity/[id]', params: { id: item.activityId } }); }}
                         style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
@@ -321,7 +321,7 @@ export default function NotificationsScreen() {
                   </View>
                   <View style={styles.rowBody}>
                     <HighlightedText text={n.message} unread={!n.read} />
-                    <ThemedText style={styles.notifTime}>{relativeDate(n.createdAt)}</ThemedText>
+                    <ThemedText style={styles.notifTime}>{relativeDate(n.createdAt, t, language)}</ThemedText>
                     {action && (
                       <Pressable
                         onPress={() => { markRead([n.id]); action.onPress(); }}

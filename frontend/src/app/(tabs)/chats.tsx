@@ -33,7 +33,7 @@ function avatarColor(userId: string): string {
 export default function ChatsScreen() {
   const { user, profile } = useAuth();
   const isPartner = profile?.role === 'partner';
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const safeAreaInsets = useSafeAreaInsets();
   const { checkUnread, checkUnreadConversations, unreadIds = [], unreadConversationIds = [] } = useChatBadge();
   const [tab, setTab] = useState<ChatTab>('activities');
@@ -138,7 +138,7 @@ export default function ChatsScreen() {
     const isUnread = unreadIds.includes(activity.id);
     const sportName = sportsMap.get(activity.sportId) ?? '';
     const isPast = activity.status === 'completed';
-    const timeStr = activity.lastMessageAt ? relativeDate(activity.lastMessageAt) : '';
+    const timeStr = activity.lastMessageAt ? relativeDate(activity.lastMessageAt, t, language) : '';
     const count = activity.participantsList.length;
     const participantsLabel = t(count === 1 ? 'chat.participants.one' : 'chat.participants.other', { count });
     const subtitle = activity.lastMessage
@@ -179,7 +179,7 @@ export default function ChatsScreen() {
 
   function renderConversationRow(conversation: Conversation) {
     const isUnread = unreadConversationIds.includes(conversation.id);
-    const timeStr = conversation.lastMessageAt ? relativeDate(conversation.lastMessageAt) : '';
+    const timeStr = conversation.lastMessageAt ? relativeDate(conversation.lastMessageAt, t, language) : '';
 
     return (
       <Link

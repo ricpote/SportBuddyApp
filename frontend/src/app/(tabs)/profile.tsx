@@ -439,7 +439,7 @@ export default function ProfileScreen() {
                             {activity.title}
                           </ThemedText>
                           <ThemedText type="small" style={styles.actMeta}>
-                            {relativeDate(activity.date)}{loc ? ` · ${loc}` : ''}
+                            {relativeDate(activity.date, t, language)}{loc ? ` · ${loc}` : ''}
                           </ThemedText>
                         </View>
                         <View style={[styles.statusChip, { backgroundColor: `${color}20` }]}>

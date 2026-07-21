@@ -1,4 +1,8 @@
-export function relativeDate(dateStr: string): string {
+import type { Language } from '@/i18n/types';
+
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
+
+export function relativeDate(dateStr: string, t: Translator, language: Language = 'en'): string {
   const date = new Date(dateStr);
   const now = new Date();
 
@@ -7,19 +11,22 @@ export function relativeDate(dateStr: string): string {
 
   if (diffDays === 0) {
     const diffMinutes = Math.round(diffMs / (1000 * 60));
-    if (Math.abs(diffMinutes) < 1) return 'now';
+    if (Math.abs(diffMinutes) < 1) return t('date.now');
     if (Math.abs(diffMinutes) < 60) {
-      return diffMinutes > 0 ? `in ${diffMinutes}m` : `${Math.abs(diffMinutes)}m ago`;
+      return diffMinutes > 0
+        ? t('date.inMinutes', { count: diffMinutes })
+        : t('date.minutesAgo', { count: Math.abs(diffMinutes) });
     }
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-    if (diffHours > 0) return `in ${diffHours}h`;
-    if (diffHours < 0) return `${Math.abs(diffHours)}h ago`;
-    return 'now';
+    if (diffHours > 0) return t('date.inHours', { count: diffHours });
+    if (diffHours < 0) return t('date.hoursAgo', { count: Math.abs(diffHours) });
+    return t('date.now');
   }
-  if (diffDays === 1) return 'tomorrow';
-  if (diffDays === -1) return 'yesterday';
-  if (diffDays > 1 && diffDays <= 7) return `in ${diffDays} days`;
-  if (diffDays < -1 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
+  if (diffDays === 1) return t('date.tomorrow');
+  if (diffDays === -1) return t('date.yesterday');
+  if (diffDays > 1 && diffDays <= 7) return t('date.inDays', { count: diffDays });
+  if (diffDays < -1 && diffDays >= -7) return t('date.daysAgo', { count: Math.abs(diffDays) });
 
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: diffDays > 365 || diffDays < -365 ? 'numeric' : undefined });
+  const locale = language === 'pt' ? 'pt-PT' : 'en-GB';
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: diffDays > 365 || diffDays < -365 ? 'numeric' : undefined });
 }

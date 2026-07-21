@@ -335,7 +335,7 @@ export default function ExploreScreen() {
           {/* META ROW: time · location · distance */}
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={13} color="#8f8b85" />
-            <ThemedText style={styles.metaText}>{relativeDate(activity.date)}</ThemedText>
+            <ThemedText style={styles.metaText}>{relativeDate(activity.date, t, language)}</ThemedText>
             <ThemedText style={styles.metaDot}>·</ThemedText>
             <Ionicons name="location-outline" size={13} color="#8f8b85" />
             <ThemedText style={styles.metaText} numberOfLines={1}>{activity.location.name}</ThemedText>

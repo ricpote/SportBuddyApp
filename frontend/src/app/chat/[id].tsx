@@ -58,7 +58,7 @@ function sportIconName(name = ''): string {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const insets = useSafeAreaInsets();
   const uid = user?.uid;
 
@@ -213,7 +213,7 @@ export default function ChatScreen() {
       id: 'created',
       text: t('chat.room.createdActivity', {
         name: creator?.name ?? t('chat.room.someone'),
-        date: relativeDate(activity.createdAt),
+        date: relativeDate(activity.createdAt, t, language),
       }),
     });
   }

@@ -15,6 +15,16 @@ const common: LanguageDictionaries = {
     'common.error': 'Something went wrong',
     'common.ok': 'OK',
     'common.createEvent': 'Create event',
+
+    'date.now': 'now',
+    'date.inMinutes': 'in {count}m',
+    'date.minutesAgo': '{count}m ago',
+    'date.inHours': 'in {count}h',
+    'date.hoursAgo': '{count}h ago',
+    'date.tomorrow': 'tomorrow',
+    'date.yesterday': 'yesterday',
+    'date.inDays': 'in {count} days',
+    'date.daysAgo': '{count} days ago',
   },
   pt: {
     'common.loading': 'A carregar...',
@@ -30,6 +40,16 @@ const common: LanguageDictionaries = {
     'common.error': 'Ocorreu um erro',
     'common.ok': 'OK',
     'common.createEvent': 'Criar evento',
+
+    'date.now': 'agora',
+    'date.inMinutes': 'daqui a {count}m',
+    'date.minutesAgo': 'há {count}m',
+    'date.inHours': 'daqui a {count}h',
+    'date.hoursAgo': 'há {count}h',
+    'date.tomorrow': 'amanhã',
+    'date.yesterday': 'ontem',
+    'date.inDays': 'daqui a {count} dias',
+    'date.daysAgo': 'há {count} dias',
   },
 };
 

@@ -263,7 +263,7 @@ export default function HomeScreen() {
                   {item.type === 'mvp' && t('home.feed.wonMvpIn')}
                   <ThemedText style={styles.feedSidebarActivity}>{item.activityTitle}</ThemedText>
                 </ThemedText>
-                <ThemedText style={styles.feedTime}>{relativeDate(item.timestamp)}</ThemedText>
+                <ThemedText style={styles.feedTime}>{relativeDate(item.timestamp, t, language)}</ThemedText>
               </View>
             </Pressable>
           ))}
