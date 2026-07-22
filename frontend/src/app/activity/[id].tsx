@@ -1019,6 +1019,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.three,
   },
   chatButton: {
@@ -1037,6 +1038,8 @@ const styles = StyleSheet.create({
   chatButtonText: { color: '#1a1005', fontSize: 16, fontWeight: 'bold' },
   secondaryButton: {
     height: 52,
+    flexGrow: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     gap: 6,
     borderRadius: 14,

@@ -113,8 +113,6 @@ const activity: LanguageDictionaries = {
     'activity.view.unknownUser': 'User {id}…',
 
     'activity.locationPicker.defaultName': 'Selected location',
-    'activity.locationPicker.placeholder': 'Type the activity address',
-    'activity.locationPicker.mobileHint': 'The interactive map is available on the web version. This mobile version is temporary.',
     'activity.locationPicker.searchPlaceholder': 'Search address or place',
     'activity.locationPicker.searchButton': 'Search',
     'activity.locationPicker.locating': 'Locating you...',
@@ -296,8 +294,6 @@ const activity: LanguageDictionaries = {
     'activity.view.unknownUser': 'Utilizador {id}…',
 
     'activity.locationPicker.defaultName': 'Local selecionado',
-    'activity.locationPicker.placeholder': 'Escreve a morada da atividade',
-    'activity.locationPicker.mobileHint': 'O mapa interativo está disponível na versão web. Esta versão mobile é temporária.',
     'activity.locationPicker.searchPlaceholder': 'Pesquisar morada ou local',
     'activity.locationPicker.searchButton': 'Pesquisar',
     'activity.locationPicker.locating': 'A localizar-te...',
