@@ -436,12 +436,6 @@ export default function UserProfileScreen() {
                         {isFollowing ? t('profile.user.following') : t('profile.user.follow')}
                       </ThemedText>
                     </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, { width: 44 }, pressed && styles.pressed]}
-                      onPress={handleMessage}
-                      disabled={openingChat}>
-                      <Ionicons name="chatbubble-outline" size={16} color="#c9c5bf" />
-                    </Pressable>
                   </View>
                 )}
               </View>
