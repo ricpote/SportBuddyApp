@@ -9,6 +9,7 @@ import {
   UserStatus,
   createUserObject,
 } from "../models/user.model";
+import { invalidateUserAuthCache } from "../middleware/auth.middleware";
 
 const USERS_COLLECTION = "users";
 
@@ -259,6 +260,7 @@ export class UsersService {
       role,
       updatedAt: updatedUser.updatedAt,
     });
+    invalidateUserAuthCache(userId);
 
     return updatedUser;
   }
@@ -286,6 +288,7 @@ export class UsersService {
       bannedUntil,
       updatedAt: updatedUser.updatedAt,
     });
+    invalidateUserAuthCache(userId);
 
     return updatedUser;
   }
