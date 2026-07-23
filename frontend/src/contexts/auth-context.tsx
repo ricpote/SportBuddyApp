@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 
 import { auth } from '@/config/firebase';
-import { api } from '@/services/api';
+import { api, ApiError } from '@/services/api';
 import { getMyProfile } from '@/services/users';
 import { UserProfile } from '@/types/user';
 
@@ -58,12 +58,30 @@ function translateAuthError(err: unknown): Error {
   return err instanceof Error ? err : new Error('auth.register.genericError');
 }
 
+async function createProfileFromFirebaseUser(firebaseUser: FirebaseUser): Promise<void> {
+  const baseName = firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User';
+  const email = firebaseUser.email ?? '';
+
+  try {
+    await api.post('/api/users/profile', { name: baseName, email });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('already exists')) return;
+    if (err instanceof Error && err.message.includes('nome')) {
+      const suffix = Math.floor(1000 + Math.random() * 9000);
+      await api.post('/api/users/profile', { name: `${baseName} ${suffix}`, email });
+      return;
+    }
+    throw err;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [signingUp, setSigningUp] = useState(false);
+  const signingUpRef = useRef(false);
 
   const loadProfile = useCallback(async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
@@ -76,8 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const nextProfile = await getMyProfile();
       setProfile(nextProfile);
-    } catch {
-      setProfile(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404 && !signingUpRef.current) {
+        try {
+          await createProfileFromFirebaseUser(firebaseUser);
+          setProfile(await getMyProfile());
+        } catch {
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
     } finally {
       setProfileLoading(false);
     }
@@ -101,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUp(name: string, email: string, password: string) {
     setSigningUp(true);
+    signingUpRef.current = true;
     try {
       let credential;
       try {
@@ -119,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     } finally {
+      signingUpRef.current = false;
       setSigningUp(false);
     }
   }
@@ -131,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ) {
     setSigningUp(true);
+    signingUpRef.current = true;
     try {
       let credential;
       try {
@@ -155,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     } finally {
+      signingUpRef.current = false;
       setSigningUp(false);
     }
   }
@@ -162,24 +193,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function completeGoogleSignIn(firebaseUser: FirebaseUser) {
     try {
       await getMyProfile();
-    } catch {
-      const baseName = firebaseUser.displayName ?? 'User';
-      const email = firebaseUser.email ?? '';
-
-      try {
-        await api.post('/api/users/profile', { name: baseName, email });
-      } catch (err) {
-        // Se o nome já estiver ocupado, tenta uma vez com um sufixo numérico
-        if (err instanceof Error && err.message.includes('nome')) {
-          const suffix = Math.floor(1000 + Math.random() * 9000);
-          await api.post('/api/users/profile', { name: `${baseName} ${suffix}`, email });
-        } else {
-          throw err;
-        }
-      }
-
-      await loadProfile(firebaseUser);
+      return;
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== 404) throw err;
     }
+
+    await createProfileFromFirebaseUser(firebaseUser);
+    await loadProfile(firebaseUser);
   }
 
   async function signInWithGoogle() {

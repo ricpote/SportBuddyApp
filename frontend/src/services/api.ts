@@ -6,6 +6,13 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function request<T>(
   path: string,
   { body, headers, ...options }: RequestOptions = {},
@@ -30,7 +37,10 @@ async function request<T>(
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
-    throw new Error(errorBody?.message ?? `Request failed with status ${response.status}`);
+    throw new ApiError(
+      errorBody?.message ?? `Request failed with status ${response.status}`,
+      response.status
+    );
   }
 
   if (response.status === 204) {

@@ -6,11 +6,26 @@
   <component name="ChangeListManager">
     <list default="true" id="3be89eaf-1dc5-4111-96b9-eae1b9dd6980" name="Changes" comment="cenas ja testadas">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/app.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/models/activity.model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/models/activity.model.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/services/messages.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/messages.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(tabs)/chats.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(tabs)/chats.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/chat/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/chat/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/direct-chat/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/direct-chat/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/contexts/auth-context.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/contexts/auth-context.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/contexts/chat-badge-context.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/contexts/chat-badge-context.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/activity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/activity.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_C:/Users/guisa/Documents/SportBuddyApp" value="3EzQVcEGpIZYRy8jBXl7tPsmMtM" />
+    </persistenceIdMap>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
@@ -37,6 +52,21 @@
   &quot;fromUser&quot;: false
 }</component>
   <component name="ProjectId" id="3EzQVcEGpIZYRy8jBXl7tPsmMtM" />
+  <component name="ProjectSessionTemplates">
+    <option name="panelTemplate">
+      <template>
+        <option name="modeId" value="Agent" />
+        <option name="model">
+          <model>
+            <option name="modelType" value="builtin_id" />
+            <option name="modelValue" value="auto" />
+          </model>
+        </option>
+        <option name="targetType" value="BACKGROUND" />
+        <option name="worktreeMode" value="WORKSPACE" />
+      </template>
+    </option>
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -51,16 +81,17 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "oauth-and-mvp",
+    "copilot.chat.legacySessionMetadata.migrated": "true",
+    "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/NOVA/3 Ano 2 Sem/ADC/Projeto_Final/frontend",
+    "last_opened_file_path": "C:/Users/guisa/Documents/SportBuddyApp",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "preferences.lookFeel",
-    "ts.external.directory.path": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2025.2.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external",
+    "ts.external.directory.path": "C:\\Users\\guisa\\Documents\\SportBuddyApp\\backend\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -72,8 +103,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.24374.151" />
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.24374.151" />
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.26830.84" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.26830.84" />
       </set>
     </attachedChunks>
   </component>
@@ -91,6 +122,8 @@
       <workItem from="1781465768460" duration="2557000" />
       <workItem from="1781622082094" duration="3226000" />
       <workItem from="1781798959226" duration="814000" />
+      <workItem from="1784827275311" duration="48000" />
+      <workItem from="1784827417928" duration="713000" />
     </task>
     <task id="LOCAL-00001" summary="a">
       <option name="closed" value="true" />

@@ -46,6 +46,7 @@ export class MessagesService {
         lastMessage: preview,
         lastMessageAt: now,
         lastMessageSender: senderName,
+        lastMessageSenderId: senderId,
       }),
     ]);
 

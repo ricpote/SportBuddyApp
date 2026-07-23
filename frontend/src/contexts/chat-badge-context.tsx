@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
-import { getMessages } from '@/services/messages';
 
 const STORAGE_KEY_PREFIX = '@chat_last_seen_v2_';
 
@@ -17,37 +16,30 @@ type ChatBadgeContextValue = {
   unreadIds: string[];
   unreadConversationIds: string[];
   markRead: (chatId: string, asOfServerTime?: number) => Promise<void>;
-  checkUnread: (activityIds: string[], currentUserId?: string) => Promise<void>;
+  checkUnread: (activities: ConversationMeta[], currentUserId?: string) => Promise<void>;
   checkUnreadConversations: (conversations: ConversationMeta[], currentUserId?: string) => Promise<void>;
 };
 
 const ChatBadgeContext = createContext<ChatBadgeContextValue | undefined>(undefined);
 
-async function findUnreadActivities(
-  ids: string[],
-  currentUserId?: string,
-  storageKey?: string
-): Promise<Set<string>> {
-  const raw = await AsyncStorage.getItem(storageKey ?? '');
-  const lastSeenMap: Record<string, number> = raw ? JSON.parse(raw) : {};
-
-  const results = await Promise.allSettled(
-    ids.map(async (id) => {
-      const messages = await getMessages(id);
-      const fromOthers = currentUserId
-        ? messages.filter((m) => m.senderId !== currentUserId)
-        : messages;
-      if (fromOthers.length === 0) return { id, unread: false };
-      const lastMsgTime = Math.max(...fromOthers.map((m) => new Date(m.createdAt).getTime()));
-      const lastSeen = lastSeenMap[id] ?? 0;
-      return { id, unread: lastMsgTime > lastSeen };
-    })
-  );
-
+// Deriva o estado de "não lido" a partir dos metadados já carregados na
+// listagem de atividades/conversas (lastMessageAt/lastMessageSenderId), em
+// vez de ir buscar as mensagens de cada chat uma a uma — isso multiplicava
+// os pedidos ao servidor por cada atividade e esgotava o rate limit.
+function findUnread(
+  items: ConversationMeta[],
+  lastSeenMap: Record<string, number>,
+  currentUserId?: string
+): Set<string> {
   const unread = new Set<string>();
-  results.forEach((r) => {
-    if (r.status === 'fulfilled' && r.value.unread) unread.add(r.value.id);
-  });
+  for (const item of items) {
+    if (!item.lastMessageAt) continue;
+    if (item.lastMessageSenderId === currentUserId) continue;
+    const lastMsgTime = new Date(item.lastMessageAt).getTime();
+    if (isNaN(lastMsgTime)) continue;
+    const lastSeen = lastSeenMap[item.id] ?? 0;
+    if (lastMsgTime > lastSeen) unread.add(item.id);
+  }
   return unread;
 }
 
@@ -77,10 +69,12 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
     });
   }, [storageKey]);
 
-  const checkUnread = useCallback(async (activityIds: string[], currentUserId?: string) => {
-    if (activityIds.length === 0) { setUnreadIds(new Set()); return; }
+  const checkUnread = useCallback(async (activities: ConversationMeta[], currentUserId?: string) => {
+    if (activities.length === 0) { setUnreadIds(new Set()); return; }
     try {
-      setUnreadIds(await findUnreadActivities(activityIds, currentUserId, storageKey));
+      const raw = await AsyncStorage.getItem(storageKey);
+      const lastSeenMap: Record<string, number> = raw ? JSON.parse(raw) : {};
+      setUnreadIds(findUnread(activities, lastSeenMap, currentUserId));
     } catch {}
   }, [storageKey]);
 
@@ -90,17 +84,7 @@ export function ChatBadgeProvider({ children }: { children: ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(storageKey);
         const lastSeenMap: Record<string, number> = raw ? JSON.parse(raw) : {};
-
-        const unread = new Set<string>();
-        for (const conv of conversations) {
-          if (!conv.lastMessageAt) continue;
-          if (conv.lastMessageSenderId === currentUserId) continue;
-          const lastMsgTime = new Date(conv.lastMessageAt).getTime();
-          if (isNaN(lastMsgTime)) continue;
-          const lastSeen = lastSeenMap[conv.id] ?? 0;
-          if (lastMsgTime > lastSeen) unread.add(conv.id);
-        }
-        setUnreadConversationIds(unread);
+        setUnreadConversationIds(findUnread(conversations, lastSeenMap, currentUserId));
       } catch {}
     },
     [storageKey]

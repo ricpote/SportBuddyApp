@@ -23,6 +23,10 @@ import { useTranslation } from '@/i18n';
 
 type ChatTab = 'friends' | 'activities';
 
+type MessagePreview = { text: string; senderName: string; createdAt: string } | null;
+
+const messagePreviewCache = new Map<string, MessagePreview>();
+
 function avatarColor(userId: string): string {
   const colors = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2'];
   let hash = 0;
@@ -61,24 +65,27 @@ export default function ChatsScreen() {
       : getMyActivities();
     fetch.then(async (data) => {
       setActivities(data);
-      const chattableIds = data
+      const chattable = data
         .filter((a) => a.status !== 'cancelled' && (isPartner || (a.participantsList || []).includes(uid)))
-        .map((a) => a.id);
-      checkUnread(chattableIds, uid);
+        .map((a) => ({ id: a.id, lastMessageAt: a.lastMessageAt, lastMessageSenderId: a.lastMessageSenderId }));
+      checkUnread(chattable, uid);
 
-      // For active chats without lastMessage yet, fetch from the messages subcollection
       const needsPreview = data.filter(
         (a) => (a.status === 'open' || a.status === 'full') && !a.lastMessage && (isPartner || (a.participantsList || []).includes(uid))
       );
+      const toFetch = needsPreview.filter((a) => !messagePreviewCache.has(a.id));
+      if (toFetch.length > 0) {
+        const results = await Promise.allSettled(toFetch.map((a) => getLastActivityMessage(a.id)));
+        results.forEach((r, idx) => {
+          if (r.status === 'fulfilled') messagePreviewCache.set(toFetch[idx].id, r.value);
+        });
+      }
       if (needsPreview.length > 0) {
-        const results = await Promise.allSettled(needsPreview.map((a) => getLastActivityMessage(a.id)));
         setActivities((prev) =>
           (prev ?? []).map((a) => {
-            const idx = needsPreview.findIndex((n) => n.id === a.id);
-            if (idx === -1) return a;
-            const r = results[idx];
-            if (r.status !== 'fulfilled' || !r.value) return a;
-            return { ...a, lastMessage: r.value.text, lastMessageSender: r.value.senderName, lastMessageAt: r.value.createdAt };
+            const preview = messagePreviewCache.get(a.id);
+            if (a.lastMessage || !preview) return a;
+            return { ...a, lastMessage: preview.text, lastMessageSender: preview.senderName, lastMessageAt: preview.createdAt };
           })
         );
       }

@@ -106,6 +106,7 @@ export default function ChatScreen() {
     if (!id) return;
 
     function fetchMessages() {
+      if (Platform.OS === 'web' && typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       getMessages(id!)
         .then((data) => {
           setMessages((prev) => {

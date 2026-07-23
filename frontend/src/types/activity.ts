@@ -49,6 +49,7 @@ export type Activity = {
   lastMessage?: string;
   lastMessageAt?: string;
   lastMessageSender?: string;
+  lastMessageSenderId?: string;
 
   createdAt: string;
   updatedAt: string;

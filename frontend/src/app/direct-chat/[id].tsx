@@ -63,6 +63,7 @@ export default function DirectChatScreen() {
     if (!id) return;
 
     function fetchMessages() {
+      if (Platform.OS === 'web' && typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       getDirectMessages(id!)
         .then((data) => {
           setMessages((prev) => {

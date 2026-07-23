@@ -60,6 +60,7 @@ export type Activity = {
   lastMessage?: string;
   lastMessageAt?: Date;
   lastMessageSender?: string;
+  lastMessageSenderId?: string;
 
   createdAt: Date;
   updatedAt: Date;
