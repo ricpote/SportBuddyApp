@@ -3,7 +3,7 @@ env: standard
 instance_class: F4
 
 automatic_scaling:
-  min_instances: 4
+  min_instances: 2
   max_instances: 50
   target_cpu_utilization: 0.6
   target_throughput_utilization: 0.6
