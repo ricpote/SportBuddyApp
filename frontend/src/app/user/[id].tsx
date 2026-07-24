@@ -50,7 +50,7 @@ function locName(loc?: string | { name?: string }): string | null {
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user: me, profile: myProfile, patchProfile, refreshProfile } = useAuth();
+  const { user: me, profile: myProfile, patchProfile, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -407,12 +407,19 @@ export default function UserProfileScreen() {
                 </View>
 
                 {isMe && (
-                  <Pressable
-                    onPress={() => router.push('/edit-profile')}
-                    style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, styles.editProfileBtn, pressed && styles.pressed]}>
-                    <Ionicons name="create-outline" size={16} color="#c9c5bf" />
-                    <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.user.editProfile')}</ThemedText>
-                  </Pressable>
+                  <View style={[styles.orgActions, !isWide && { width: '100%' }]}>
+                    <Pressable
+                      onPress={() => router.push('/edit-profile')}
+                      style={({ pressed }) => [styles.actionBtn, styles.actionBtnNeutral, styles.editProfileBtn, !isWide && { flex: 1 }, pressed && styles.pressed]}>
+                      <Ionicons name="create-outline" size={16} color="#c9c5bf" />
+                      <ThemedText type="smallBold" style={{ color: '#c9c5bf' }}>{t('profile.user.editProfile')}</ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={signOut}
+                      style={({ pressed }) => [styles.actionBtn, styles.logoutBtn, { width: 44 }, pressed && styles.pressed]}>
+                      <Ionicons name="log-out-outline" size={16} color="#eb8f84" />
+                    </Pressable>
+                  </View>
                 )}
 
                 {!isMe && (
@@ -779,6 +786,7 @@ const styles = StyleSheet.create({
   actionBtnOrange: { backgroundColor: '#e8823f' },
   actionBtnNeutral: { backgroundColor: '#141315', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   editProfileBtn: { paddingHorizontal: Spacing.three, flexShrink: 0, alignSelf: 'flex-start' },
+  logoutBtn: { backgroundColor: 'rgba(235,143,132,0.1)', borderWidth: 1, borderColor: '#eb8f84', flexShrink: 0 },
   followBtn: { paddingHorizontal: Spacing.three, flexShrink: 0, justifyContent: 'flex-start' },
 
   sportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/contexts/auth-context';
@@ -153,6 +154,7 @@ export default function ActivitiesMapScreen() {
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const mapRef = useRef<MapView>(null);
+  const insets = useSafeAreaInsets();
 
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -286,7 +288,7 @@ export default function ActivitiesMapScreen() {
         })}
       </MapView>
 
-      <View style={styles.topOverlay} pointerEvents="box-none">
+      <View style={[styles.topOverlay, { top: insets.top + 16 }]} pointerEvents="box-none">
         {!isAdmin && (
           <View style={styles.radiusRow}>
             {([5, 10, 20, 50] as const).map((option, i, arr) => {
@@ -328,14 +330,17 @@ export default function ActivitiesMapScreen() {
 
       <Pressable
         onPress={handleRecenter}
-        style={[styles.locationButton, selectedActivity ? styles.locationButtonAboveCard : undefined]}
+        style={[
+          styles.locationButton,
+          { bottom: (selectedActivity ? 128 : 16) + insets.bottom },
+        ]}
       >
         <Ionicons name="locate" size={20} color="#e8823f" />
       </Pressable>
 
       {selectedActivity && status && (
         <Pressable
-          style={styles.bottomCard}
+          style={[styles.bottomCard, { bottom: 16 + insets.bottom }]}
           onPress={() => router.push({ pathname: '/activity/[id]', params: { id: selectedActivity.id } })}
         >
           <View style={styles.cardIconBox}>
@@ -445,10 +450,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  locationButtonAboveCard: {
-    bottom: 128,
-  },
-
   bottomCard: {
     position: 'absolute',
     bottom: 16,
